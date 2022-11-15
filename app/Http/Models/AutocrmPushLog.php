@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class AutocrmPushLog
- * 
+ *
  * @property int $id_autocrm_push_log
  * @property int $id_user
  * @property string $push_log_to
@@ -19,29 +19,29 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $push_log_content
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
- * 
+ *
  * @property \App\Http\Models\User $user
  *
  * @package App\Models
  */
 class AutocrmPushLog extends Model
 {
-	protected $primaryKey = 'id_autocrm_push_log';
+    protected $primaryKey = 'id_autocrm_push_log';
 
-	protected $casts = [
-		'id_user' => 'int'
-	];
+    protected $casts = [
+        'id_user' => 'int'
+    ];
 
-	protected $fillable = [
-		'id_user',
-		'user_type',
-		'push_log_to',
-		'push_log_subject',
-		'push_log_content'
-	];
+    protected $fillable = [
+        'id_user',
+        'user_type',
+        'push_log_to',
+        'push_log_subject',
+        'push_log_content'
+    ];
 
-	public function user()
-	{
-		return $this->belongsTo(\App\Http\Models\User::class, 'id_user');
-	}
+    public function user()
+    {
+        return $this->belongsTo(\App\Http\Models\User::class, 'id_user');
+    }
 }

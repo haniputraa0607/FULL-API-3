@@ -20,11 +20,13 @@ class ProductDetail extends Model
         'updated_at'
     ];
 
-    public function product(){
+    public function product()
+    {
         return $this->belongsTo(App\Http\Models\Product::class, 'id_product');
     }
 
-    public function outlet(){
+    public function outlet()
+    {
         return $this->belongsTo(App\Http\Models\Outlet::class, 'id_outlet');
     }
 }

@@ -1,7 +1,7 @@
 <?php
 
 return [
-	'api_url' => env('APP_API_URL'),
+    'api_url' => env('APP_API_URL'),
     /*
     |--------------------------------------------------------------------------
     | Application Name
@@ -44,9 +44,9 @@ return [
     ? in_array($_SERVER['REMOTE_ADDR'], explode(',', env('DEV_IP', '127.0.0.1')))
     : true : false,
     'debug_blacklist' => [
-    	'_COOKIE' => array_keys($_COOKIE),
-    	'_SERVER' => array_keys($_SERVER),
-    	'_ENV' => array_keys($_ENV), 
+        '_COOKIE' => array_keys($_COOKIE),
+        '_SERVER' => array_keys($_SERVER),
+        '_ENV' => array_keys($_ENV),
     ],
 
     /*
@@ -184,11 +184,11 @@ return [
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
-		Mpociot\ApiDoc\ApiDocGeneratorServiceProvider::class,
-		LaravelFCM\FCMServiceProvider::class,
-		Intervention\Image\ImageServiceProvider::class,
-		Maatwebsite\Excel\ExcelServiceProvider::class,
-		Bogardo\Mailgun\MailgunServiceProvider::class,
+        Mpociot\ApiDoc\ApiDocGeneratorServiceProvider::class,
+        LaravelFCM\FCMServiceProvider::class,
+        Intervention\Image\ImageServiceProvider::class,
+        Maatwebsite\Excel\ExcelServiceProvider::class,
+        Bogardo\Mailgun\MailgunServiceProvider::class,
         SMartins\PassportMultiauth\Providers\MultiauthServiceProvider::class,
         App\Providers\ValidatorServiceProvider::class,
         Fruitcake\Cors\CorsServiceProvider::class,
@@ -243,11 +243,11 @@ return [
         'URL' => Illuminate\Support\Facades\URL::class,
         'Validator' => Illuminate\Support\Facades\Validator::class,
         'View' => Illuminate\Support\Facades\View::class,
-		'FCM'      => LaravelFCM\Facades\FCM::class,
-		'FCMGroup' => LaravelFCM\Facades\FCMGroup::class, // Optional
-		'Image' => Intervention\Image\Facades\Image::class,
-		'Excel' => Maatwebsite\Excel\Facades\Excel::class,
-		'Mailgun' => Bogardo\Mailgun\Facades\Mailgun::class,
+        'FCM'      => LaravelFCM\Facades\FCM::class,
+        'FCMGroup' => LaravelFCM\Facades\FCMGroup::class, // Optional
+        'Image' => Intervention\Image\Facades\Image::class,
+        'Excel' => Maatwebsite\Excel\Facades\Excel::class,
+        'Mailgun' => Bogardo\Mailgun\Facades\Mailgun::class,
     ],
 
 ];

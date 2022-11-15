@@ -5,9 +5,7 @@ namespace Modules\Subscription\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Lib\MyHelper;
-
 use Modules\Subscription\Entities\Subscription;
 use Modules\Subscription\Entities\FeaturedSubscription;
 use Modules\Subscription\Entities\SubscriptionOutlet;
@@ -25,7 +23,6 @@ use Modules\Deals\Entities\DealsContentDetail;
 use Modules\Promotion\Entities\DealsPromotionContent;
 use Modules\Promotion\Entities\DealsPromotionContentDetail;
 use App\Http\Models\Setting;
-
 use Modules\Subscription\Http\Requests\ListSubscription;
 use Modules\Subscription\Http\Requests\Step1Subscription;
 use Modules\Subscription\Http\Requests\Step2Subscription;
@@ -33,14 +30,12 @@ use Modules\Subscription\Http\Requests\Step3Subscription;
 use Modules\Subscription\Http\Requests\DetailSubscription;
 use Modules\Subscription\Http\Requests\DeleteSubscription;
 use Modules\Subscription\Http\Requests\UpdateCompleteSubscription;
-
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use DB;
 
 class ApiSubscription extends Controller
 {
-
-    function __construct()
+    public function __construct()
     {
         date_default_timezone_set('Asia/Jakarta');
         $this->user = "Modules\Users\Http\Controllers\ApiUser";
@@ -51,17 +46,17 @@ class ApiSubscription extends Controller
     public $saveImage = "img/subscription/";
 
         /* CHECK INPUTAN */
-    function checkInputan($post)
+    public function checkInputan($post)
     {
 
         $data = [];
 
         if (isset($post['subscription_discount_type'])) {
-        	$data['subscription_discount_type'] = $post['subscription_discount_type'];
+            $data['subscription_discount_type'] = $post['subscription_discount_type'];
         }
 
         if (isset($post['subscription_type'])) {
-        	$data['subscription_type'] = $post['subscription_type'];
+            $data['subscription_type'] = $post['subscription_type'];
         }
 
         if (isset($post['id_subscription'])) {
@@ -77,7 +72,6 @@ class ApiSubscription extends Controller
         }
 
         if (isset($post['subscription_image'])) {
-
             if (!file_exists($this->saveImage)) {
                 mkdir($this->saveImage, 0777, true);
             }
@@ -123,19 +117,15 @@ class ApiSubscription extends Controller
             $data['subscription_price_point'] = null;
         }
         // ---------------------------- FREE
-        if ( ($post['prices_by']??false) == 'money' ) {
+        if (($post['prices_by'] ?? false) == 'money') {
             $data['subscription_price_cash'] = $post['subscription_price_cash'];
             $data['subscription_price_point'] = null;
-        } 
-        elseif ( ($post['prices_by']??false) == 'point' ) 
-        {
+        } elseif (($post['prices_by'] ?? false) == 'point') {
             $data['subscription_price_cash'] = null;
             $data['subscription_price_point'] = $post['subscription_price_point'];
-        }
-        else
-        {
+        } else {
             $data['subscription_price_cash'] = null;
-            $data['subscription_price_point'] = null;   
+            $data['subscription_price_point'] = null;
             $data['is_free'] = 1;
         }
 
@@ -152,7 +142,7 @@ class ApiSubscription extends Controller
         }
 
         if (isset($post['product_rule'])) {
-        	$data['product_rule'] = $post['product_rule'];
+            $data['product_rule'] = $post['product_rule'];
         }
 
         if (isset($post['payment_method'])) {
@@ -167,9 +157,9 @@ class ApiSubscription extends Controller
             $data['subscription_total'] = $post['subscription_total'];
         }
 
-        if ( ($post['subscription_total_type']??0) == 'unlimited' ) {
+        if (($post['subscription_total_type'] ?? 0) == 'unlimited') {
             $data['subscription_total'] = 0;
-        }else{
+        } else {
             $data['subscription_total'] = $post['subscription_total'];
         }
 
@@ -191,8 +181,7 @@ class ApiSubscription extends Controller
         if (isset($post['subscription_voucher_total'])) {
             $data['subscription_voucher_total'] = $post['subscription_voucher_total'];
         }
-        if ( ($post['voucher_type']??0)=='percent' ) {
-            
+        if (($post['voucher_type'] ?? 0) == 'percent') {
             if (isset($post['subscription_voucher_percent'])) {
                 $data['subscription_voucher_percent'] = $post['subscription_voucher_percent'];
                 $data['subscription_voucher_nominal'] = null;
@@ -200,8 +189,7 @@ class ApiSubscription extends Controller
             if (isset($post['subscription_voucher_percent_max'])) {
                 $data['subscription_voucher_percent_max'] = $post['subscription_voucher_percent_max'];
             }
-        }else{
-
+        } else {
             if (isset($post['subscription_voucher_nominal'])) {
                 $data['subscription_voucher_percent'] = null;
                 $data['subscription_voucher_percent_max'] = null;
@@ -217,7 +205,7 @@ class ApiSubscription extends Controller
         if (isset($post['new_purchase_after'])) {
             $data['new_purchase_after'] = $post['new_purchase_after'];
         }
-        if ( ($post['purchase_limit']??0) == 'no_limit' ) {
+        if (($post['purchase_limit'] ?? 0) == 'no_limit') {
             $data['new_purchase_after'] = 'No Limit';
         }
 
@@ -257,38 +245,38 @@ class ApiSubscription extends Controller
             $data['charged_outlet'] = $post['charged_outlet'];
         }
 
-    	if ( ($data['subscription_type']??false) == 'welcome') {
-        	$data['user_limit'] = 1;
+        if (($data['subscription_type'] ?? false) == 'welcome') {
+            $data['user_limit'] = 1;
         }
 
         if (isset($post['brand_rule'])) {
-        	$data['brand_rule'] = $post['brand_rule'];
+            $data['brand_rule'] = $post['brand_rule'];
         }
 
         if (isset($post['product_type'])) {
-        	$data['product_type'] = $post['product_type'];
+            $data['product_type'] = $post['product_type'];
         }
 
         if (isset($post['filter_outlet'])) {
-        	switch ($post['filter_outlet']) {
-        		case 'selected_outlet':
-		        	$data['id_outlet'] = $post['id_outlet'] ?? [];
-		        	$data['is_all_outlet'] = 0;
-		        	unset($data['id_outlet_group']);
-        			break;
-        		
-        		case 'outlet_group':
-		        	$data['id_outlet_group'] = $post['id_outlet_group'] ?? [];
-		        	$data['is_all_outlet'] = 0;
-		        	unset($data['id_outlet']);
-        			break;
+            switch ($post['filter_outlet']) {
+                case 'selected_outlet':
+                    $data['id_outlet'] = $post['id_outlet'] ?? [];
+                    $data['is_all_outlet'] = 0;
+                    unset($data['id_outlet_group']);
+                    break;
 
-        		default:
-        			$data['is_all_outlet'] = 1;
-        			unset($data['id_outlet']);
-        			unset($data['id_outlet_group']);
-        			break;
-        	}
+                case 'outlet_group':
+                    $data['id_outlet_group'] = $post['id_outlet_group'] ?? [];
+                    $data['is_all_outlet'] = 0;
+                    unset($data['id_outlet']);
+                    break;
+
+                default:
+                    $data['is_all_outlet'] = 1;
+                    unset($data['id_outlet']);
+                    unset($data['id_outlet_group']);
+                    break;
+            }
         }
 
         $data['subscription_step_complete'] = 0;
@@ -305,12 +293,12 @@ class ApiSubscription extends Controller
                         'subscription_users.*',
                         'users.*'
                     )
-                    ->join('users', 'subscription_users.id_user','=','users.id')
+                    ->join('users', 'subscription_users.id_user', '=', 'users.id')
                     ->withCount(['subscription_user_vouchers as kuota'])
-                    ->withCount(['subscription_user_vouchers as used' => function($q){
+                    ->withCount(['subscription_user_vouchers as used' => function ($q) {
                         $q->whereNotNull('used_at');
                     }])
-                    ->withCount(['subscription_user_vouchers as available' => function($q){
+                    ->withCount(['subscription_user_vouchers as available' => function ($q) {
                         $q->whereNull('used_at');
                     }])
                     ->groupBy('id_subscription_user');
@@ -321,68 +309,68 @@ class ApiSubscription extends Controller
                         'subscription_users.*',
                         'users.*'
                     )
-                    ->join('users', 'subscription_users.id_user','=','users.id')
+                    ->join('users', 'subscription_users.id_user', '=', 'users.id')
                     ->withCount(['subscription_user_vouchers as kuota'])
-                    ->withCount(['subscription_user_vouchers as used' => function($q){
+                    ->withCount(['subscription_user_vouchers as used' => function ($q) {
                         $q->whereNotNull('used_at');
                     }])
-                    ->withCount(['subscription_user_vouchers as available' => function($q){
+                    ->withCount(['subscription_user_vouchers as available' => function ($q) {
                         $q->whereNull('used_at');
                     }])
                     ->groupBy('id_subscription_user');
 
         $total = SubscriptionUser::where('id_subscription', '=', $post['id_subscription'])->paginate(1)->toArray();
 
-		$foreign = [];
-		$foreign2 = [];
-        if($post['rule']??false){
-            $this->filterParticipate($query,$request,$foreign);
-            $this->filterParticipate($count,$request,$foreign2);
+        $foreign = [];
+        $foreign2 = [];
+        if ($post['rule'] ?? false) {
+            $this->filterParticipate($query, $request, $foreign);
+            $this->filterParticipate($count, $request, $foreign2);
         }
 
         $column = ['subscription_receipt', 'user', 'bought_at', 'expired_at', 'payment_status', 'payment_price', 'available', 'history' ];
 
-        if($post['start']){
+        if ($post['start']) {
             $query = $query->skip($post['start']);
         }
-        if($post['length']>0){
+        if ($post['length'] > 0) {
             $query = $query->take($post['length']);
         }
 
         foreach ($post['order'] as $value) {
             switch ($column[$value['column']]) {
                 case 'subscription_receipt':
-                $query->orderBy('subscription_user_receipt_number',$value['dir']);
-                break;
-                
+                    $query->orderBy('subscription_user_receipt_number', $value['dir']);
+                    break;
+
                 case 'user':
-                $query->orderBy('users.name',$value['dir']);
-                break;
-                
+                    $query->orderBy('users.name', $value['dir']);
+                    break;
+
                 case 'bought_at':
-                $query->orderBy('bought_at',$value['dir']);
-                break;
+                    $query->orderBy('bought_at', $value['dir']);
+                    break;
 
                 case 'expired_at':
-                $query->orderBy('subscription_expired_at',$value['dir']);
-                break;
+                    $query->orderBy('subscription_expired_at', $value['dir']);
+                    break;
 
                 case 'payment_status':
-                $query->orderBy('paid_status',$value['dir']);
-                break;
+                    $query->orderBy('paid_status', $value['dir']);
+                    break;
 
                 case 'payment_price':
-                $query->orderBy('subscription_price_point',$value['dir'])
-                        ->orderBy('subscription_price_cash',$value['dir']);
-                break;
+                    $query->orderBy('subscription_price_point', $value['dir'])
+                        ->orderBy('subscription_price_cash', $value['dir']);
+                    break;
 
                 case 'available':
-                $query->orderBy('available',$value['dir']);
-                break;
+                    $query->orderBy('available', $value['dir']);
+                    break;
 
                 default:
-                $query->orderBy('id_subscription_user',$value['dir']);
-                break;
+                    $query->orderBy('id_subscription_user', $value['dir']);
+                    break;
             }
         }
 
@@ -403,8 +391,8 @@ class ApiSubscription extends Controller
                 'status'  => 'success',
                 'result'  => $query,
                 'rule'    => $post,
-                'count'   => $count['total']??0,
-                'total'   => $total['total']??0
+                'count'   => $count['total'] ?? 0,
+                'total'   => $total['total'] ?? 0
             ];
         } else {
             $result = [
@@ -425,28 +413,27 @@ class ApiSubscription extends Controller
                     ->where('subscription_user_receipt_number', '=', $post['subscription_user_receipt_number'])
                     ->whereNotNull('used_at')
                     ->with([
-                        'transaction' => function($q){
+                        'transaction' => function ($q) {
                             $q->select(
-                                'id_outlet', 
+                                'id_outlet',
                                 'id_transaction',
                                 'transaction_receipt_number'
                             );
                         },
-                        'transaction.productTransaction' => function($q){
+                        'transaction.productTransaction' => function ($q) {
                             $q->select(
                                 DB::raw('SUM(transaction_product_qty) as total_item'),
                                 'id_transaction_product',
                                 'id_transaction'
                             );
                         },
-                        'transaction.outlet' => function($q){
-                            $q->select('id_outlet','outlet_name');
+                        'transaction.outlet' => function ($q) {
+                            $q->select('id_outlet', 'outlet_name');
                         }
                     ])
                     ->get()
                     ->toArray();
         return $data;
-
     }
 
     public function create(Step1Subscription $request)
@@ -460,7 +447,7 @@ class ApiSubscription extends Controller
             unset($data['error']);
             return response()->json($data);
         }
-        $save = Subscription::updateOrCreate(['id_subscription' => $data['id_subscription']??''], $data);
+        $save = Subscription::updateOrCreate(['id_subscription' => $data['id_subscription'] ?? ''], $data);
 
         if ($save) {
             DB::commit();
@@ -493,33 +480,28 @@ class ApiSubscription extends Controller
         }
 
         $this->deleteOutlet($data['id_subscription']);
-        if ( !$data['is_all_outlet'] ) {
-        	 if (isset($data['id_outlet'])) {
-		        $outlets = $data['id_outlet'];
+        if (!$data['is_all_outlet']) {
+            if (isset($data['id_outlet'])) {
+                $outlets = $data['id_outlet'];
 
-	            $saveOutlet = $this->saveOutlet($subs['id_subscription'], $data['id_outlet']);
-	            unset($data['id_outlet']);
-        	}
-        	elseif (isset($data['id_outlet_group'])) {
-        		$outlet_groups = $data['id_outlet_group'];
+                $saveOutlet = $this->saveOutlet($subs['id_subscription'], $data['id_outlet']);
+                unset($data['id_outlet']);
+            } elseif (isset($data['id_outlet_group'])) {
+                $outlet_groups = $data['id_outlet_group'];
 
-	            $save_outlet_group = $this->saveOutletGroup($subs['id_subscription'], $data['id_outlet_group']);
-	            unset($data['id_outlet_group']);	
-        	}
+                $save_outlet_group = $this->saveOutletGroup($subs['id_subscription'], $data['id_outlet_group']);
+                unset($data['id_outlet_group']);
+            }
         }
 
         if (isset($data['id_product'])) {
-
             $data['is_all_product'] = null;
-        	$products = $data['id_product'];
+            $products = $data['id_product'];
             // DELETE
             $this->deleteProduct($data['id_subscription']);
-            if ( ($data['id_product'][0]??0) == 'all') 
-            {
+            if (($data['id_product'][0] ?? 0) == 'all') {
                 $data['is_all_product'] = 1;
-            }
-            else
-            {
+            } else {
                 // SAVE
                 $data['is_all_product'] = 0;
                 $saveOutlet = $this->saveProduct($subs['id_subscription'], $data['id_product'], $subs['product_type']);
@@ -529,17 +511,15 @@ class ApiSubscription extends Controller
 
         $delete_payment = SubscriptionPaymentMethod::where('id_subscription', $data['id_subscription'])->delete();
         if (isset($data['payment_method'])) {
-        	if(in_array('all', $data['payment_method'])){
+            if (in_array('all', $data['payment_method'])) {
                 $data['is_all_payment'] = 1;
-        	}
-        	else
-            {
+            } else {
                 $data['is_all_payment'] = 0;
                 $saveOutlet = $this->savePayment($subs['id_subscription'], $data['payment_method']);
             }
             unset($data['payment_method']);
-        }else{
-        	$data['is_all_payment'] = 1;
+        } else {
+            $data['is_all_payment'] = 1;
         }
 
         $delete_shipment = SubscriptionShipmentMethod::where('id_subscription', $data['id_subscription'])->delete();
@@ -550,10 +530,10 @@ class ApiSubscription extends Controller
 
         $brand_product_messages = [];
         if (!empty($outlets) && !empty($products) && $data['is_all_outlet'] != 1 && $data['is_all_product'] != 1) {
-        	$check_brand_product = app($this->promo)->checkBrandProduct($outlets, $products);
-        	if ($check_brand_product['status'] == false) {
-        		$brand_product_messages = $check_brand_product['messages']??['Outlet tidak mempunyai produk dengan brand yang sesuai.'];
-        	}
+            $check_brand_product = app($this->promo)->checkBrandProduct($outlets, $products);
+            if ($check_brand_product['status'] == false) {
+                $brand_product_messages = $check_brand_product['messages'] ?? ['Outlet tidak mempunyai produk dengan brand yang sesuai.'];
+            }
         }
 
         $save = Subscription::where('id_subscription', $data['id_subscription'])->update($data);
@@ -567,7 +547,7 @@ class ApiSubscription extends Controller
         $save = MyHelper::checkCreate($save);
 
         if (!empty($brand_product_messages)) {
-        	$save['brand_product_error'] = $brand_product_messages;
+            $save['brand_product_error'] = $brand_product_messages;
         }
 
         return response()->json($save);
@@ -588,17 +568,17 @@ class ApiSubscription extends Controller
             $data_content[$key]['id_subscription'] = $post['id_subscription'];
             $data_content[$key]['id_subscription_content'] = $value;
             $data_content[$key]['title'] = $post['content_title'][$key];
-            $data_content[$key]['is_active'] = ($post['visible'][$key+1]??0) ? 1 : null;
+            $data_content[$key]['is_active'] = ($post['visible'][$key + 1] ?? 0) ? 1 : null;
             $data_content[$key]['order'] = ($content_order++);
             $data_content[$key]['created_at'] = date('Y-m-d H:i:s');
             $data_content[$key]['updated_at'] = date('Y-m-d H:i:s');
 
             $detail_order = 1;
-            if ( ($post['id_content_detail'][$key+1]??0) ) {
-                foreach ($post['id_content_detail'][$key+1] as $key2 => $value2) {
+            if (($post['id_content_detail'][$key + 1] ?? 0)) {
+                foreach ($post['id_content_detail'][$key + 1] as $key2 => $value2) {
                     $data_content_detail[$key][$key2]['id_subscription_content'] = $value;
                     $data_content_detail[$key][$key2]['id_subscription_content_detail'] = $value2;
-                    $data_content_detail[$key][$key2]['content'] = $post['content_detail'][$key+1][$key2];
+                    $data_content_detail[$key][$key2]['content'] = $post['content_detail'][$key + 1][$key2];
                     $data_content_detail[$key][$key2]['order'] = $detail_order++;
                     $data_content_detail[$key][$key2]['created_at'] = date('Y-m-d H:i:s');
                     $data_content_detail[$key][$key2]['updated_at'] = date('Y-m-d H:i:s');
@@ -607,19 +587,16 @@ class ApiSubscription extends Controller
         }
 
         // hapus content & detail
-        $del_content = SubscriptionContent::where('id_subscription','=',$post['id_subscription'])->delete();
+        $del_content = SubscriptionContent::where('id_subscription', '=', $post['id_subscription'])->delete();
 
         // create content & detail
-        foreach ($post['id_subscription_content'] as $key => $value) 
-        {
+        foreach ($post['id_subscription_content'] as $key => $value) {
             $save = SubscriptionContent::create($data_content[$key]);
 
             $id_subscription_content = $save['id_subscription_content'];
 
-            if ( ($post['id_content_detail'][$key+1]??0) ) {
-
-                foreach ($post['id_content_detail'][$key+1] as $key2 => $value2) {
-
+            if (($post['id_content_detail'][$key + 1] ?? 0)) {
+                foreach ($post['id_content_detail'][$key + 1] as $key2 => $value2) {
                     $data_content_detail[$key][$key2]['id_subscription_content'] = $id_subscription_content;
 
                     $save = SubscriptionContentDetail::create($data_content_detail[$key][$key2]);
@@ -629,7 +606,7 @@ class ApiSubscription extends Controller
 
         // update description
         $data_subs['subscription_description'] = $post['subscription_description'];
-        $save = Subscription::where('id_subscription','=',$post['id_subscription'])->update($data_subs);
+        $save = Subscription::where('id_subscription', '=', $post['id_subscription'])->update($data_subs);
 
         if ($save) {
             DB::commit();
@@ -639,7 +616,7 @@ class ApiSubscription extends Controller
         return response()->json(MyHelper::checkUpdate($save));
     }
 
-    public function createOrUpdateContent($data, $source='subscription')
+    public function createOrUpdateContent($data, $source = 'subscription')
     {
         $post = $data;
         $data_content = [];
@@ -647,24 +624,24 @@ class ApiSubscription extends Controller
         $content_order = 1;
 
         if ($source == 'deals') {
-        	$contentTable = new DealsContent;
-        	$contentTableDetail = new DealsContentDetail;
-        }elseif ($source == 'deals_promotion') {
-        	$contentTable = new DealsPromotionContent;
-        	$contentTableDetail = new DealsPromotionContentDetail;
-        	$source = 'deals';
-        }else{
-        	$contentTable = new SubscriptionContent;
-        	$contentTableDetail = new SubscriptionContentDetail;
+            $contentTable = new DealsContent();
+            $contentTableDetail = new DealsContentDetail();
+        } elseif ($source == 'deals_promotion') {
+            $contentTable = new DealsPromotionContent();
+            $contentTableDetail = new DealsPromotionContentDetail();
+            $source = 'deals';
+        } else {
+            $contentTable = new SubscriptionContent();
+            $contentTableDetail = new SubscriptionContentDetail();
         }
 
         //Rapiin data yg masuk
         $count = 0;
-        foreach ($post['id_'.$source.'_content'] as $key => $value) {
-            $data_content[$count]['id_'.$source] = $post['id_'.$source];
-            $data_content[$count]['id_'.$source.'_content'] = $value;
+        foreach ($post['id_' . $source . '_content'] as $key => $value) {
+            $data_content[$count]['id_' . $source] = $post['id_' . $source];
+            $data_content[$count]['id_' . $source . '_content'] = $value;
             $data_content[$count]['title'] = $post['content_title'][$key];
-            $data_content[$count]['is_active'] = ($post['visible'][$key+1]??0) ? 1 : null;
+            $data_content[$count]['is_active'] = ($post['visible'][$key + 1] ?? 0) ? 1 : null;
             $data_content[$count]['order'] = ($content_order++);
             $data_content[$count]['created_at'] = date('Y-m-d H:i:s');
             $data_content[$count]['updated_at'] = date('Y-m-d H:i:s');
@@ -673,48 +650,42 @@ class ApiSubscription extends Controller
         }
 
         $count = 0;
-        foreach ($post['content_detail']??[] as $key => $value) {
+        foreach ($post['content_detail'] ?? [] as $key => $value) {
             $detail_order = 1;
-            if ( ($post['id_content_detail'][$key]??0) ) {
+            if (($post['id_content_detail'][$key] ?? 0)) {
                 foreach ($post['id_content_detail'][$key] as $key2 => $value2) {
-                    $data_content_detail[$count][$key2]['id_'.$source.'_content'] = $value;
-                    $data_content_detail[$count][$key2]['id_'.$source.'_content_detail'] = $value2;
+                    $data_content_detail[$count][$key2]['id_' . $source . '_content'] = $value;
+                    $data_content_detail[$count][$key2]['id_' . $source . '_content_detail'] = $value2;
                     $data_content_detail[$count][$key2]['content'] = $post['content_detail'][$key][$key2];
                     $data_content_detail[$count][$key2]['order'] = $detail_order++;
                     $data_content_detail[$count][$key2]['created_at'] = date('Y-m-d H:i:s');
                     $data_content_detail[$count][$key2]['updated_at'] = date('Y-m-d H:i:s');
                 }
             }
-        	$count++;
+            $count++;
         }
 
         // hapus content & detail
-        $del_content = $contentTable->where('id_'.$source,'=',$post['id_'.$source])->delete();
+        $del_content = $contentTable->where('id_' . $source, '=', $post['id_' . $source])->delete();
 
         // create content & detail
-        foreach ($post['id_'.$source.'_content'] as $key => $value) 
-        {
+        foreach ($post['id_' . $source . '_content'] as $key => $value) {
             $save = $contentTable->create($data_content[$key]);
 
-            $id_content = $save['id_'.$source.'_content'];
+            $id_content = $save['id_' . $source . '_content'];
 
-            if ( ($post['id_content_detail'][$key+1]??0) ) {
-
-                foreach ($post['id_content_detail'][$key+1] as $key2 => $value2) {
-
-                    $data_content_detail[$key][$key2]['id_'.$source.'_content'] = $id_content;
+            if (($post['id_content_detail'][$key + 1] ?? 0)) {
+                foreach ($post['id_content_detail'][$key + 1] as $key2 => $value2) {
+                    $data_content_detail[$key][$key2]['id_' . $source . '_content'] = $id_content;
 
                     $save = $contentTableDetail->create($data_content_detail[$key][$key2]);
                 }
             }
         }
 
-        if ($save) 
-        {
+        if ($save) {
             return true;
-        }
-        else
-        {
+        } else {
             return false;
         }
     }
@@ -723,7 +694,7 @@ class ApiSubscription extends Controller
     {
         $data = $request->json()->all();
 
-        DB::beginTransaction();     
+        DB::beginTransaction();
         $new_data = $this->checkInputan($data);
 
         //update subscription outlet
@@ -731,12 +702,9 @@ class ApiSubscription extends Controller
             $new_data['is_all_outlet'] = null;
             // DELETE
             $this->deleteOutlet($data['id_subscription']);
-            if ( ($data['id_outlet'][0]??0) == 'all') 
-            {
+            if (($data['id_outlet'][0] ?? 0) == 'all') {
                 $new_data['is_all_outlet'] = 1;
-            }
-            else
-            {
+            } else {
                 // SAVE
                 $new_data['is_all_outlet'] = 0;
                 $saveOutlet = $this->saveOutlet($data['id_subscription'], $data['id_outlet']);
@@ -746,16 +714,12 @@ class ApiSubscription extends Controller
 
         // update subscription product
         if (isset($data['id_product'])) {
-
             $data['is_all_product'] = null;
             // DELETE
             $this->deleteProduct($data['id_subscription']);
-            if ( ($data['id_product'][0]??0) == 'all') 
-            {
+            if (($data['id_product'][0] ?? 0) == 'all') {
                 $new_data['is_all_product'] = 1;
-            }
-            else
-            {
+            } else {
                 // SAVE
                 $new_data['is_all_product'] = 0;
                 $saveProduct = $this->saveProduct($data['id_subscription'], $data['id_product']);
@@ -788,11 +752,10 @@ class ApiSubscription extends Controller
         }
 
         return response()->json(MyHelper::checkUpdate($save));
-
     }
 
     /* SAVE BRAND */
-    function saveBrand($id_subs, $id_brand = [])
+    public function saveBrand($id_subs, $id_brand = [])
     {
         $data = [];
 
@@ -815,7 +778,7 @@ class ApiSubscription extends Controller
     }
 
     /* SAVE OUTLET */
-    function saveOutlet($id_subs, $id_outlet = [])
+    public function saveOutlet($id_subs, $id_outlet = [])
     {
         $dataOutlet = [];
 
@@ -840,7 +803,7 @@ class ApiSubscription extends Controller
     }
 
     /* SAVE OUTLET */
-    function saveOutletGroup($id_subs, $id_outlet_group = [])
+    public function saveOutletGroup($id_subs, $id_outlet_group = [])
     {
         $data_outlet_group = [];
 
@@ -865,10 +828,10 @@ class ApiSubscription extends Controller
     }
 
     /* SAVE PRODUCT */
-    function saveProduct($id_subs, $id_product = [], $product_type = 'single')
+    public function saveProduct($id_subs, $id_product = [], $product_type = 'single')
     {
         $data_product = [];
-		$data_product = app($this->promo_campaign)->getProductInsertFormat($id_product, $id_table = 'id_subscription', $id_subs);
+        $data_product = app($this->promo_campaign)->getProductInsertFormat($id_product, $id_table = 'id_subscription', $id_subs);
 
         if (!empty($data_product)) {
             $save = SubscriptionProduct::insert($data_product);
@@ -882,7 +845,7 @@ class ApiSubscription extends Controller
     }
 
     /* SAVE PAYMENT */
-    function savePayment($id_subs, $payment = [])
+    public function savePayment($id_subs, $payment = [])
     {
         $data_payment = [];
 
@@ -907,65 +870,64 @@ class ApiSubscription extends Controller
     }
 
     /* SAVE SHIPMENT */
-    function saveShipment($id_subs, $shipment = [], $data_subs)
+    public function saveShipment($id_subs, $shipment = [], $data_subs = null)
     {
         $data_shipment = [];
         $data = $data_subs;
 
-        if(in_array('all', $shipment) && $data['subscription_discount_type'] != 'discount_delivery'){
+        if (in_array('all', $shipment) && $data['subscription_discount_type'] != 'discount_delivery') {
             $data['is_all_shipment'] = 1;
-    	}
-    	else{
+        } else {
             $data['is_all_shipment'] = 0;
 
-	        $shipment = array_flip($shipment);
-	        unset($shipment['all']);
-	        $shipment = array_flip($shipment);
+            $shipment = array_flip($shipment);
+            unset($shipment['all']);
+            $shipment = array_flip($shipment);
 
-	        foreach ($shipment as $value) {
-	        	if ($value == 'Pickup Order' && $data['subscription_discount_type'] == 'discount_delivery') {
-	        		continue;
-	        	}
+            foreach ($shipment as $value) {
+                if ($value == 'Pickup Order' && $data['subscription_discount_type'] == 'discount_delivery') {
+                    continue;
+                }
 
-	            array_push($data_shipment, [
-	                'shipment_method' => $value,
-	                'id_subscription' => $id_subs,
-	                'created_at' => date('Y-m-d H:i:s'),
-	                'updated_at' => date('Y-m-d H:i:s')
-	            ]);
-	        }
+                array_push($data_shipment, [
+                    'shipment_method' => $value,
+                    'id_subscription' => $id_subs,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s')
+                ]);
+            }
 
-	        if (empty($data_shipment)) {
-	        	if ($data['subscription_discount_type'] != 'discount_delivery') {
-	        		$delivery_pickup = [
-	                	'id_subscription' => $id_subs,
-		            	'shipment_method' => 'Pickup Order',
-		                'created_at' => date('Y-m-d H:i:s'),
-		                'updated_at' => date('Y-m-d H:i:s')
-	            	];
-	        		$data_shipment[] = $delivery_pickup;
-	        	}
+            if (empty($data_shipment)) {
+                if ($data['subscription_discount_type'] != 'discount_delivery') {
+                    $delivery_pickup = [
+                        'id_subscription' => $id_subs,
+                        'shipment_method' => 'Pickup Order',
+                        'created_at' => date('Y-m-d H:i:s'),
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ];
+                    $data_shipment[] = $delivery_pickup;
+                }
 
-	        	$delivery_gosend = [
-	                'id_subscription' => $id_subs,
-	            	'shipment_method' => 'GO-SEND',
-	                'created_at' => date('Y-m-d H:i:s'),
-	                'updated_at' => date('Y-m-d H:i:s')
-	        	];
-	        	
-	        	$data_shipment[] = $delivery_gosend;
-	        }
+                $delivery_gosend = [
+                    'id_subscription' => $id_subs,
+                    'shipment_method' => 'GO-SEND',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s')
+                ];
 
-	        if (!empty($data_shipment)) {
-	            $save = SubscriptionShipmentMethod::insert($data_shipment);
-	        }
+                $data_shipment[] = $delivery_gosend;
+            }
+
+            if (!empty($data_shipment)) {
+                $save = SubscriptionShipmentMethod::insert($data_shipment);
+            }
         }
 
         return $data['is_all_shipment'];
     }
 
     /* DELETE OUTLET */
-    function deleteBrand($id_subscription)
+    public function deleteBrand($id_subscription)
     {
         $delete = SubscriptionBrand::where('id_subscription', $id_subscription)->delete();
 
@@ -973,7 +935,7 @@ class ApiSubscription extends Controller
     }
 
     /* DELETE OUTLET */
-    function deleteOutlet($id_subscription)
+    public function deleteOutlet($id_subscription)
     {
         $delete = SubscriptionOutlet::where('id_subscription', $id_subscription)->delete();
         $delete = SubscriptionOutletGroup::where('id_subscription', $id_subscription)->delete();
@@ -982,7 +944,7 @@ class ApiSubscription extends Controller
     }
 
     /* DELETE PRODUCT */
-    function deleteProduct($id_subscription)
+    public function deleteProduct($id_subscription)
     {
         $delete = SubscriptionProduct::where('id_subscription', $id_subscription)->delete();
 
@@ -993,7 +955,7 @@ class ApiSubscription extends Controller
     {
         $post = $request->json()->all();
         $data = Subscription::
-                    where('id_subscription','=',$post['id_subscription'])
+                    where('id_subscription', '=', $post['id_subscription'])
                     ->select(
                         'id_subscription',
                         'subscription_title',
@@ -1015,27 +977,27 @@ class ApiSubscription extends Controller
     {
         $post = $request->json()->all();
         $data = Subscription::
-                    where('id_subscription','=',$post['id_subscription'])
+                    where('id_subscription', '=', $post['id_subscription'])
                     ->with([
-                    	'outlets' => function($q){
-	                        $q->select(
-	                            'outlets.id_outlet',
-	                            'outlet_code',
-	                            'outlet_name'
-	                        );
-	                    },
-	                    'subscription_products.product' => function($q){
-	                    	$q->select(
-	                    		'products.id_product',
-	                    		'product_code',
-	                    		'product_name'
-	                    	);
-	                    },
-	                    'subscription_shipment_method',
-	                    'subscription_payment_method',
-	                    'subscription_brands',
-	                    'outlet_groups'
-	                ])
+                        'outlets' => function ($q) {
+                            $q->select(
+                                'outlets.id_outlet',
+                                'outlet_code',
+                                'outlet_name'
+                            );
+                        },
+                        'subscription_products.product' => function ($q) {
+                            $q->select(
+                                'products.id_product',
+                                'product_code',
+                                'product_name'
+                            );
+                        },
+                        'subscription_shipment_method',
+                        'subscription_payment_method',
+                        'subscription_brands',
+                        'outlet_groups'
+                    ])
                     ->first()
                     ->toArray();
         return response()->json(MyHelper::checkGet($data));
@@ -1045,7 +1007,7 @@ class ApiSubscription extends Controller
     {
         $post = $request->json()->all();
         $data = Subscription::
-                    where('id_subscription','=',$post['id_subscription'])
+                    where('id_subscription', '=', $post['id_subscription'])
                     ->with(
                         'subscription_content',
                         'subscription_content.subscription_content_details'
@@ -1060,11 +1022,11 @@ class ApiSubscription extends Controller
     {
         $post = $request->json()->all();
         $data = Subscription::
-                    where('id_subscription','=',$post['id_subscription'])
+                    where('id_subscription', '=', $post['id_subscription'])
                     ->with([
                         'subscription_content',
                         'subscription_content.subscription_content_details',
-                        'outlets' => function($q){
+                        'outlets' => function ($q) {
                             $q->select(
                                 'outlets.id_outlet',
                                 'outlet_code',
@@ -1074,23 +1036,23 @@ class ApiSubscription extends Controller
                                 'outlet_email'
                             );
                         },
-                        'subscription_products.product' => function($q){
-	                    	$q->select(
-	                    		'products.id_product',
-	                    		'product_code',
-	                    		'product_name'
-	                    	);
-	                    },
-	                    'subscription_products.brand',
-	                    'subscription_products.product_variant_pivot.product_variant',
-	                    'brand',
-	                    'subscription_shipment_method',
-	                    'subscription_payment_method',
-	                    'brands',
-	                    'outlet_groups'
+                        'subscription_products.product' => function ($q) {
+                            $q->select(
+                                'products.id_product',
+                                'product_code',
+                                'product_name'
+                            );
+                        },
+                        'subscription_products.brand',
+                        'subscription_products.product_variant_pivot.product_variant',
+                        'brand',
+                        'subscription_shipment_method',
+                        'subscription_payment_method',
+                        'brands',
+                        'outlet_groups'
                     ])
-                    ->withCount(['subscription_users' => function($q) {
-                    	$q->where('paid_status','!=','Cancelled');
+                    ->withCount(['subscription_users' => function ($q) {
+                        $q->where('paid_status', '!=', 'Cancelled');
                     }])
                     // ->select(
                     //     'subscription_description'
@@ -1099,47 +1061,46 @@ class ApiSubscription extends Controller
                     ->toArray();
 
         if ($data) {
-
             $total = SubscriptionUser::
                     where('id_subscription', '=', $post['id_subscription'])
                     ->select(
                         'subscription_users.*',
                         'users.*'
                     )
-                    ->join('users', 'subscription_users.id_user','=','users.id')
+                    ->join('users', 'subscription_users.id_user', '=', 'users.id')
                     ->withCount(['subscription_user_vouchers as kuota'])
-                    ->withCount(['subscription_user_vouchers as used' => function($q){
+                    ->withCount(['subscription_user_vouchers as used' => function ($q) {
                         $q->whereNotNull('used_at');
                     }])
-                    ->withCount(['subscription_user_vouchers as available' => function($q){
+                    ->withCount(['subscription_user_vouchers as available' => function ($q) {
                         $q->whereNull('used_at');
                     }])
                     ->groupBy('id_subscription_user');
             $foreign = [];
-            $this->filterParticipate($total,$request,$foreign);
+            $this->filterParticipate($total, $request, $foreign);
             foreach ($foreign as $value) {
                 $total->leftJoin(...$value);
             }
             $total = $total->paginate(1)->toArray();
 
-            $data['total'] = $total['total']??0;
+            $data['total'] = $total['total'] ?? 0;
 
-            $getProduct = app($this->promo_campaign)->getProduct('subscription',$data);
-    		$desc = app($this->promo_campaign)->getPromoDescription('subscription', $data, $getProduct['product']??'', true);
-    		$data['description'] = $desc;
+            $getProduct = app($this->promo_campaign)->getProduct('subscription', $data);
+            $desc = app($this->promo_campaign)->getPromoDescription('subscription', $data, $getProduct['product'] ?? '', true);
+            $data['description'] = $desc;
         }
 
-        $data['total_used_voucher'] = SubscriptionUserVoucher::join('subscription_users', 'subscription_user_vouchers.id_subscription_user','=','subscription_users.id_subscription_user')->where('id_subscription','=',$post['id_subscription'])->whereNotNull('used_at')->count();
+        $data['total_used_voucher'] = SubscriptionUserVoucher::join('subscription_users', 'subscription_user_vouchers.id_subscription_user', '=', 'subscription_users.id_subscription_user')->where('id_subscription', '=', $post['id_subscription'])->whereNotNull('used_at')->count();
 
         return response()->json(MyHelper::checkGet($data));
     }
 
     public function listSubscription(ListSubscription $request)
     {
-        $post = $request->json()->all(); 
-        $subs = (new Subscription)->newQuery();
+        $post = $request->json()->all();
+        $subs = (new Subscription())->newQuery();
         $user = $request->user();
-        $curBalance = (int) $user->balance??0;
+        $curBalance = (int) $user->balance ?? 0;
 
         if ($request->json('forSelect2')) {
             return MyHelper::checkGet($subs->with(['outlets', 'users'])->whereDoesntHave('featured_subscriptions')->get());
@@ -1151,11 +1112,11 @@ class ApiSubscription extends Controller
                         ->addSelect('subscriptions.*')->distinct();
         }
 
-        if ( empty($request->json('admin')) ) {
+        if (empty($request->json('admin'))) {
             $subs = $subs->whereNotNull('subscription_step_complete');
         }
 
-        if ( $request->json('with_brand') ) {
+        if ($request->json('with_brand')) {
             $subs = $subs->with(['brand', 'brands']);
         }
 
@@ -1164,17 +1125,17 @@ class ApiSubscription extends Controller
             $subs = $subs->where('id_subscription', '=', $request->json('id_subscription'))
                         ->with([
                             'outlets.city',
-                            'subscription_content' => function($q) {
+                            'subscription_content' => function ($q) {
                                 $q->orderBy('order')
                                     ->where('is_active', '=', 1)
                                     ->addSelect(
-                                        'id_subscription', 
-                                        'id_subscription_content', 
+                                        'id_subscription',
+                                        'id_subscription_content',
                                         'title',
                                         'order'
                                     );
                             },
-                            'subscription_content.subscription_content_details' => function($q) {
+                            'subscription_content.subscription_content_details' => function ($q) {
                                 $q->orderBy('order')
                                     ->addSelect(
                                         'id_subscription_content_detail',
@@ -1195,7 +1156,7 @@ class ApiSubscription extends Controller
         }
 
         if ($request->json('key_free')) {
-            $subs = $subs->where(function($query) use ($request){
+            $subs = $subs->where(function ($query) use ($request) {
                 $query->where('subscription_title', 'LIKE', '%' . $request->json('key_free') . '%')
                     ->orWhere('subscription_sub_title', 'LIKE', '%' . $request->json('key_free') . '%');
             });
@@ -1207,11 +1168,11 @@ class ApiSubscription extends Controller
             if ($request->json('subscription_type_paid')) {
                 $query->orWhere(function ($amp) use ($request) {
                     $amp->whereNotNull('subscription_price_cash');
-                    if(is_numeric($val=$request->json('price_range_start'))){
-                        $amp->where('subscription_price_cash','>=',$val);
+                    if (is_numeric($val = $request->json('price_range_start'))) {
+                        $amp->where('subscription_price_cash', '>=', $val);
                     }
-                    if(is_numeric($val=$request->json('price_range_end'))){
-                        $amp->where('subscription_price_cash','<=',$val);
+                    if (is_numeric($val = $request->json('price_range_end'))) {
+                        $amp->where('subscription_price_cash', '<=', $val);
                     }
                 });
             }
@@ -1220,11 +1181,11 @@ class ApiSubscription extends Controller
             if ($request->json('subscription_type_point')) {
                 $query->orWhere(function ($amp) use ($request) {
                     $amp->whereNotNull('subscription_price_point');
-                    if(is_numeric($val=$request->json('point_range_start'))){
-                        $amp->where('subscription_price_point','>=',$val);
+                    if (is_numeric($val = $request->json('point_range_start'))) {
+                        $amp->where('subscription_price_point', '>=', $val);
                     }
-                    if(is_numeric($val=$request->json('point_range_end'))){
-                        $amp->where('subscription_price_point','<=',$val);
+                    if (is_numeric($val = $request->json('point_range_end'))) {
+                        $amp->where('subscription_price_point', '<=', $val);
                     }
                 });
             }
@@ -1246,21 +1207,17 @@ class ApiSubscription extends Controller
 
         if ($request->json('alphabetical')) {
             $subs->orderBy('subscription_title', 'ASC');
-
-        } else if ($request->json('alphabetical-desc')) {
+        } elseif ($request->json('alphabetical-desc')) {
             $subs->orderBy('subscription_title', 'DESC');
-
-        } else if ($request->json('newest')) {
+        } elseif ($request->json('newest')) {
             $subs->orderBy('subscription_publish_start', 'DESC');
-
-        } else if ($request->json('oldest')) {
+        } elseif ($request->json('oldest')) {
             $subs->orderBy('subscription_publish_start', 'ASC');
-
         } else {
             $subs->orderBy('subscription_end', 'ASC');
         }
         if ($request->json('id_city')) {
-            $subs->with('outlets','outlets.city');
+            $subs->with('outlets', 'outlets.city');
         }
         if ($request->json('created_at')) {
             $subs->orderBy('created_at', 'DESC');
@@ -1276,7 +1233,6 @@ class ApiSubscription extends Controller
             }
 
             $subs = $this->kota($subs, $city, $request->json('admin'));
-
         }
 
         if ($request->json('highest_available_subscription')) {
@@ -1335,39 +1291,39 @@ class ApiSubscription extends Controller
             //url webview
             $subs[0]['webview_url'] = config('url.app_url') . "api/webview/subscription/" . $subs[0]['id_subscription'];
             // text tombol beli
-            $subs[0]['button_text'] = $subs[0]['subscription_price_type']=='free'?'Ambil':'Tukar';
+            $subs[0]['button_text'] = $subs[0]['subscription_price_type'] == 'free' ? 'Ambil' : 'Tukar';
             $subs[0]['button_status'] = 0;
             //text konfirmasi pembelian
-            if($subs[0]['subscription_price_type']=='free'){
+            if ($subs[0]['subscription_price_type'] == 'free') {
                 //voucher free
-                $payment_message = Setting::where('key', 'payment_messages')->pluck('value_text')->first()??'Kamu yakin ingin membeli subscription ini?';
-                $payment_message = MyHelper::simpleReplace($payment_message,['subscription_title'=>$subs[0]['subscription_title']]);
-            }elseif($subs[0]['subscription_price_type']=='point'){
-                $payment_message = Setting::where('key', 'payment_messages_point')->pluck('value_text')->first()??'Anda akan menukarkan %point% points anda dengan subscription %subscription_title%?';
-                $payment_message = MyHelper::simpleReplace($payment_message,['point'=>$subs[0]['subscription_price_point'],'subscription_title'=>$subs[0]['subscription_title']]);
-            }else{
-                $payment_message = Setting::where('key', 'payment_messages')->pluck('value_text')->first()??'Kamu yakin ingin membeli subscription %subscription_title%?';
-                $payment_message = MyHelper::simpleReplace($payment_message,['subscription_title'=>$subs[0]['subscription_title']]);
+                $payment_message = Setting::where('key', 'payment_messages')->pluck('value_text')->first() ?? 'Kamu yakin ingin membeli subscription ini?';
+                $payment_message = MyHelper::simpleReplace($payment_message, ['subscription_title' => $subs[0]['subscription_title']]);
+            } elseif ($subs[0]['subscription_price_type'] == 'point') {
+                $payment_message = Setting::where('key', 'payment_messages_point')->pluck('value_text')->first() ?? 'Anda akan menukarkan %point% points anda dengan subscription %subscription_title%?';
+                $payment_message = MyHelper::simpleReplace($payment_message, ['point' => $subs[0]['subscription_price_point'],'subscription_title' => $subs[0]['subscription_title']]);
+            } else {
+                $payment_message = Setting::where('key', 'payment_messages')->pluck('value_text')->first() ?? 'Kamu yakin ingin membeli subscription %subscription_title%?';
+                $payment_message = MyHelper::simpleReplace($payment_message, ['subscription_title' => $subs[0]['subscription_title']]);
             }
 
-            $payment_success_message = Setting::where('key', 'payment_success_messages')->pluck('value_text')->first()??'Anda telah membeli subscription %subscription_title%';
-            $payment_success_message = MyHelper::simpleReplace($payment_success_message,['subscription_title'=>$subs[0]['subscription_title']]);
+            $payment_success_message = Setting::where('key', 'payment_success_messages')->pluck('value_text')->first() ?? 'Anda telah membeli subscription %subscription_title%';
+            $payment_success_message = MyHelper::simpleReplace($payment_success_message, ['subscription_title' => $subs[0]['subscription_title']]);
 
 
-            $subs[0]['payment_message'] = $payment_message??'';
+            $subs[0]['payment_message'] = $payment_message ?? '';
             $subs[0]['payment_success_message'] = $payment_success_message;
 
-            if($subs[0]['subscription_price_type']=='free'&&$subs[0]['subscription_status']=='available'){
-                $subs[0]['button_status']=1;
-            }else {
-                if($subs[0]['subscription_price_type']=='point'){
-                    $subs[0]['button_status']=$subs[0]['subscription_price_point']<=$curBalance?1:0;
-                    if($subs[0]['subscription_price_point']>$curBalance){
-                        $subs[0]['payment_fail_message'] = Setting::where('key', 'payment_fail_messages')->pluck('value_text')->first()??'Mohon maaf, point anda tidak cukup';
+            if ($subs[0]['subscription_price_type'] == 'free' && $subs[0]['subscription_status'] == 'available') {
+                $subs[0]['button_status'] = 1;
+            } else {
+                if ($subs[0]['subscription_price_type'] == 'point') {
+                    $subs[0]['button_status'] = $subs[0]['subscription_price_point'] <= $curBalance ? 1 : 0;
+                    if ($subs[0]['subscription_price_point'] > $curBalance) {
+                        $subs[0]['payment_fail_message'] = Setting::where('key', 'payment_fail_messages')->pluck('value_text')->first() ?? 'Mohon maaf, point anda tidak cukup';
                     }
-                }else{
+                } else {
                     $subs[0]['button_text'] = 'Beli';
-                    if($subs[0]['subscription_status']=='available'){
+                    if ($subs[0]['subscription_status'] == 'available') {
                         $subs[0]['button_status'] = 1;
                     }
                 }
@@ -1396,8 +1352,8 @@ class ApiSubscription extends Controller
                 $next = false;
             }
 
-            for ($i=$start; $i < $end; $i++) {
-                $subs[$i]['time_to_end']=strtotime($subs[$i]['subscription_end'])-time();
+            for ($i = $start; $i < $end; $i++) {
+                $subs[$i]['time_to_end'] = strtotime($subs[$i]['subscription_end']) - time();
 
                 $list[$i]['id_subscription'] = $subs[$i]['id_subscription'];
                 $list[$i]['url_subscription_image'] = $subs[$i]['url_subscription_image'];
@@ -1416,10 +1372,8 @@ class ApiSubscription extends Controller
 
             $result['current_page']  = $page;
             if (!$request->json('id_subscription')) {
-                
                 $result['data']          = $listData;
-            }else{
-
+            } else {
                 $result['data']          = $resultData;
             }
             $result['total']         = count($resultData);
@@ -1430,29 +1384,28 @@ class ApiSubscription extends Controller
             }
 
             // print_r($deals); exit();
-            if(!$result['total']){
-                $result=[];
+            if (!$result['total']) {
+                $result = [];
             }
 
-            if(
+            if (
                 $request->json('voucher_type_point') ||
                 $request->json('voucher_type_paid') ||
                 $request->json('voucher_type_free') ||
                 $request->json('id_city') ||
                 $request->json('key_free')
-            ){
+            ) {
                 $resultMessage = 'Maaf, voucher yang kamu cari belum tersedia';
-            }else{
+            } else {
                 $resultMessage = 'Nantikan penawaran menarik dari kami';
             }
             return response()->json(MyHelper::checkGet($result, $resultMessage));
-
-        }else{
+        } else {
             return response()->json(MyHelper::checkGet($subs));
         }
     }
 
-    function unlimited($subs)
+    public function unlimited($subs)
     {
         $unlimited = array_filter(array_column($subs, "available_subscription"), function ($subs) {
             if ($subs == "*") {
@@ -1463,7 +1416,7 @@ class ApiSubscription extends Controller
         return $unlimited;
     }
 
-    function limited($subs)
+    public function limited($subs)
     {
         $limited = array_filter(array_column($subs, "available_subscription"), function ($subs) {
             if ($subs != "*") {
@@ -1475,7 +1428,7 @@ class ApiSubscription extends Controller
     }
 
     /* SORT DEALS */
-    function highestAvailableVoucher($subs)
+    public function highestAvailableVoucher($subs)
     {
         usort($subs, function ($a, $b) {
             return $a['available_subscription'] < $b['available_subscription'];
@@ -1484,7 +1437,7 @@ class ApiSubscription extends Controller
         return $subs;
     }
 
-    function lowestAvailableVoucher($subs)
+    public function lowestAvailableVoucher($subs)
     {
         usort($subs, function ($a, $b) {
             return $a['available_subscription'] > $b['available_subscription'];
@@ -1494,7 +1447,7 @@ class ApiSubscription extends Controller
     }
 
     /* INI LIST KOTA */
-    public function kota($subs, $city = "", $admin=false)
+    public function kota($subs, $city = "", $admin = false)
     {
         $timeNow = date('Y-m-d H:i:s');
 
@@ -1524,7 +1477,6 @@ class ApiSubscription extends Controller
 
                 foreach ($kota as $k => $v) {
                     if ($v) {
-
                         $kota[$k]['outlet'] = [];
 
                         foreach ($value['outlets'] as $outlet) {
@@ -1554,18 +1506,18 @@ class ApiSubscription extends Controller
 
             $calc = $value['subscription_total'] - $value['subscription_bought'];
 
-            if ( empty($value['subscription_total']) ) {
+            if (empty($value['subscription_total'])) {
                 $calc = '*';
             }
 
-            if(is_numeric($calc)){
-                if($calc||$admin){
-                    $subs[$key]['percent_subscription'] = $calc*100/$value['subscription_total'];
-                }else{
+            if (is_numeric($calc)) {
+                if ($calc || $admin) {
+                    $subs[$key]['percent_subscription'] = $calc * 100 / $value['subscription_total'];
+                } else {
                     unset($subs[$key]);
                     continue;
                 }
-            }else{
+            } else {
                 $subs[$key]['percent_voucher'] = 100;
             }
             $subs[$key]['available_subscription'] = (string) $calc;
@@ -1587,17 +1539,17 @@ class ApiSubscription extends Controller
         $subs = SubscriptionUser::
                 with([
                     'subscription.outlets.city',
-                    'subscription.subscription_content' => function($q) {
+                    'subscription.subscription_content' => function ($q) {
                         $q->orderBy('order')
                             ->where('is_active', '=', 1)
                             ->addSelect(
-                                'id_subscription', 
-                                'id_subscription_content', 
+                                'id_subscription',
+                                'id_subscription_content',
                                 'title',
                                 'order'
                             );
                     },
-                    'subscription.subscription_content.subscription_content_details' => function($q) {
+                    'subscription.subscription_content.subscription_content_details' => function ($q) {
                         $q->orderBy('order')
                             ->addSelect(
                                 'id_subscription_content_detail',
@@ -1606,43 +1558,43 @@ class ApiSubscription extends Controller
                                 'order'
                             );
                     },
-                    'subscription_user_vouchers' => function($q){
+                    'subscription_user_vouchers' => function ($q) {
                         $q->whereNotNull('used_at');
                     },
-                    'subscription_user_vouchers.transaction' => function($q){
+                    'subscription_user_vouchers.transaction' => function ($q) {
                         $q->select('id_outlet', 'id_transaction');
                     },
-                    'subscription_user_vouchers.transaction.productTransaction' => function($q){
+                    'subscription_user_vouchers.transaction.productTransaction' => function ($q) {
                         $q->select(
                             DB::raw('SUM(transaction_product_qty) as total_item'),
                             'id_transaction_product',
                             'id_transaction'
                         );
                     },
-                    'subscription_user_vouchers.transaction.outlet' => function($q){
-                        $q->select('id_outlet','outlet_name');
+                    'subscription_user_vouchers.transaction.outlet' => function ($q) {
+                        $q->select('id_outlet', 'outlet_name');
                     }
                 ])
                 ->where('id_user', $user['id'])
-                ->where('subscription_expired_at', '>=',date('Y-m-d H:i:s'))
+                ->where('subscription_expired_at', '>=', date('Y-m-d H:i:s'))
                 ->whereIn('paid_status', ['Completed','Free'])
-                ->withCount(['subscription_user_vouchers as used_voucher' => function($q){
+                ->withCount(['subscription_user_vouchers as used_voucher' => function ($q) {
                     $q->whereNotNull('used_at');
                 }])
-                ->withCount(['subscription_user_vouchers as available_voucher' => function($q){
+                ->withCount(['subscription_user_vouchers as available_voucher' => function ($q) {
                     $q->whereNull('used_at');
                 }]);
 
         if (isset($post['expired_start'])) {
-            $subs->whereDate('subscription_expired_at', '>=',date('Y-m-d', strtotime($post['expired_start'])));
+            $subs->whereDate('subscription_expired_at', '>=', date('Y-m-d', strtotime($post['expired_start'])));
         }
 
         if (isset($post['expired_end'])) {
-            $subs->whereDate('subscription_expired_at', '<=',date('Y-m-d', strtotime($post['expired_end'])));
+            $subs->whereDate('subscription_expired_at', '<=', date('Y-m-d', strtotime($post['expired_end'])));
         }
 
         //search by outlet
-        if(isset($post['id_outlet']) && is_numeric($post['id_outlet'])){
+        if (isset($post['id_outlet']) && is_numeric($post['id_outlet'])) {
             $subs->join('subscription_user_vouchers', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
                     ->join('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription')
                     ->join('subscription_outlets', 'subscriptions.id_subscription', 'subscription_outlets.id_subscription')
@@ -1652,16 +1604,16 @@ class ApiSubscription extends Controller
                     ->distinct();
         }
 
-        if(isset($post['key_free']) && $post['key_free'] != null){
-            if(!MyHelper::isJoined($subs,'subscription_user_vouchers')){
+        if (isset($post['key_free']) && $post['key_free'] != null) {
+            if (!MyHelper::isJoined($subs, 'subscription_user_vouchers')) {
                 $subs->leftJoin('subscription_user_vouchers', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user');
             }
-            if(!MyHelper::isJoined($subs,'subscriptions')){
+            if (!MyHelper::isJoined($subs, 'subscriptions')) {
                 $subs->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
             }
             $subs->where(function ($query) use ($post) {
-                $query->where('subscriptions.subscription_title', 'LIKE', '%'.$post['key_free'].'%')
-                        ->orWhere('subscriptions.subscription_sub_title', 'LIKE', '%'.$post['key_free'].'%');
+                $query->where('subscriptions.subscription_title', 'LIKE', '%' . $post['key_free'] . '%')
+                        ->orWhere('subscriptions.subscription_sub_title', 'LIKE', '%' . $post['key_free'] . '%');
             });
         }
 
@@ -1671,13 +1623,11 @@ class ApiSubscription extends Controller
 
         if (isset($post['newest']) && ($post['newest'] == 1 || $post['newest'] == '1')) {
                 $subs = $subs->orderBy('subscription_users.bought_at', 'desc');
-        }
-
-        elseif (isset($post['newest_expired']) && ($post['newest_expired'] == 1 || $post['newest_expired'] == '1')) {
+        } elseif (isset($post['newest_expired']) && ($post['newest_expired'] == 1 || $post['newest_expired'] == '1')) {
             $subs = $subs->orderBy('subscription_expired_at', 'asc');
         }
 
-        if (isset($post['used']) && ($post['used'] == 1 || $post['used'] == '1'))  {
+        if (isset($post['used']) && ($post['used'] == 1 || $post['used'] == '1')) {
             $subs = $subs->orderBy('used_voucher', 'desc');
         }
         if (isset($post['available']) && ($post['available'] == 1 || $post['available'] == '1')) {
@@ -1685,40 +1635,33 @@ class ApiSubscription extends Controller
         }
 
 // return $subs->get();
-        if ( isset($post['id_subscription_user']) ) 
-        {
+        if (isset($post['id_subscription_user'])) {
             $subs = $subs->where('id_subscription_user', '=', $post['id_subscription_user'])
                          ->first()->toArray();
 
             if (!empty($subs)) {
-
                 $subscription = $this->kota([$subs['subscription']], "", $request->json('admin'));
 
-                $subs['outlet_by_city'] = $subscription[0]['outlet_by_city']??'';
+                $subs['outlet_by_city'] = $subscription[0]['outlet_by_city'] ?? '';
             }
             if ($subs) {
                 if (empty($subs['subscription']['subscription_image'])) {
-                    $subs['url_subscription_image'] = config('url.storage_url_api').'img/default.jpg';
-                }
-                else {
-                    $subs['url_subscription_image'] = config('url.storage_url_api').$subs['subscription']['subscription_image'];
+                    $subs['url_subscription_image'] = config('url.storage_url_api') . 'img/default.jpg';
+                } else {
+                    $subs['url_subscription_image'] = config('url.storage_url_api') . $subs['subscription']['subscription_image'];
                 }
                 $subs['time_server'] = date('Y-m-d H:i:s');
-                $subs['time_to_end'] = strtotime($subs['subscription_expired_at'])-time();
-                $subs['url_webview'] = config('url.app_api_url') ."api/webview/mysubscription/". $subs['id_subscription_user'];
+                $subs['time_to_end'] = strtotime($subs['subscription_expired_at']) - time();
+                $subs['url_webview'] = config('url.app_api_url') . "api/webview/mysubscription/" . $subs['id_subscription_user'];
             }
             $data = $subs;
-        }
-        else
-        {
-
+        } else {
             $subs = $subs->get();
             $data = [];
-            if(!empty($subs) && !empty($subs[0])){
+            if (!empty($subs) && !empty($subs[0])) {
                 foreach ($subs as $key => $sub) {
                     //check voucher total
                     if ($sub['subscription_user_vouchers_count'] < $sub['subscription']['subscription_voucher_total']) {
-
                         $data[$key]['id_subscription']              = $sub['subscription']['id_subscription'];
                         $data[$key]['id_subscription_user']         = $sub['id_subscription_user'];
                         $data[$key]['subscription_end']             = date('Y-m-d H:i:s', strtotime($sub['subscription']['subscription_end']));
@@ -1728,14 +1671,13 @@ class ApiSubscription extends Controller
                         $data[$key]['used_voucher']                 = $sub['used_voucher'];
                         $data[$key]['available_voucher']            = $sub['available_voucher'];
                         if (empty($sub['subscription']['subscription_image'])) {
-                            $data[$key]['url_subscription_image'] = config('url.storage_url_api').'img/default.jpg';
-                        }
-                        else {
-                            $data[$key]['url_subscription_image'] = config('url.storage_url_api').$sub['subscription']['subscription_image'];
+                            $data[$key]['url_subscription_image'] = config('url.storage_url_api') . 'img/default.jpg';
+                        } else {
+                            $data[$key]['url_subscription_image'] = config('url.storage_url_api') . $sub['subscription']['subscription_image'];
                         }
 
-                        $data[$key]['time_to_end']                  = strtotime($sub['subscription']['subscription_expired_at'])-time();
-                        $data[$key]['url_webview']                  = config('url.app_api_url') ."api/webview/mysubscription/". $sub['id_subscription_user'];
+                        $data[$key]['time_to_end']                  = strtotime($sub['subscription']['subscription_expired_at']) - time();
+                        $data[$key]['url_webview']                  = config('url.app_api_url') . "api/webview/mysubscription/" . $sub['id_subscription_user'];
                         $data[$key]['time_server']                  = date('Y-m-d H:i:s');
                     }
                 }
@@ -1759,7 +1701,7 @@ class ApiSubscription extends Controller
                     $next = false;
                 }
 
-                for ($i=$start; $i < $end; $i++) {
+                for ($i = $start; $i < $end; $i++) {
                     array_push($resultData, $data[$i]);
                 }
 
@@ -1773,19 +1715,17 @@ class ApiSubscription extends Controller
                 }
 
                 // print_r($deals); exit();
-                if(!$result['total']){
-                    $result=[];
+                if (!$result['total']) {
+                    $result = [];
                 }
                 $data = $result;
-            }
-            else
-            {   
-                $empty_text = Setting::where('key','=','message_mysubscription_empty_header')
-                                ->orWhere('key','=','message_mysubscription_empty_content')
+            } else {
+                $empty_text = Setting::where('key', '=', 'message_mysubscription_empty_header')
+                                ->orWhere('key', '=', 'message_mysubscription_empty_content')
                                 ->orderBy('id_setting')
                                 ->get();
-                $text['header'] = $empty_text[0]['value']??'Anda belum memiliki Paket.';
-                $text['content'] = $empty_text[1]['value']??'Banyak keuntungan dengan berlangganan.';
+                $text['header'] = $empty_text[0]['value'] ?? 'Anda belum memiliki Paket.';
+                $text['content'] = $empty_text[1]['value'] ?? 'Banyak keuntungan dengan berlangganan.';
                 return  response()->json([
                     'status'   => 'fail',
                     'messages' => ['My Subscription is empty'],
@@ -1796,68 +1736,71 @@ class ApiSubscription extends Controller
         return response()->json($this->checkGet($data));
     }
 
-    public static function  checkGet($data, $message = null){
-            if($data && !empty($data)) return ['status' => 'success', 'result' => $data];
-            else if(empty($data)) {
-            	$empty_text = Setting::where('key','=','message_mysubscription_empty_header')
-	                ->orWhere('key','=','message_mysubscription_empty_content')
-	                ->orderBy('id_setting')
-	                ->get();
-	            $text['header'] = $empty_text[0]['value']??'Anda belum memiliki Paket.';
-	            $text['content'] = $empty_text[1]['value']??'Banyak keuntungan dengan berlangganan.';
-	            return [
-	                'status'   => 'fail',
-	                'messages' => ['My Subscription is empty'],
-	                'empty'    => $text,
-	            ];
+    public static function checkGet($data, $message = null)
+    {
+        if ($data && !empty($data)) {
+            return ['status' => 'success', 'result' => $data];
+        } elseif (empty($data)) {
+            $empty_text = Setting::where('key', '=', 'message_mysubscription_empty_header')
+            ->orWhere('key', '=', 'message_mysubscription_empty_content')
+            ->orderBy('id_setting')
+            ->get();
+            $text['header'] = $empty_text[0]['value'] ?? 'Anda belum memiliki Paket.';
+            $text['content'] = $empty_text[1]['value'] ?? 'Banyak keuntungan dengan berlangganan.';
+            return [
+            'status'   => 'fail',
+            'messages' => ['My Subscription is empty'],
+            'empty'    => $text,
+            ];
 
-                /*if($message == null){
-                    $message = 'Maaf, halaman ini tidak tersedia';
-                }
-                return [
-                    'status'    => 'fail', 
-                    'messages'  => [$message], 
-                    'empty'     => [
-                        'header'    => "",
-                        'content'   => ""
-                    ]
-                ];*/
+            /*if($message == null){
+            $message = 'Maaf, halaman ini tidak tersedia';
             }
-            else return ['status' => 'fail', 'messages' => ['failed to retrieve data']];
+            return [
+            'status'    => 'fail',
+            'messages'  => [$message],
+            'empty'     => [
+                'header'    => "",
+                'content'   => ""
+            ]
+            ];*/
+        } else {
+            return ['status' => 'fail', 'messages' => ['failed to retrieve data']];
+        }
     }
 
     /*============================= Start Filter & Sort V2 ================================*/
     public function listSubscriptionV2(Request $request)
     {
         $post = $request->json()->all();
-        $subs = (new Subscription)->newQuery();
+        $subs = (new Subscription())->newQuery();
         $subs->where('subscription_publish_end', '>=', date('Y-m-d H:i:s'));
-		$subs->where('subscription_publish_start', '<=', date('Y-m-d H:i:s'));
+        $subs->where('subscription_publish_start', '<=', date('Y-m-d H:i:s'));
         $subs->where('subscription_end', '>=', date('Y-m-d H:i:s'));
         $subs->where('subscription_step_complete', '=', 1);
-        $subs->where(function($q){
-        	$q->whereColumn('subscription_bought', '<', 'subscription_total')
-        		->orWhere('subscription_total','0');
+        $subs->where(function ($q) {
+            $q->whereColumn('subscription_bought', '<', 'subscription_total')
+                ->orWhere('subscription_total', '0');
         });
 
         if ($request->json('id_outlet') && is_integer($request->json('id_outlet'))) {
             $subs = $subs->leftJoin('subscription_outlets', 'subscriptions.id_subscription', '=', 'subscription_outlets.id_subscription')
-            	->where(function($query) use ($request){
-            		$query->where('id_outlet', $request->json('id_outlet'))
-            			->orWhere('subscriptions.is_all_outlet','=',1);
-            	})
+                ->where(function ($query) use ($request) {
+                    $query->where('id_outlet', $request->json('id_outlet'))
+                        ->orWhere('subscriptions.is_all_outlet', '=', 1);
+                })
                 ->addSelect('subscriptions.*')->distinct();
         }
 
         if ($request->json('key_free')) {
-            $subs = $subs->where(function($query) use ($request){
+            $subs = $subs->where(function ($query) use ($request) {
                 $query->where('subscription_title', 'LIKE', '%' . $request->json('key_free') . '%')
                     ->orWhere('subscription_sub_title', 'LIKE', '%' . $request->json('key_free') . '%');
             });
         }
 
         if ($request->json('id_brand')) {
-            $subs->where('id_brand',$request->json('id_brand'));
+            $subs->where('id_brand', $request->json('id_brand'));
         }
 
         if ($request->json('min_price')) {
@@ -1868,14 +1811,14 @@ class ApiSubscription extends Controller
             $subs->where('subscription_price_cash', '<=', $request->json('max_price'));
         }
 
-        if($request->json('sort')){
-            if($request->json('sort') == 'old'){
+        if ($request->json('sort')) {
+            if ($request->json('sort') == 'old') {
                 $subs->orderBy('subscription_publish_start', 'asc');
-            }elseif($request->json('sort') == 'new'){
+            } elseif ($request->json('sort') == 'new') {
                 $subs->orderBy('subscription_publish_start', 'desc');
-            }elseif($request->json('sort') == 'sales-desc'){
+            } elseif ($request->json('sort') == 'sales-desc') {
                 $subs->orderBy('subscription_bought', 'desc');
-            }elseif($request->json('sort') == 'periode'){
+            } elseif ($request->json('sort') == 'periode') {
                 $subs->orderBy('subscription_end', 'asc');
             }
         }
@@ -1901,38 +1844,36 @@ class ApiSubscription extends Controller
             $next = false;
         }
 
-        for ($i=$start; $i < $end; $i++) {
-            $subs[$i]['time_to_end']=strtotime($subs[$i]['subscription_end'])-time();
+        for ($i = $start; $i < $end; $i++) {
+            $subs[$i]['time_to_end'] = strtotime($subs[$i]['subscription_end']) - time();
 
-            $list[$i]['id_subscription'] 				= $subs[$i]['id_subscription'];
-            $list[$i]['url_subscription_image'] 		= $subs[$i]['url_subscription_image'];
-            $list[$i]['time_to_end'] 					= $subs[$i]['time_to_end'];
-            $list[$i]['subscription_start'] 			= $subs[$i]['subscription_start'];
-            $list[$i]['subscription_publish_start'] 	= $subs[$i]['subscription_publish_start'];
-            $list[$i]['subscription_end'] 				= $subs[$i]['subscription_end'];
-            $list[$i]['subscription_publish_end'] 		= $subs[$i]['subscription_publish_end'];
+            $list[$i]['id_subscription']                = $subs[$i]['id_subscription'];
+            $list[$i]['url_subscription_image']         = $subs[$i]['url_subscription_image'];
+            $list[$i]['time_to_end']                    = $subs[$i]['time_to_end'];
+            $list[$i]['subscription_start']             = $subs[$i]['subscription_start'];
+            $list[$i]['subscription_publish_start']     = $subs[$i]['subscription_publish_start'];
+            $list[$i]['subscription_end']               = $subs[$i]['subscription_end'];
+            $list[$i]['subscription_publish_end']       = $subs[$i]['subscription_publish_end'];
 
-            $list[$i]['subscription_start_indo'] 		= MyHelper::dateFormatInd($subs[$i]['subscription_start'], false, false).' pukul '.date('H:i', strtotime($subs[$i]['subscription_start']));
-            $list[$i]['subscription_publish_start_indo']= MyHelper::dateFormatInd($subs[$i]['subscription_publish_start'], false, false).' pukul '.date('H:i', strtotime($subs[$i]['subscription_publish_start']));
-            $list[$i]['subscription_end_indo'] 			= MyHelper::dateFormatInd($subs[$i]['subscription_end'], false, false).' pukul '.date('H:i', strtotime($subs[$i]['subscription_end']));
-            $list[$i]['subscription_publish_end_indo'] 	= MyHelper::dateFormatInd($subs[$i]['subscription_publish_end'], false, false).' pukul '.date('H:i', strtotime($subs[$i]['subscription_publish_end']));
+            $list[$i]['subscription_start_indo']        = MyHelper::dateFormatInd($subs[$i]['subscription_start'], false, false) . ' pukul ' . date('H:i', strtotime($subs[$i]['subscription_start']));
+            $list[$i]['subscription_publish_start_indo'] = MyHelper::dateFormatInd($subs[$i]['subscription_publish_start'], false, false) . ' pukul ' . date('H:i', strtotime($subs[$i]['subscription_publish_start']));
+            $list[$i]['subscription_end_indo']          = MyHelper::dateFormatInd($subs[$i]['subscription_end'], false, false) . ' pukul ' . date('H:i', strtotime($subs[$i]['subscription_end']));
+            $list[$i]['subscription_publish_end_indo']  = MyHelper::dateFormatInd($subs[$i]['subscription_publish_end'], false, false) . ' pukul ' . date('H:i', strtotime($subs[$i]['subscription_publish_end']));
 
-            $list[$i]['subscription_price_cash'] 		= $subs[$i]['subscription_price_cash'];
-            $list[$i]['subscription_price_point'] 		= $subs[$i]['subscription_price_point'];
-            $list[$i]['subscription_price_type'] 		= $subs[$i]['subscription_price_type'];
-            $list[$i]['subscription_price_pretty'] 		= $subs[$i]['subscription_price_pretty'];
-            $list[$i]['time_server'] 					= date('Y-m-d H:i:s');
-            $list[$i]['time_server_indo']  				= MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false).' pukul '.date('H:i');
+            $list[$i]['subscription_price_cash']        = $subs[$i]['subscription_price_cash'];
+            $list[$i]['subscription_price_point']       = $subs[$i]['subscription_price_point'];
+            $list[$i]['subscription_price_type']        = $subs[$i]['subscription_price_type'];
+            $list[$i]['subscription_price_pretty']      = $subs[$i]['subscription_price_pretty'];
+            $list[$i]['time_server']                    = date('Y-m-d H:i:s');
+            $list[$i]['time_server_indo']               = MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false) . ' pukul ' . date('H:i');
             array_push($resultData, $subs[$i]);
             array_push($listData, $list[$i]);
         }
 
         $result['current_page']  = $page;
         if (!$request->json('id_subscription')) {
-
             $result['data']          = $listData;
-        }else{
-
+        } else {
             $result['data']          = $resultData;
         }
         $result['total']         = count($resultData);
@@ -1943,19 +1884,19 @@ class ApiSubscription extends Controller
         }
 
         // print_r($deals); exit();
-        if(!$result['total']){
-            $result=[];
+        if (!$result['total']) {
+            $result = [];
         }
 
-        if(
+        if (
             $request->json('voucher_type_point') ||
             $request->json('voucher_type_paid') ||
             $request->json('voucher_type_free') ||
             $request->json('id_city') ||
             $request->json('key_free')
-        ){
+        ) {
             $resultMessage = 'Maaf, voucher yang kamu cari belum tersedia';
-        }else{
+        } else {
             $resultMessage = 'Nantikan penawaran menarik dari kami';
         }
         return response()->json(MyHelper::checkGet($result, $resultMessage));
@@ -1969,7 +1910,7 @@ class ApiSubscription extends Controller
         $subs = SubscriptionUser::
         with([
             'subscription.outlets.city',
-            'subscription.subscription_content' => function($q) {
+            'subscription.subscription_content' => function ($q) {
                 $q->orderBy('order')
                     ->where('is_active', '=', 1)
                     ->addSelect(
@@ -1979,7 +1920,7 @@ class ApiSubscription extends Controller
                         'order'
                     );
             },
-            'subscription.subscription_content.subscription_content_details' => function($q) {
+            'subscription.subscription_content.subscription_content_details' => function ($q) {
                 $q->orderBy('order')
                     ->addSelect(
                         'id_subscription_content_detail',
@@ -1988,88 +1929,87 @@ class ApiSubscription extends Controller
                         'order'
                     );
             },
-            'subscription_user_vouchers' => function($q){
+            'subscription_user_vouchers' => function ($q) {
                 $q->whereNotNull('used_at');
             },
-            'subscription_user_vouchers.transaction' => function($q){
+            'subscription_user_vouchers.transaction' => function ($q) {
                 $q->select('id_outlet', 'id_transaction');
             },
-            'subscription_user_vouchers.transaction.productTransaction' => function($q){
+            'subscription_user_vouchers.transaction.productTransaction' => function ($q) {
                 $q->select(
                     DB::raw('SUM(transaction_product_qty) as total_item'),
                     'id_transaction_product',
                     'id_transaction'
                 );
             },
-            'subscription_user_vouchers.transaction.outlet' => function($q){
-                $q->select('id_outlet','outlet_name');
+            'subscription_user_vouchers.transaction.outlet' => function ($q) {
+                $q->select('id_outlet', 'outlet_name');
             }
         ])
             ->where('id_user', $user['id'])
-            ->where('subscription_expired_at', '>=',date('Y-m-d H:i:s'))
+            ->where('subscription_expired_at', '>=', date('Y-m-d H:i:s'))
             ->whereIn('paid_status', ['Completed','Free'])
-            ->withCount(['subscription_user_vouchers as used_voucher' => function($q){
+            ->withCount(['subscription_user_vouchers as used_voucher' => function ($q) {
                 $q->whereNotNull('used_at');
             }])
-            ->withCount(['subscription_user_vouchers as available_voucher' => function($q){
+            ->withCount(['subscription_user_vouchers as available_voucher' => function ($q) {
                 $q->whereNull('used_at');
             }])
-            ->whereHas('subscription_user_vouchers', function($q){
+            ->whereHas('subscription_user_vouchers', function ($q) {
                 $q->whereNull('used_at');
             });
 
         //search by outlet
-        if(isset($post['id_outlet']) && is_numeric($post['id_outlet'])){
+        if (isset($post['id_outlet']) && is_numeric($post['id_outlet'])) {
             $subs->join('subscription_user_vouchers', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
                 ->join('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription')
                 ->leftjoin('subscription_outlets', 'subscriptions.id_subscription', 'subscription_outlets.id_subscription')
                 ->where(function ($query) use ($post) {
                     $query->orWhere('subscription_outlets.id_outlet', $post['id_outlet'])
-                    	->orWhere('subscriptions.is_all_outlet','=',1);
+                        ->orWhere('subscriptions.is_all_outlet', '=', 1);
                 })
                 ->distinct();
         }
 
 
 
-        if((isset($post['key_free']) && $post['key_free'] != null) || (isset($post['id_brand']) && is_numeric($post['id_brand']))){
-            if(!MyHelper::isJoined($subs,'subscription_user_vouchers')){
+        if ((isset($post['key_free']) && $post['key_free'] != null) || (isset($post['id_brand']) && is_numeric($post['id_brand']))) {
+            if (!MyHelper::isJoined($subs, 'subscription_user_vouchers')) {
                 $subs->leftJoin('subscription_user_vouchers', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user');
             }
-            if(!MyHelper::isJoined($subs,'subscriptions')){
+            if (!MyHelper::isJoined($subs, 'subscriptions')) {
                 $subs->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
             }
             $subs->where(function ($query) use ($post) {
-                $query->where('subscriptions.subscription_title', 'LIKE', '%'.$post['key_free'].'%')
-                    ->orWhere('subscriptions.subscription_sub_title', 'LIKE', '%'.$post['key_free'].'%');
+                $query->where('subscriptions.subscription_title', 'LIKE', '%' . $post['key_free'] . '%')
+                    ->orWhere('subscriptions.subscription_sub_title', 'LIKE', '%' . $post['key_free'] . '%');
             });
 
-            if(!empty($post['id_brand'])){
-                $subs->where('subscriptions.id_brand',$post['id_brand']);
+            if (!empty($post['id_brand'])) {
+                $subs->where('subscriptions.id_brand', $post['id_brand']);
             }
         }
 
-        if(isset($post['voucher_expired']) && $post['voucher_expired'] != null){
+        if (isset($post['voucher_expired']) && $post['voucher_expired'] != null) {
             $subs->whereDate('subscription_expired_at', date('Y-m-d', strtotime($post['voucher_expired'])));
         }
 
-        if($request->json('sort')){
-            if($request->json('sort') == 'old'){
+        if ($request->json('sort')) {
+            if ($request->json('sort') == 'old') {
                 $subs->orderBy('subscription_users.bought_at', 'asc');
-            }elseif($request->json('sort') == 'new'){
+            } elseif ($request->json('sort') == 'new') {
                 $subs->orderBy('subscription_users.bought_at', 'desc');
             }
-        }else{
+        } else {
             $voucher = $subs->orderBy('subscription_users.bought_at', 'desc');
         }
 
         $subs = $subs->get();
         $data = [];
-        if(!empty($subs) && !empty($subs[0])){
+        if (!empty($subs) && !empty($subs[0])) {
             foreach ($subs as $key => $sub) {
                 //check voucher total
                 if ($sub['subscription_user_vouchers_count'] < $sub['subscription']['subscription_voucher_total']) {
-
                     $temp['id_subscription']              = $sub['subscription']['id_subscription'];
                     $temp['id_subscription_user']         = $sub['id_subscription_user'];
                     $temp['subscription_end']             = date('Y-m-d H:i:s', strtotime($sub['subscription']['subscription_end']));
@@ -2079,38 +2019,35 @@ class ApiSubscription extends Controller
                     $temp['used_voucher']                 = $sub['used_voucher'];
                     $temp['available_voucher']            = $sub['available_voucher'];
                     if (empty($sub['subscription']['subscription_image'])) {
-                        $temp['url_subscription_image'] = config('url.storage_url_api').'img/default.jpg';
-                    }
-                    else {
-                        $temp['url_subscription_image'] = config('url.storage_url_api').$sub['subscription']['subscription_image'];
+                        $temp['url_subscription_image'] = config('url.storage_url_api') . 'img/default.jpg';
+                    } else {
+                        $temp['url_subscription_image'] = config('url.storage_url_api') . $sub['subscription']['subscription_image'];
                     }
 
-                    $temp['time_to_end']                  = strtotime($sub['subscription']['subscription_expired_at'])-time();
-                    $temp['url_webview']                  = config('url.app_api_url') ."api/webview/mysubscription/". $sub['id_subscription_user'];
+                    $temp['time_to_end']                  = strtotime($sub['subscription']['subscription_expired_at']) - time();
+                    $temp['url_webview']                  = config('url.app_api_url') . "api/webview/mysubscription/" . $sub['id_subscription_user'];
                     $temp['time_server']                  = date('Y-m-d H:i:s');
 
                     if ($sub['subscription_expired_at'] < date('Y-m-d H:i:s') || $sub['available_voucher'] === 0) {
-	            		$sub['is_used'] = 0;
-	            	}
-                    $temp['is_used']                  	= $sub['is_used'];
-                    $temp['subscription_end_indo']             = MyHelper::dateFormatInd($sub['subscription']['subscription_end'], false, false).' pukul '.date('H:i', strtotime($sub['subscription']['subscription_end']));
-                    $temp['subscription_publish_end_indo']     = MyHelper::dateFormatInd($sub['subscription']['subscription_publish_end'], false, false).' pukul '.date('H:i', strtotime($sub['subscription']['subscription_publish_end']));
-                    $temp['time_server_indo']                  = MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false).' pukul '.date('H:i');
+                        $sub['is_used'] = 0;
+                    }
+                    $temp['is_used']                    = $sub['is_used'];
+                    $temp['subscription_end_indo']             = MyHelper::dateFormatInd($sub['subscription']['subscription_end'], false, false) . ' pukul ' . date('H:i', strtotime($sub['subscription']['subscription_end']));
+                    $temp['subscription_publish_end_indo']     = MyHelper::dateFormatInd($sub['subscription']['subscription_publish_end'], false, false) . ' pukul ' . date('H:i', strtotime($sub['subscription']['subscription_publish_end']));
+                    $temp['time_server_indo']                  = MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false) . ' pukul ' . date('H:i');
                     $temp['subscription_expired_at_indo']      = MyHelper::dateFormatInd($sub['subscription_expired_at'], false, false);
-                    $temp['subscription_expired_at_time_indo'] = 'pukul '.date('H:i', strtotime($sub['subscription_expired_at']));
+                    $temp['subscription_expired_at_time_indo'] = 'pukul ' . date('H:i', strtotime($sub['subscription_expired_at']));
 
                     $data[] = $temp;
                 }
             }
-        }
-        else
-        {
-            $empty_text = Setting::where('key','=','message_mysubscription_empty_header')
-                ->orWhere('key','=','message_mysubscription_empty_content')
+        } else {
+            $empty_text = Setting::where('key', '=', 'message_mysubscription_empty_header')
+                ->orWhere('key', '=', 'message_mysubscription_empty_content')
                 ->orderBy('id_setting')
                 ->get();
-            $text['header'] = $empty_text[0]['value']??'Anda belum memiliki Paket.';
-            $text['content'] = $empty_text[1]['value']??'Banyak keuntungan dengan berlangganan.';
+            $text['header'] = $empty_text[0]['value'] ?? 'Anda belum memiliki Paket.';
+            $text['content'] = $empty_text[1]['value'] ?? 'Banyak keuntungan dengan berlangganan.';
             return  response()->json([
                 'status'   => 'fail',
                 'messages' => ['My Subscription is empty'],
@@ -2124,18 +2061,18 @@ class ApiSubscription extends Controller
 
     public function listCompleteSubscription(Request $request)
     {
-    	$post = $request->json()->all();
-    	return MyHelper::checkGet(
-    		Subscription::whereDoesntHave('featured_subscriptions')
-    		->where('subscription_step_complete','1')
-    		->where('subscription_end', '>', date('Y-m-d H:i:s'))
-           	->where('subscription_publish_end', '>', date('Y-m-d H:i:s'))
-    		->select($post['select']??'*')
-    		->get()
-    	);
+        $post = $request->json()->all();
+        return MyHelper::checkGet(
+            Subscription::whereDoesntHave('featured_subscriptions')
+            ->where('subscription_step_complete', '1')
+            ->where('subscription_end', '>', date('Y-m-d H:i:s'))
+            ->where('subscription_publish_end', '>', date('Y-m-d H:i:s'))
+            ->select($post['select'] ?? '*')
+            ->get()
+        );
     }
 
-    protected function filterParticipate($query, $request,&$foreign='')
+    protected function filterParticipate($query, $request, &$foreign = '')
     {
         $query->groupBy('subscription_users.id_subscription_user');
         $allowed = array(
@@ -2147,11 +2084,11 @@ class ApiSubscription extends Controller
         $where = $request->json('operator') == 'or' ? 'orWhere' : 'where';
         $whereDate = $request->json('operator') == 'or' ? 'orWhereDate' : 'whereDate';
         $rule = $request->json('rule');
-        $query->where(function($queryx) use ($rule,$allowed,$where,$query,&$foreign,$request, $whereDate){
-            $foreign=array();
-            $outletCount=0;
-            $userCount=0;
-            foreach ($rule??[] as $value) {
+        $query->where(function ($queryx) use ($rule, $allowed, $where, $query, &$foreign, $request, $whereDate) {
+            $foreign = array();
+            $outletCount = 0;
+            $userCount = 0;
+            foreach ($rule ?? [] as $value) {
                 if (!in_array($value['subject'], $allowed['subject'])) {
                     continue;
                 }
@@ -2162,21 +2099,21 @@ class ApiSubscription extends Controller
                     $value['parameter'] = '%' . $value['parameter'] . '%';
                 }
                 if (in_array($value['subject'], $allowed['mainSubject'])) {
-                    if($value['subject']=='bought_at'){
-                        $queryx->$whereDate('subscription_users.'.$value['subject'], $value['operator'], strtotime($value['parameter']));
-                    }else{
-                        $queryx->$where('subscription_users.'.$value['subject'], $value['operator'], $value['parameter']);
+                    if ($value['subject'] == 'bought_at') {
+                        $queryx->$whereDate('subscription_users.' . $value['subject'], $value['operator'], strtotime($value['parameter']));
+                    } else {
+                        $queryx->$where('subscription_users.' . $value['subject'], $value['operator'], $value['parameter']);
                     }
                 } else {
                     switch ($value['subject']) {
                         case 'user_phone':
                         // $foreign['users']=['users','users.id','=','subscription_users.id_user'];
-                        $queryx->$where('users.phone', $value['operator'], $value['parameter']);
-                        break;
+                            $queryx->$where('users.phone', $value['operator'], $value['parameter']);
+                            break;
 
                         default:
                             # code...
-                        break;
+                            break;
                     }
                 }
                 $return[] = $value;
@@ -2185,23 +2122,24 @@ class ApiSubscription extends Controller
         return ['filter' => $return, 'filter_operator' => $request->json('operator')];
     }
 
-    function listSubscriptionAjax(){
+    public function listSubscriptionAjax()
+    {
         $data = Subscription::where('subscription_publish_end', '>=', date('Y-m-d H:i:s'))
                 ->select('id_subscription', 'subscription_title')->get()->toArray();
         return response()->json(MyHelper::checkGet($data));
     }
 
-    function delete(DeleteSubscription $request)
+    public function delete(DeleteSubscription $request)
     {
         DB::beginTransaction();
         $post = $request->json()->all();
-        $check = Subscription::where('id_subscription','=',$post['id_subscription'])->where('subscription_bought','>',0)->first();
+        $check = Subscription::where('id_subscription', '=', $post['id_subscription'])->where('subscription_bought', '>', 0)->first();
 
         if (!$check) {
             // delete image first
             $this->deleteImage($check);
 
-            $delete = Subscription::where('id_subscription','=',$post['id_subscription'])->delete();
+            $delete = Subscription::where('id_subscription', '=', $post['id_subscription'])->delete();
 
             if ($delete) {
                 DB::commit();
@@ -2218,7 +2156,7 @@ class ApiSubscription extends Controller
         }
     }
 
-    function deleteImage($subscription)
+    public function deleteImage($subscription)
     {
         if (!empty($subscription->subscription_image)) {
             $delete = MyHelper::deletePhoto($subscription->subscription_image);
@@ -2227,152 +2165,160 @@ class ApiSubscription extends Controller
         return true;
     }
 
-    function getSubscriptionData($id, $step)
+    public function getSubscriptionData($id, $step)
     {
-    	$data = Subscription::where('id_subscription','=',$id);
+        $data = Subscription::where('id_subscription', '=', $id);
 
-    	if ($step == 'all') {
-    		
+        if ($step == 'all') {
             $data = $data->with([
-	                	'subscription_content',
-	                    'subscription_content.subscription_content_details',
-	                	'outlets' => function($q){
-	                        $q->select(
-	                            'outlets.id_outlet',
-	                            'outlet_code',
-	                            'outlet_name'
-	                        );
-	                    },
-	                    'products' => function($q){
-	                    	$q->select(
-	                    		'products.id_product',
-	                    		'product_code',
-	                    		'product_name'
-	                    	);
-	                    },
-	                    'subscription_products'
-	                ])
-	                ->first();
-    	}
+                        'subscription_content',
+                        'subscription_content.subscription_content_details',
+                        'outlets' => function ($q) {
+                            $q->select(
+                                'outlets.id_outlet',
+                                'outlet_code',
+                                'outlet_name'
+                            );
+                        },
+                        'products' => function ($q) {
+                            $q->select(
+                                'products.id_product',
+                                'product_code',
+                                'product_name'
+                            );
+                        },
+                        'subscription_products'
+                    ])
+                    ->first();
+        }
 
         return $data;
     }
 
-    function updateComplete(UpdateCompleteSubscription $request)
+    public function updateComplete(UpdateCompleteSubscription $request)
     {
-    	$post = $request->json()->all();
+        $post = $request->json()->all();
 
-    	$check = $this->checkComplete($post['id_subscription'], $step, $errors);
+        $check = $this->checkComplete($post['id_subscription'], $step, $errors);
 
-		if ($check)
-		{
-			$update = Subscription::where('id_subscription','=',$post['id_subscription'])->update(['subscription_step_complete' => 1]);
+        if ($check) {
+            $update = Subscription::where('id_subscription', '=', $post['id_subscription'])->update(['subscription_step_complete' => 1]);
 
-			if ($update)
-			{
-				return ['status' => 'success'];
-			}else{
-				return ['status'=> 'fail', 'messages' => ['Update deals failed']];
-			}
-		}
-		else
-		{
-			return [
-				'status'	=> 'fail',
-				'step' 		=> $step,
-				'messages' 	=> $errors
-			];
-		}
+            if ($update) {
+                return ['status' => 'success'];
+            } else {
+                return ['status' => 'fail', 'messages' => ['Update deals failed']];
+            }
+        } else {
+            return [
+                'status'    => 'fail',
+                'step'      => $step,
+                'messages'  => $errors
+            ];
+        }
     }
 
-    function checkComplete($id, &$step, &$errors=[])
+    public function checkComplete($id, &$step, &$errors = [])
     {
-    	$subs = $this->getSubscriptionData($id, 'all');
-    	if (!$subs) {
-    		$errors[] = 'Subscription not found';
-    		return false;
-    	}
+        $subs = $this->getSubscriptionData($id, 'all');
+        if (!$subs) {
+            $errors[] = 'Subscription not found';
+            return false;
+        }
 
-    	$subs = $subs->toArray();
+        $subs = $subs->toArray();
 
-		$step = 2;
-		$errors[] = 'Subscription not complete';
+        $step = 2;
+        $errors[] = 'Subscription not complete';
 
-		do {
-			if( !isset($subs['is_free']) && empty($subs['subscription_price_cash']) && empty($subs['subscription_price_point']) ) break;
-			if( !isset($subs['is_all_outlet']) ) break;
-			if( !isset($subs['subscription_voucher_expired']) && !isset($subs['subscription_voucher_duration']) ) break;
-			if( !isset($subs['subscription_voucher_total']) ) break;
-			if( empty($subs['subscription_voucher_nominal']) && empty($subs['subscription_voucher_percent']) ) break;
+        do {
+            if (!isset($subs['is_free']) && empty($subs['subscription_price_cash']) && empty($subs['subscription_price_point'])) {
+                break;
+            }
+            if (!isset($subs['is_all_outlet'])) {
+                break;
+            }
+            if (!isset($subs['subscription_voucher_expired']) && !isset($subs['subscription_voucher_duration'])) {
+                break;
+            }
+            if (!isset($subs['subscription_voucher_total'])) {
+                break;
+            }
+            if (empty($subs['subscription_voucher_nominal']) && empty($subs['subscription_voucher_percent'])) {
+                break;
+            }
 
-			if (!empty($subs['outlets']) && !empty($subs['subscription_products']) && $subs['is_all_outlet'] != 1 && $subs['is_all_product'] != 1) {
- 	        	$check_brand_product = app($this->promo)->checkBrandProduct($subs['outlets'], $subs['subscription_products']);
-	        	if ($check_brand_product['status'] == false) {
-	        		$errors = array_merge($errors,$check_brand_product['messages']??['Outlet tidak mempunyai produk dengan brand yang sesuai.']);
-	        		break;
-	        	}
-	        }
+            if (!empty($subs['outlets']) && !empty($subs['subscription_products']) && $subs['is_all_outlet'] != 1 && $subs['is_all_product'] != 1) {
+                $check_brand_product = app($this->promo)->checkBrandProduct($subs['outlets'], $subs['subscription_products']);
+                if ($check_brand_product['status'] == false) {
+                    $errors = array_merge($errors, $check_brand_product['messages'] ?? ['Outlet tidak mempunyai produk dengan brand yang sesuai.']);
+                    break;
+                }
+            }
 
-			$step = null;
-			$errors = [];
-		} while (false);
+            $step = null;
+            $errors = [];
+        } while (false);
 
-		if (!empty($step)) return false;
+        if (!empty($step)) {
+            return false;
+        }
 
-    	if ( empty($subs['subscription_content']) || empty($subs['subscription_description']) ) {
-    		$step = 3;
-	    	$errors[] = 'Subscription not complete';
-    		return false;
-    	}
+        if (empty($subs['subscription_content']) || empty($subs['subscription_description'])) {
+            $step = 3;
+            $errors[] = 'Subscription not complete';
+            return false;
+        }
 
-    	return true;
+        return true;
     }
 
-    function textReplace(Request $request)
+    public function textReplace(Request $request)
     {
-		$text_replace = [];
-		$data_subs = Subscription::where('id_subscription', $request->id_subscription)
-					->with('brand','products')
-					->first()
-					->append(
-						'subscription_voucher_benefit_pretty',
-						'subscription_voucher_max_benefit_pretty',
-						'subscription_minimal_transaction_pretty'
-					);
+        $text_replace = [];
+        $data_subs = Subscription::where('id_subscription', $request->id_subscription)
+                    ->with('brand', 'products')
+                    ->first()
+                    ->append(
+                        'subscription_voucher_benefit_pretty',
+                        'subscription_voucher_max_benefit_pretty',
+                        'subscription_minimal_transaction_pretty'
+                    );
 
-		if ($data_subs->subscription_title) {
-			$text_replace[] = ['keyword' => '%title%', 'reference' => 'subscription_title'];
-		}
-		if ($data_subs->subscription_price_pretty) {
-			$text_replace[] = ['keyword' => '%price%', 'reference' => 'subscription_price_pretty'];
-		}
-		if ($data_subs->brand->name_brand) {
-			$text_replace[] = ['keyword' => '%brand%', 'reference' => 'name_brand'];
-		}
-		if ($data_subs->subscription_voucher_benefit_pretty) {
-			$text_replace[] = ['keyword' => '%benefit%', 'reference' => 'subscription_voucher_benefit_pretty'];
-		}
-		if ($data_subs->subscription_voucher_max_benefit_pretty) {
-			$text_replace[] = ['keyword' => '%max_benefit%', 'reference' => 'subscription_voucher_max_benefit_pretty'];
-		}
-		if ($data_subs->subscription_minimal_transaction) {
-			$text_replace[] = ['keyword' => '%min_transaction%', 'reference' => 'subscription_minimal_transaction_pretty'];
-		}
-		if ($data_subs->subscription_voucher_expired) {
-			$text_replace[] = ['keyword' => '%voucher_expired%', 'reference' => 'subscription_voucher_expired'];
-		}
-		if ($data_subs->daily_usage_limit) {
-			$text_replace[] = ['keyword' => '%daily_usage_limit%', 'reference' => 'daily_usage_limit'];
-		}		
-		
-		return MyHelper::checkGet($text_replace);
+        if ($data_subs->subscription_title) {
+            $text_replace[] = ['keyword' => '%title%', 'reference' => 'subscription_title'];
+        }
+        if ($data_subs->subscription_price_pretty) {
+            $text_replace[] = ['keyword' => '%price%', 'reference' => 'subscription_price_pretty'];
+        }
+        if ($data_subs->brand->name_brand) {
+            $text_replace[] = ['keyword' => '%brand%', 'reference' => 'name_brand'];
+        }
+        if ($data_subs->subscription_voucher_benefit_pretty) {
+            $text_replace[] = ['keyword' => '%benefit%', 'reference' => 'subscription_voucher_benefit_pretty'];
+        }
+        if ($data_subs->subscription_voucher_max_benefit_pretty) {
+            $text_replace[] = ['keyword' => '%max_benefit%', 'reference' => 'subscription_voucher_max_benefit_pretty'];
+        }
+        if ($data_subs->subscription_minimal_transaction) {
+            $text_replace[] = ['keyword' => '%min_transaction%', 'reference' => 'subscription_minimal_transaction_pretty'];
+        }
+        if ($data_subs->subscription_voucher_expired) {
+            $text_replace[] = ['keyword' => '%voucher_expired%', 'reference' => 'subscription_voucher_expired'];
+        }
+        if ($data_subs->daily_usage_limit) {
+            $text_replace[] = ['keyword' => '%daily_usage_limit%', 'reference' => 'daily_usage_limit'];
+        }
+
+        return MyHelper::checkGet($text_replace);
     }
 
-    function listAllSubscription(Request $request){
+    public function listAllSubscription(Request $request)
+    {
         $post = $request->json()->all();
         $list = Subscription::orderBy('id_subscription', 'asc');
 
-        if(isset($post['subscription_type']) && !empty($post['subscription_type'])){
+        if (isset($post['subscription_type']) && !empty($post['subscription_type'])) {
             $list = $list->where('subscription_type', $post['subscription_type']);
         }
 

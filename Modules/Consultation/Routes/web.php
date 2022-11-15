@@ -11,6 +11,6 @@
 |
 */
 
-Route::prefix('consultation')->group(function() {
+Route::prefix('consultation')->group(function () {
     Route::get('/', 'ConsultationController@index');
 });

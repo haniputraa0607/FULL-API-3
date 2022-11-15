@@ -11,7 +11,7 @@ use Reliese\Database\Eloquent\Model as Eloquent;
 
 /**
  * Class FeaturedPromoCampaign
- * 
+ *
  * @property int $id_featured_promo_campaign
  * @property int $id_promo_campaign
  * @property \Carbon\Carbon $date_start
@@ -19,35 +19,35 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  * @property int $order
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
- * 
+ *
  * @property \Modules\PromoCampaign\Entities\PromoCampaign $promo_campaign
  *
  * @package Modules\PromoCampaign\Entities
  */
 class FeaturedPromoCampaign extends Eloquent
 {
-	protected $primaryKey = 'id_featured_promo_campaign';
+    protected $primaryKey = 'id_featured_promo_campaign';
 
-	protected $casts = [
-		'id_promo_campaign' => 'int',
-		'order' => 'int'
-	];
+    protected $casts = [
+        'id_promo_campaign' => 'int',
+        'order' => 'int'
+    ];
 
-	protected $dates = [
-		'date_start',
-		'date_end'
-	];
+    protected $dates = [
+        'date_start',
+        'date_end'
+    ];
 
-	protected $fillable = [
-		'id_promo_campaign',
-		'date_start',
-		'date_end',
-		'order',
+    protected $fillable = [
+        'id_promo_campaign',
+        'date_start',
+        'date_end',
+        'order',
         'feature_type'
-	];
+    ];
 
-	public function promo_campaign()
-	{
-		return $this->belongsTo(\Modules\PromoCampaign\Entities\PromoCampaign::class, 'id_promo_campaign');
-	}
+    public function promo_campaign()
+    {
+        return $this->belongsTo(\Modules\PromoCampaign\Entities\PromoCampaign::class, 'id_promo_campaign');
+    }
 }

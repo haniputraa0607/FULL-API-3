@@ -31,23 +31,23 @@ class ApiProductVariantController extends Controller
         $post = $request->all();
         $product_variant = ProductVariant::with(['product_variant_parent', 'product_variant_child']);
 
-        if ($keyword = ($request->search['value']??false)) {
-            $product_variant->where('product_variant_name', 'like', '%'.$keyword.'%')
-                        ->orWhereHas('product_variant_parent', function($q) use ($keyword) {
-                                $q->where('product_variant_name', 'like', '%'.$keyword.'%');
-                            })
-                        ->orWhereHas('product_variant_child', function($q) use ($keyword) {
-                            $q->where('product_variant_name', 'like', '%'.$keyword.'%');
+        if ($keyword = ($request->search['value'] ?? false)) {
+            $product_variant->where('product_variant_name', 'like', '%' . $keyword . '%')
+                        ->orWhereHas('product_variant_parent', function ($q) use ($keyword) {
+                                $q->where('product_variant_name', 'like', '%' . $keyword . '%');
+                        })
+                        ->orWhereHas('product_variant_child', function ($q) use ($keyword) {
+                            $q->where('product_variant_name', 'like', '%' . $keyword . '%');
                         });
         }
 
-        if(isset($post['get_child']) && $post['get_child'] == 1){
+        if (isset($post['get_child']) && $post['get_child'] == 1) {
             $product_variant = $product_variant->whereNotNull('id_parent');
         }
 
-        if(isset($post['page'])){
-            $product_variant = $product_variant->orderBy('updated_at', 'desc')->paginate($request->length?:10);
-        }else{
+        if (isset($post['page'])) {
+            $product_variant = $product_variant->orderBy('updated_at', 'desc')->paginate($request->length ?: 10);
+        } else {
             $product_variant = $product_variant->orderBy('product_variant_order', 'asc')->get()->toArray();
         }
 
@@ -62,32 +62,32 @@ class ApiProductVariantController extends Controller
     public function store(Request $request)
     {
         $post = $request->all();
-        if(isset($post['data']) && !empty($post['data'])){
+        if (isset($post['data']) && !empty($post['data'])) {
             DB::beginTransaction();
             $data_request = $post['data'];
 
             $visible = 'Hidden';
-            if(isset($data_request[0]['product_variant_visibility'])){
+            if (isset($data_request[0]['product_variant_visibility'])) {
                 $visible = 'Visible';
             }
             $store = ProductVariant::create([
                             'product_variant_name' => $data_request[0]['product_variant_name'],
                             'product_variant_visibility' => $visible]);
 
-            if($store){
-                if(isset($data_request['child'])){
+            if ($store) {
+                if (isset($data_request['child'])) {
                     $id = $store['id_product_variant'];
-                    foreach ($data_request['child'] as $key=>$child){
-                        $id_parent = NULL;
+                    foreach ($data_request['child'] as $key => $child) {
+                        $id_parent = null;
 
-                        if($child['parent'] == 0){
+                        if ($child['parent'] == 0) {
                             $id_parent = $id;
-                        }elseif(isset($data_request['child'][(int)$child['parent']]['id'])){
+                        } elseif (isset($data_request['child'][(int)$child['parent']]['id'])) {
                             $id_parent = $data_request['child'][(int)$child['parent']]['id'];
                         }
 
                         $visible = 'Hidden';
-                        if(isset($child['product_variant_visibility'])){
+                        if (isset($child['product_variant_visibility'])) {
                             $visible = 'Visible';
                         }
 
@@ -96,22 +96,22 @@ class ApiProductVariantController extends Controller
                             'product_variant_visibility' => $visible,
                             'id_parent' => $id_parent]);
 
-                        if($store){
+                        if ($store) {
                             $data_request['child'][$key]['id'] = $store['id_product_variant'];
-                        }else{
+                        } else {
                             DB::rollback();
                             return response()->json(['status' => 'fail', 'messages' => ['Failed add product variant']]);
                         }
                     }
                 }
-            }else{
+            } else {
                 DB::rollback();
                 return response()->json(['status' => 'fail', 'messages' => ['Failed add product variant']]);
             }
 
             DB::commit();
             return response()->json(MyHelper::checkCreate($store));
-        }else{
+        } else {
             return response()->json(['status' => 'fail', 'messages' => ['Incompleted Data']]);
         }
     }
@@ -125,8 +125,8 @@ class ApiProductVariantController extends Controller
     {
         $post = $request->all();
 
-        if(isset($post['id_product_variant']) && !empty($post['id_product_variant'])){
-            $get_all_parent = ProductVariant::where(function ($q){
+        if (isset($post['id_product_variant']) && !empty($post['id_product_variant'])) {
+            $get_all_parent = ProductVariant::where(function ($q) {
                 $q->whereNull('id_parent')->orWhere('id_parent', 0);
             })->get()->toArray();
 
@@ -136,7 +136,7 @@ class ApiProductVariantController extends Controller
                 'all_parent' => $get_all_parent,
                 'product_variant' => $product_variant
             ]]);
-        }else{
+        } else {
             return response()->json(['status' => 'fail', 'messages' => ['Incompleted Data']]);
         }
     }
@@ -151,45 +151,45 @@ class ApiProductVariantController extends Controller
     {
         $post = $request->all();
 
-        if(isset($post['id_product_variant']) && !empty($post['id_product_variant'])){
+        if (isset($post['id_product_variant']) && !empty($post['id_product_variant'])) {
             DB::beginTransaction();
-            if(isset($post['product_variant_name'])){
+            if (isset($post['product_variant_name'])) {
                 $data_update['product_variant_name'] = $post['product_variant_name'];
             }
 
-            if(isset($post['id_parent'])){
+            if (isset($post['id_parent'])) {
                 $data_update['id_parent'] = $post['id_parent'];
             }
 
-            if(isset($post['product_variant_visibility'])){
+            if (isset($post['product_variant_visibility'])) {
                 $data_update['product_variant_visibility'] = $post['product_variant_visibility'];
             }
 
             $update = ProductVariant::where('id_product_variant', $post['id_product_variant'])->update($data_update);
 
-            if($update){
-                if(isset($post['child']) && !empty($post['child'])){
-                    foreach ($post['child'] as $child){
+            if ($update) {
+                if (isset($post['child']) && !empty($post['child'])) {
+                    foreach ($post['child'] as $child) {
                         $data_update_child['id_parent'] = $post['id_product_variant'];
-                        if(isset($child['product_variant_name'])){
+                        if (isset($child['product_variant_name'])) {
                             $data_update_child['product_variant_name'] = $child['product_variant_name'];
                         }
 
-                        if(isset($child['product_variant_visibility'])){
+                        if (isset($child['product_variant_visibility'])) {
                             $data_update_child['product_variant_visibility'] = 'Visible';
-                        }else{
+                        } else {
                             $data_update_child['product_variant_visibility'] = 'Hidden';
                         }
 
                         $update = ProductVariant::updateOrCreate(['id_product_variant' => $child['id_product_variant']], $data_update_child);
 
-                        if(!$update){
+                        if (!$update) {
                             DB::rollback();
                             return response()->json(['status' => 'fail', 'messages' => ['Failed update child product variant']]);
                         }
                     }
                 }
-            }else{
+            } else {
                 DB::rollback();
                 return response()->json(['status' => 'fail', 'messages' => ['Failed update product variant']]);
             }
@@ -198,7 +198,7 @@ class ApiProductVariantController extends Controller
             //update all product
             RefreshVariantTree::dispatch([])->allOnConnection('database');
             return response()->json(['status' => 'success']);
-        }else{
+        } else {
             return response()->json(['status' => 'fail', 'messages' => ['Incompleted Data']]);
         }
     }
@@ -214,19 +214,19 @@ class ApiProductVariantController extends Controller
         $check = TransactionProductVariant::join('product_variants', 'product_variants.id_product_variant', 'transaction_product_variants.id_product_variant')
                 ->whereIn('transaction_product_variants.id_product_variant', $post['ids'])
                 ->pluck('product_variant_name')->toArray();
-        if(!empty($check)){
-            return response()->json(['status' => 'fail', 'messages' => ['Can not delete this variant : '.implode(',',$check).'. Variants already use in transaction.']]);
+        if (!empty($check)) {
+            return response()->json(['status' => 'fail', 'messages' => ['Can not delete this variant : ' . implode(',', $check) . '. Variants already use in transaction.']]);
         }
 
         $delete = true;
-        foreach ($post['ids'] as $val){
+        foreach ($post['ids'] as $val) {
             $idProductVariantGroup = ProductVariantPivot::join('product_variant_groups', 'product_variant_groups.id_product_variant_group', 'product_variant_pivot.id_product_variant_group')
                 ->where('id_product_variant', $val)->pluck('product_variant_groups.id_product_variant_group')->toArray();
             $check = TransactionProduct::whereIn('id_product_variant_group', $idProductVariantGroup)->first();
 
-            if($check <= 0 ){
+            if ($check <= 0) {
                 $delete = ProductVariant::where('id_product_variant', $val)->delete();
-                if($delete){
+                if ($delete) {
                     ProductVariantPivot::whereIn('id_product_variant_group', $idProductVariantGroup)->delete();
                     ProductVariantGroup::whereIn('id_product_variant_group', $idProductVariantGroup)->delete();
                 }
@@ -236,27 +236,29 @@ class ApiProductVariantController extends Controller
         return response()->json(MyHelper::checkDelete($delete));
     }
 
-    public function deleteChild($id_parent){
+    public function deleteChild($id_parent)
+    {
         $get = ProductVariant::where('id_parent', $id_parent)->first();
-        if($get){
+        if ($get) {
             $delete  = ProductVariant::where('id_parent', $id_parent)->delete();
             $this->deleteChild($get['id_product_variant']);
             return $delete;
-        }else{
+        } else {
             return true;
         }
     }
 
-    public function position(Request $request){
+    public function position(Request $request)
+    {
         $post = $request->all();
 
-        if(empty($post)){
-            $data = ProductVariant::orderBy('product_variant_order', 'asc')->where(function ($q){
+        if (empty($post)) {
+            $data = ProductVariant::orderBy('product_variant_order', 'asc')->where(function ($q) {
                 $q->whereNull('id_parent')->orWhere('id_parent', 0);
             })->with('product_variant_child')->get()->toArray();
             RefreshVariantTree::dispatch([])->allOnConnection('database');
             return MyHelper::checkGet($data);
-        }else{
+        } else {
             foreach ($request->position as $position => $id_product_variant) {
                 ProductVariant::where('id_product_variant', $id_product_variant)->update(['product_variant_order' => $position]);
             }
@@ -265,7 +267,8 @@ class ApiProductVariantController extends Controller
         }
     }
 
-    public function import(Request $request) {
+    public function import(Request $request)
+    {
         $post = $request->json()->all();
         $result = [
             'updated' => 0,
@@ -275,17 +278,17 @@ class ApiProductVariantController extends Controller
             'more_msg' => [],
             'more_msg_extended' => []
         ];
-        $data = $post['data'][0]??[];
+        $data = $post['data'][0] ?? [];
 
         foreach ($data as $key => $value) {
             $check = ProductVariant::where('product_variant_name', $value['product_variant_name'])->first();
-            if(!$check){
+            if (!$check) {
                 $productVariant = ProductVariant::create([
                     'product_variant_name' => $value['product_variant_name']
                 ]);
-                if($productVariant){
-                    $explodeChild = explode(',',$value['product_variant_child']);
-                    foreach ($explodeChild as $child){
+                if ($productVariant) {
+                    $explodeChild = explode(',', $value['product_variant_child']);
+                    foreach ($explodeChild as $child) {
                         $dataChild = [
                             'id_parent' => $productVariant['id_product_variant'],
                             'product_variant_name' => ltrim($child)
@@ -293,17 +296,17 @@ class ApiProductVariantController extends Controller
                         ProductVariant::updateOrCreate(['product_variant_name' => ltrim($child)], $dataChild);
                     }
                     $result['create']++;
-                }else{
+                } else {
                     $result['failed']++;
                     $result['more_msg_extended'][] = "Product variant with name {$value['product_variant_name']} failed to be created";
                 }
                 continue;
-            }else{
+            } else {
                 $update = ProductVariant::where('id_product_variant', $check['id_product_variant'])->update(['product_variant_name' => $value['product_variant_name']]);
 
-                if($update){
-                    $explodeChild = explode(',',$value['product_variant_child']);
-                    foreach ($explodeChild as $child){
+                if ($update) {
+                    $explodeChild = explode(',', $value['product_variant_child']);
+                    foreach ($explodeChild as $child) {
                         $dataChild = [
                             'id_parent' => $check['id_product_variant'],
                             'product_variant_name' => ltrim($child)
@@ -311,7 +314,7 @@ class ApiProductVariantController extends Controller
                         ProductVariant::updateOrCreate(['product_variant_name' => ltrim($child)], $dataChild);
                     }
                     $result['updated']++;
-                }else{
+                } else {
                     $result['no_update']++;
                 }
             }
@@ -321,27 +324,28 @@ class ApiProductVariantController extends Controller
         //update all product
         RefreshVariantTree::dispatch([])->allOnConnection('database');
 
-        if($result['updated']){
-            $response[] = 'Update '.$result['updated'].' product variant';
+        if ($result['updated']) {
+            $response[] = 'Update ' . $result['updated'] . ' product variant';
         }
-        if($result['create']){
-            $response[] = 'Create '.$result['create'].' new product variant';
+        if ($result['create']) {
+            $response[] = 'Create ' . $result['create'] . ' new product variant';
         }
-        if($result['no_update']){
-            $response[] = $result['no_update'].' product variant not updated';
+        if ($result['no_update']) {
+            $response[] = $result['no_update'] . ' product variant not updated';
         }
-        if($result['failed']){
-            $response[] = 'Failed create '.$result['failed'].' product variant';
+        if ($result['failed']) {
+            $response[] = 'Failed create ' . $result['failed'] . ' product variant';
         }
-        $response = array_merge($response,$result['more_msg_extended']);
+        $response = array_merge($response, $result['more_msg_extended']);
         return MyHelper::checkGet($response);
     }
 
-    public function updateUseStatus(Request $request){
+    public function updateUseStatus(Request $request)
+    {
         $post = $request->all();
-        if($post['status'] == 0){
+        if ($post['status'] == 0) {
             ProductDetail::where('id_product', $post['id_product'])->update(['product_detail_stock_status' => 'Sold Out', 'product_detail_stock_item' => 0]);
-        }else{
+        } else {
             ProductDetail::where('id_product', $post['id_product'])->update(['product_detail_stock_status' => 'Available', 'product_detail_stock_item' => 0]);
         }
         $update = Product::where('id_product', $post['id_product'])->update(['product_variant_status' => $post['status']]);

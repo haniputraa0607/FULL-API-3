@@ -49,7 +49,8 @@ class XenditController extends Controller
         return env('XENDIT_' . strtoupper($key));
     }
 
-    protected function getUniversalStatusCode($status) {
+    protected function getUniversalStatusCode($status)
+    {
         $universalStatus = [
             'FAILED' => 'FAILED', // OVO & LINKAJA
             'COMPLETED' => 'COMPLETED', // OVO
@@ -145,7 +146,7 @@ class XenditController extends Controller
                 'status'         => $universalStatus,
                 'xendit_id'      => $post['id'] ?? null,
                 'payment_id'     => $post['payment_id'] ?? null,
-                'expiration_date'=> $post['expiration_date'] ?? null,
+                'expiration_date' => $post['expiration_date'] ?? null,
                 'failure_code'   => $post['failure_code'] ?? null,
             ]);
             DB::commit();
@@ -188,7 +189,7 @@ class XenditController extends Controller
                 'status'         => $universalStatus,
                 'xendit_id'      => $post['id'] ?? null,
                 'payment_id'     => $post['payment_id'] ?? null,
-                'expiration_date'=> $post['expiration_date'] ?? null,
+                'expiration_date' => $post['expiration_date'] ?? null,
                 'failure_code'   => $post['failure_code'] ?? null,
             ]);
             DB::commit();
@@ -239,7 +240,7 @@ class XenditController extends Controller
                 'status'         => $universalStatus,
                 'xendit_id'      => $post['id'] ?? null,
                 'payment_id'     => $post['payment_id'] ?? null,
-                'expiration_date'=> $post['expiration_date'] ?? null,
+                'expiration_date' => $post['expiration_date'] ?? null,
                 'failure_code'   => $post['failure_code'] ?? null,
             ]);
             DB::commit();
@@ -315,7 +316,7 @@ class XenditController extends Controller
                     TransactionPaymentXendit::where('id_transaction', $transaction->id_transaction)->update([
                         'status'         => $universalStatus,
                         'xendit_id'      => $status['id'] ?? $transaction->xendit_id,
-                        'expiration_date'=> $status['expiration_date'] ?? $transaction->expiration_date,
+                        'expiration_date' => $status['expiration_date'] ?? $transaction->expiration_date,
                         'failure_code'   => $status['failure_code'] ?? $transaction->failure_code,
                     ]);
                 } else {
@@ -374,7 +375,7 @@ class XenditController extends Controller
                     DealsPaymentXendit::where('id_deals_user', $deals_user->id_deals_user)->update([
                         'status'         => $universalStatus,
                         'xendit_id'      => $status['id'] ?? $deals_user->xendit_id,
-                        'expiration_date'=> $status['expiration_date'] ?? $deals_user->expiration_date,
+                        'expiration_date' => $status['expiration_date'] ?? $deals_user->expiration_date,
                         'failure_code'   => $status['failure_code'] ?? $deals_user->failure_code,
                     ]);
                 } else {
@@ -432,7 +433,7 @@ class XenditController extends Controller
                     SubscriptionPaymentXendit::where('id_subscription_user', $subscription_user->id_subscription_user)->update([
                         'status'         => $universalStatus,
                         'xendit_id'      => $status['id'] ?? $subscription_user->xendit_id,
-                        'expiration_date'=> $status['expiration_date'] ?? $subscription_user->expiration_date,
+                        'expiration_date' => $status['expiration_date'] ?? $subscription_user->expiration_date,
                         'failure_code'   => $status['failure_code'] ?? $subscription_user->failure_code,
                     ]);
                 } else {
@@ -453,7 +454,7 @@ class XenditController extends Controller
         $method = strtoupper($method);
 
         $tab = ($options['type'] == 'trx' ? 'history/order' : 'page/consultation');
-        $redirect_url = env('XENDIT_REDIRECT_URL').$tab.'?type='.$options['type'].'&order_id='.urlencode($options['order_id'] ?? $external_id);
+        $redirect_url = env('XENDIT_REDIRECT_URL') . $tab . '?type=' . $options['type'] . '&order_id=' . urlencode($options['order_id'] ?? $external_id);
 
         $params = [
             'external_id'  => (string) $external_id,
@@ -503,7 +504,8 @@ class XenditController extends Controller
         }
     }
 
-    public function expireInvoice($id, &$errors = []){
+    public function expireInvoice($id, &$errors = [])
+    {
         CustomHttpClient::setLogType('expire_invoice');
         CustomHttpClient::setIdReference($id);
         try {
@@ -523,7 +525,7 @@ class XenditController extends Controller
             'for-user-id'  => null,
         ];
 
-        if(!empty($partial)){
+        if (!empty($partial)) {
             $params['amount'] = $partial['amount'];
             $params['reason'] = $partial['reason'];
         }

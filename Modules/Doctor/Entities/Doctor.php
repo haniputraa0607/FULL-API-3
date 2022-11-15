@@ -12,31 +12,35 @@ use Illuminate\Notifications\Notifiable;
 use Modules\Doctor\Entities\DoctorSchedule;
 use App\Traits\HasInfobipToken;
 
-class Doctor extends Authenticatable 
+class Doctor extends Authenticatable
 {
-    protected $table = 'doctors';
+    use HasApiTokens;
+    use Notifiable;
+    use HasInfobipToken;
 
-    use HasApiTokens, Notifiable, HasInfobipToken;
+    protected $table = 'doctors';
 
     protected $primaryKey = 'id_doctor';
 
-    public function findForPassport($username) {
-		if(substr($username, 0, 2) == '62'){
-			$username = substr($username,2);
-		}elseif(substr($username, 0, 3) == '+62'){
-			$username = substr($username,3);
-		}
+    public function findForPassport($username)
+    {
+        if (substr($username, 0, 2) == '62') {
+            $username = substr($username, 2);
+        } elseif (substr($username, 0, 3) == '+62') {
+            $username = substr($username, 3);
+        }
 
-		if(substr($username, 0, 1) != '0'){
-			$username = '0'.$username;
-		}
+        if (substr($username, 0, 1) != '0') {
+            $username = '0' . $username;
+        }
 
         return $this->where('doctor_phone', $username)->first();
     }
 
-    public function getAuthPassword() {
-		return $this->password;
-	}
+    public function getAuthPassword()
+    {
+        return $this->password;
+    }
 
 
     protected $fillable   = [
@@ -85,7 +89,8 @@ class Doctor extends Authenticatable
         return $this->belongsTo(DoctorClinic::class, 'id_doctor_clinic', 'id_doctor_clinic');
     }
 
-    public function outlet(){
+    public function outlet()
+    {
         return $this->belongsTo(\App\Http\Models\Outlet::class, 'id_outlet', 'id_outlet');
     }
 
@@ -111,10 +116,10 @@ class Doctor extends Authenticatable
 
     public function getUrlDoctorPhotoAttribute()
     {
-        if(!empty($this->attributes['doctor_photo'])){
-            $url_doctor_photo = env('STORAGE_URL_API').$this->attributes['doctor_photo'];
+        if (!empty($this->attributes['doctor_photo'])) {
+            $url_doctor_photo = env('STORAGE_URL_API') . $this->attributes['doctor_photo'];
         } else {
-            $url_doctor_photo = env('STORAGE_URL_API').'default_image/doctor.png';
+            $url_doctor_photo = env('STORAGE_URL_API') . 'default_image/doctor.png';
         }
 
         return $url_doctor_photo;
@@ -122,8 +127,8 @@ class Doctor extends Authenticatable
 
     public function getChallengeKey2Attribute()
     {
-    	$password = md5($this->password);
-    	return $password.'15F1AB77951B5JAO';
+        $password = md5($this->password);
+        return $password . '15F1AB77951B5JAO';
     }
 
     public function getNameAttribute()
@@ -133,26 +138,26 @@ class Doctor extends Authenticatable
 
     public function getDoctorServiceDecodedAttribute()
     {
-    	$service = json_decode($this->doctor_service);
-    	return $service;
+        $service = json_decode($this->doctor_service);
+        return $service;
     }
 
     public function getPracticeExperiencePlaceDecodedAttribute()
     {
-    	$experience_place = json_decode($this->practice_experience_place);
-    	return $experience_place;
+        $experience_place = json_decode($this->practice_experience_place);
+        return $experience_place;
     }
 
     public function createScheduleDay($id_doctor)
     {
-    	$scheduleDay = DoctorSchedule::where('id_doctor', $id_doctor)->pluck('day')->toArray();
+        $scheduleDay = DoctorSchedule::where('id_doctor', $id_doctor)->pluck('day')->toArray();
         $arrayDay = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
-        foreach($arrayDay as $key => $day){
+        foreach ($arrayDay as $key => $day) {
             //order for day
             $order = $this->getOrder($day);
-            
-            if(in_array($day, $scheduleDay) == false){
+
+            if (in_array($day, $scheduleDay) == false) {
                 $create = DoctorSchedule::create([
                     'id_doctor' => $id_doctor,
                     'day' => $day,
@@ -168,14 +173,15 @@ class Doctor extends Authenticatable
 
         $doctorSchedule = DoctorSchedule::where('id_doctor', $id_doctor)->get();
 
-    	return $doctorSchedule;
+        return $doctorSchedule;
     }
 
-    public function getOrder($day){
+    public function getOrder($day)
+    {
         switch ($day) {
             case "monday":
-              $order = 1;
-              break;
+                $order = 1;
+                break;
             case "tuesday":
                 $order = 2;
                 break;

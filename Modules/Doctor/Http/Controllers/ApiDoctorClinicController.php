@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use App\Lib\MyHelper;
-
 use Modules\Doctor\Entities\DoctorClinic;
 use Modules\Doctor\Http\Requests\DoctorClinicCreate;
 use Validator;
@@ -36,7 +35,7 @@ class ApiDoctorClinicController extends Controller
     {
         $post = $request->json()->all();
         unset($post['_token']);
- 
+
         DB::beginTransaction();
         if (isset($post['id_doctor_clinic'])) {
             try {

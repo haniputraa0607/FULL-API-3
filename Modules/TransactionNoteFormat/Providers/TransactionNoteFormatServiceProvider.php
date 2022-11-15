@@ -39,10 +39,11 @@ class TransactionNoteFormatServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('transactionnoteformat.php'),
+            __DIR__ . '/../Config/config.php' => config_path('transactionnoteformat.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'transactionnoteformat'
+            __DIR__ . '/../Config/config.php',
+            'transactionnoteformat'
         );
     }
 
@@ -55,11 +56,11 @@ class TransactionNoteFormatServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/transactionnoteformat');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/transactionnoteformat';
@@ -78,7 +79,7 @@ class TransactionNoteFormatServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'transactionnoteformat');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'transactionnoteformat');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'transactionnoteformat');
         }
     }
 

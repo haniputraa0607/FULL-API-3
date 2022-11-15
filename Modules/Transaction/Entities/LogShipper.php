@@ -17,5 +17,4 @@ class LogShipper extends Model
         'request_url',
         'response'
     ];
-
 }

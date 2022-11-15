@@ -7,14 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 class Disburse extends Model
 {
     protected $table = 'disburse';
-	protected $primaryKey = 'id_disburse';
+    protected $primaryKey = 'id_disburse';
 
-	protected $fillable = [
+    protected $fillable = [
         'id_merchant_log_balance',
-	    'disburse_nominal',
+        'disburse_nominal',
         'disburse_fee',
         'id_bank_account',
-		'disburse_status',
+        'disburse_status',
         'beneficiary_bank_name',
         'beneficiary_account_number',
         'beneficiary_name',
@@ -28,7 +28,7 @@ class Disburse extends Model
         'reference_no',
         'old_reference_no',
         'count_retry'
-	];
+    ];
 
     public function disburse_outlet()
     {

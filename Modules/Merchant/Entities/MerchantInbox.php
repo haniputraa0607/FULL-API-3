@@ -7,11 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 class MerchantInbox extends Model
 {
     protected $table = 'merchant_inboxes';
-	protected $primaryKey = 'id_merchant_inboxes';
+    protected $primaryKey = 'id_merchant_inboxes';
 
-	protected $fillable = [
-	    'id_campaign',
-		'id_merchant',
+    protected $fillable = [
+        'id_campaign',
+        'id_merchant',
         'inboxes_subject',
         'inboxes_content',
         'inboxes_clickto',
@@ -20,5 +20,5 @@ class MerchantInbox extends Model
         'inboxes_send_at',
         'read',
         'id_brand'
-	];
+    ];
 }

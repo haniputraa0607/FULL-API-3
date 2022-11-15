@@ -46,10 +46,11 @@ class AutocrmServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('autocrm.php'),
+            __DIR__ . '/../Config/config.php' => config_path('autocrm.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'autocrm'
+            __DIR__ . '/../Config/config.php',
+            'autocrm'
         );
     }
 
@@ -62,11 +63,11 @@ class AutocrmServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/autocrm');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/autocrm';
@@ -85,7 +86,7 @@ class AutocrmServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'autocrm');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'autocrm');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'autocrm');
         }
     }
 

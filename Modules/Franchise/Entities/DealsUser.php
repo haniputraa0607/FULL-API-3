@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class DealsUser
- * 
+ *
  * @property int $id_deals_user
  * @property int $id_deals_voucher
  * @property int $id_user
@@ -32,89 +32,95 @@ use Illuminate\Database\Eloquent\Model;
 class DealsUser extends Model
 {
     protected $connection = 'mysql3';
-	protected $primaryKey = 'id_deals_user';
+    protected $primaryKey = 'id_deals_user';
 
-	protected $casts = [
-		'id_deals_voucher' => 'int',
-		'id_user' => 'int',
-		'id_outlet' => 'int',
-		'voucher_price_point' => 'int',
-		'voucher_price_cash' => 'int'
-	];
+    protected $casts = [
+        'id_deals_voucher' => 'int',
+        'id_user' => 'int',
+        'id_outlet' => 'int',
+        'voucher_price_point' => 'int',
+        'voucher_price_cash' => 'int'
+    ];
 
-	protected $dates = [
-		'claimed_at' => 'datetime:Y-m-d H:i:s',
-		'redeemed_at',
-		'used_at',
-		'voucher_active_at',
-		'voucher_expired_at'
-	];
+    protected $dates = [
+        'claimed_at' => 'datetime:Y-m-d H:i:s',
+        'redeemed_at',
+        'used_at',
+        'voucher_active_at',
+        'voucher_expired_at'
+    ];
 
-	protected $fillable = [
-		'id_deals_voucher',
-		'id_deals',
-		'id_user',
-		'id_outlet',
-		'voucher_hash',
-		'voucher_hash_code',
-		'claimed_at',
-		'redeemed_at',
-		'used_at',
-		'voucher_price_point',
-		'payment_method',
-		'balance_nominal',
-		'voucher_price_cash',
-		'paid_status',
-		'voucher_active_at',
-		'voucher_expired_at',
-		'is_used'
-	];
+    protected $fillable = [
+        'id_deals_voucher',
+        'id_deals',
+        'id_user',
+        'id_outlet',
+        'voucher_hash',
+        'voucher_hash_code',
+        'claimed_at',
+        'redeemed_at',
+        'used_at',
+        'voucher_price_point',
+        'payment_method',
+        'balance_nominal',
+        'voucher_price_cash',
+        'paid_status',
+        'voucher_active_at',
+        'voucher_expired_at',
+        'is_used'
+    ];
 
-	function user() {
-		return $this->belongsTo(User::class, 'id_user', 'id')->select('id', 'name', 'phone', 'email', 'gender', 'phone_verified', 'email_verified', 'level', 'birthday', 'points');
-	}
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'id_user', 'id')->select('id', 'name', 'phone', 'email', 'gender', 'phone_verified', 'email_verified', 'level', 'birthday', 'points');
+    }
 
-	function userMid()
-	{
-		return $this->belongsTo(User::class, 'id_user', 'id')->select('id', 'name', 'phone', 'email');
-	}
+    public function userMid()
+    {
+        return $this->belongsTo(User::class, 'id_user', 'id')->select('id', 'name', 'phone', 'email');
+    }
 
-	function outlet() {
-		return $this->belongsTo(Outlet::class, 'id_outlet', 'id_outlet')->select('id_outlet','outlet_code', 'outlet_name', 'outlet_address');
-	}
+    public function outlet()
+    {
+        return $this->belongsTo(Outlet::class, 'id_outlet', 'id_outlet')->select('id_outlet', 'outlet_code', 'outlet_name', 'outlet_address');
+    }
 
-	function dealVoucher() {
-		return $this->belongsTo(DealsVoucher::class, 'id_deals_voucher', 'id_deals_voucher');
-	}
+    public function dealVoucher()
+    {
+        return $this->belongsTo(DealsVoucher::class, 'id_deals_voucher', 'id_deals_voucher');
+    }
 
-	function deals() {
-		return $this->belongsTo(Deal::class, 'id_deals', 'id_deals');
-	}
-	
-	function deals_voucher() {
-		return $this->belongsTo(DealsVoucher::class, 'id_deals_voucher', 'id_deals_voucher')->select('id_deals_voucher', 'id_deals', 'voucher_code');
-	}
-	
-	function deals_payment_ipay88() {
-		return $this->hasOne(\Modules\IPay88\Entities\DealsPaymentIpay88::class, 'id_deals_user', 'id_deals_user');
-	}
+    public function deals()
+    {
+        return $this->belongsTo(Deal::class, 'id_deals', 'id_deals');
+    }
 
-	function getGetTransactionAttribute() {
+    public function deals_voucher()
+    {
+        return $this->belongsTo(DealsVoucher::class, 'id_deals_voucher', 'id_deals_voucher')->select('id_deals_voucher', 'id_deals', 'voucher_code');
+    }
 
-        if( $this->paid_status != "Cancelled" )
-        {
-        	$this->load([
-        		'dealVoucher.transaction_voucher' => function($q) {
-    				$q->where('status','=','success');
-    			},
-    			'dealVoucher.transaction_voucher.transaction' => function($q) {
-				$q->select(
-					'id_transaction',
-					'transaction_receipt_number',
-					'trasaction_type',
-					'transaction_grandtotal'
-				);
-			}]);
+    public function deals_payment_ipay88()
+    {
+        return $this->hasOne(\Modules\IPay88\Entities\DealsPaymentIpay88::class, 'id_deals_user', 'id_deals_user');
+    }
+
+    public function getGetTransactionAttribute()
+    {
+
+        if ($this->paid_status != "Cancelled") {
+            $this->load([
+                'dealVoucher.transaction_voucher' => function ($q) {
+                    $q->where('status', '=', 'success');
+                },
+                'dealVoucher.transaction_voucher.transaction' => function ($q) {
+                    $q->select(
+                        'id_transaction',
+                        'transaction_receipt_number',
+                        'trasaction_type',
+                        'transaction_grandtotal'
+                    );
+                }]);
         }
     }
 }

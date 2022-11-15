@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class UsersMembership
- * 
+ *
  * @property int $id_log_membership
  * @property int $id_user
  * @property int $id_membership
@@ -25,7 +25,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $benefit_discount
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
- * 
+ *
  * @property \App\Http\Models\User $user
  * @property \App\Http\Models\Membership $membership
  *
@@ -33,63 +33,63 @@ use Illuminate\Database\Eloquent\Model;
  */
 class UsersMembership extends Model
 {
-	protected $primaryKey = 'id_log_membership';
-	public $incrementing = true;
+    protected $primaryKey = 'id_log_membership';
+    public $incrementing = true;
 
-	protected $casts = [
-		'id_log_membership' => 'int',
-		'id_user' => 'int',
-		'id_membership' => 'int',
-		'min_total_value' => 'int',
-		'min_total_count' => 'int',
-		'min_total_balance' => 'int',
-		'retain_min_total_value' => 'int',
-		'retain_min_total_count' => 'int',
-		'retain_min_total_balance' => 'int',
-		'benefit_point_multiplier' => 'int',
-		'benefit_cashback_multiplier' => 'int',
-		'benefit_discount' => 'int',
-		'cashback_maximum' => 'int'
-	];
+    protected $casts = [
+        'id_log_membership' => 'int',
+        'id_user' => 'int',
+        'id_membership' => 'int',
+        'min_total_value' => 'int',
+        'min_total_count' => 'int',
+        'min_total_balance' => 'int',
+        'retain_min_total_value' => 'int',
+        'retain_min_total_count' => 'int',
+        'retain_min_total_balance' => 'int',
+        'benefit_point_multiplier' => 'int',
+        'benefit_cashback_multiplier' => 'int',
+        'benefit_discount' => 'int',
+        'cashback_maximum' => 'int'
+    ];
 
-	protected $dates = [
-		'retain_date'
-	];
+    protected $dates = [
+        'retain_date'
+    ];
 
-	protected $fillable = [
-		'id_user',
-		'id_membership',
-		'membership_name',
-		'membership_name_color',
-		'membership_image',
-		'membership_card',
-		'membership_type',
-		'min_total_value',
-		'min_total_count',
-		'min_total_balance',
-		'retain_date',
-		'retain_min_total_value',
-		'retain_min_total_count',
-		'retain_min_total_balance',
-		'benefit_point_multiplier',
-		'benefit_cashback_multiplier',
-		'benefit_promo_id',
-		'benefit_discount',
-		'cashback_maximum'
-	];
+    protected $fillable = [
+        'id_user',
+        'id_membership',
+        'membership_name',
+        'membership_name_color',
+        'membership_image',
+        'membership_card',
+        'membership_type',
+        'min_total_value',
+        'min_total_count',
+        'min_total_balance',
+        'retain_date',
+        'retain_min_total_value',
+        'retain_min_total_count',
+        'retain_min_total_balance',
+        'benefit_point_multiplier',
+        'benefit_cashback_multiplier',
+        'benefit_promo_id',
+        'benefit_discount',
+        'cashback_maximum'
+    ];
 
-	public function user()
-	{
-		return $this->belongsTo(\App\Http\Models\User::class, 'id_user');
-	}
+    public function user()
+    {
+        return $this->belongsTo(\App\Http\Models\User::class, 'id_user');
+    }
 
-	public function membership()
-	{
-		return $this->belongsTo(\App\Http\Models\Membership::class, 'id_membership');
-	}
+    public function membership()
+    {
+        return $this->belongsTo(\App\Http\Models\Membership::class, 'id_membership');
+    }
 
-	public function users_membership_promo_id()
-	{
-	    return $this->hasMany(UsersMembershipPromoId::class, 'id_users_membership', 'id_log_membership');
-	}
+    public function users_membership_promo_id()
+    {
+        return $this->hasMany(UsersMembershipPromoId::class, 'id_users_membership', 'id_log_membership');
+    }
 }

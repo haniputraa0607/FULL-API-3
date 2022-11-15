@@ -6,10 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class GlobalMonthlyReportTrxMenu extends Model
 {
-	protected $connection = 'mysql';
+    protected $connection = 'mysql';
     /**
      * The table associated with the model.
-     * 
+     *
      * @var string
      */
     protected $table = 'global_monthly_report_trx_menu';
@@ -44,7 +44,7 @@ class GlobalMonthlyReportTrxMenu extends Model
         'cust_old',
         'product_name'
     ];
-	
+
     public function product()
     {
         return $this->belongsTo(Product::class, 'id_product', 'id_product')->select('id_product', 'product_code', 'product_name');

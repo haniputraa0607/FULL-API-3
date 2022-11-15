@@ -46,10 +46,11 @@ class BrandServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('brand.php'),
+            __DIR__ . '/../Config/config.php' => config_path('brand.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'brand'
+            __DIR__ . '/../Config/config.php',
+            'brand'
         );
     }
 
@@ -62,11 +63,11 @@ class BrandServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/brand');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/brand';
@@ -85,7 +86,7 @@ class BrandServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'brand');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'brand');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'brand');
         }
     }
 

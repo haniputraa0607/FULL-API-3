@@ -71,13 +71,14 @@ use Modules\Transaction\Entities\TransactionBundlingProduct;
 use Modules\Transaction\Http\Requests\TransactionDetail;
 use Carbon\Carbon;
 use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
-use function foo\func;
 use Modules\Product\Entities\ProductSpecialPrice;
 use Modules\Product\Entities\ProductGlobalPrice;
 use App\Http\Models\TransactionPickupGoSendUpdate;
 use Modules\OutletApp\Entities\ProductModifierGroupInventoryBrand;
 use App\Http\Models\Autocrm;
 use Modules\Autocrm\Entities\AutoresponseCodeList;
+
+use function foo\func;
 
 class ApiOutletApp extends Controller
 {
@@ -94,9 +95,9 @@ class ApiOutletApp extends Controller
         $this->subscription     = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
         $this->endPoint  = config('url.storage_url_api');
         $this->shopeepay      = "Modules\ShopeePay\Http\Controllers\ShopeePayController";
-        $this->outlet      		= "Modules\Outlet\Http\Controllers\ApiOutletController";
+        $this->outlet           = "Modules\Outlet\Http\Controllers\ApiOutletController";
         $this->autoresponse_code = "Modules\Autocrm\Http\Controllers\ApiAutoresponseWithCode";
-        $this->default_driver_photo = config('url.storage_url_api')."default_image/delivery/driver_default_image.png";
+        $this->default_driver_photo = config('url.storage_url_api') . "default_image/delivery/driver_default_image.png";
     }
 
     public function deleteToken(DeleteToken $request)
@@ -126,7 +127,8 @@ class ApiOutletApp extends Controller
         if ($check) {
             return response()->json(['status' => 'success']);
         } else {
-            $query = OutletToken::create(['id_outlet' => $outlet['id_outlet'], 'token' => $post['token']]);return response()->json(MyHelper::checkUpdate($query));
+            $query = OutletToken::create(['id_outlet' => $outlet['id_outlet'], 'token' => $post['token']]);
+            return response()->json(MyHelper::checkUpdate($query));
         }
     }
 
@@ -138,40 +140,55 @@ class ApiOutletApp extends Controller
         $list = Transaction::leftjoin('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
             ->leftJoin('transaction_products', 'transactions.id_transaction', 'transaction_products.id_transaction')
             ->leftJoin('users', 'users.id', 'transactions.id_user')
-            ->select('transactions.id_transaction', 'transaction_receipt_number', 'order_id', 'transaction_date',
+            ->select(
+                'transactions.id_transaction',
+                'transaction_receipt_number',
+                'order_id',
+                'transaction_date',
                 DB::raw('(CASE WHEN pickup_by = "Customer" THEN "Pickup Order" ELSE "Delivery" END) AS transaction_type'),
-                'pickup_by', 'pickup_type', 'pickup_at', 'receive_at', 'ready_at', 'taken_at', 'reject_at', 'taken_by_system_at', 'transaction_grandtotal', DB::raw('sum(transaction_product_qty) as total_item'), 'users.name')
+                'pickup_by',
+                'pickup_type',
+                'pickup_at',
+                'receive_at',
+                'ready_at',
+                'taken_at',
+                'reject_at',
+                'taken_by_system_at',
+                'transaction_grandtotal',
+                DB::raw('sum(transaction_product_qty) as total_item'),
+                'users.name'
+            )
             ->where('transactions.id_outlet', $outlet->id_outlet)
             ->whereDate('transaction_date', date('Y-m-d'))
             ->where('transaction_payment_status', 'Completed')
             ->where('trasaction_type', 'Pickup Order')
             ->whereNull('void_date')
             ->groupBy('transaction_products.id_transaction');
-        switch ($post['sort']??'') {
+        switch ($post['sort'] ?? '') {
             case 'oldest':
-                $list->orderBy('transaction_date','ASC')->orderBy('transactions.id_transaction','ASC');
+                $list->orderBy('transaction_date', 'ASC')->orderBy('transactions.id_transaction', 'ASC');
                 break;
 
             case 'newest':
-                $list->orderBy('transaction_date','DESC')->orderBy('transactions.id_transaction','DESC');
+                $list->orderBy('transaction_date', 'DESC')->orderBy('transactions.id_transaction', 'DESC');
                 break;
-            
+
             case 'shortest_pickup_time':
-                $list->orderBy('pickup_at','ASC')->orderBy('transactions.id_transaction','ASC');
+                $list->orderBy('pickup_at', 'ASC')->orderBy('transactions.id_transaction', 'ASC');
                 break;
 
             case 'longest_pickup_time':
-                $list->orderBy('pickup_at','DESC')->orderBy('transactions.id_transaction','DESC');
+                $list->orderBy('pickup_at', 'DESC')->orderBy('transactions.id_transaction', 'DESC');
                 break;
-            
+
             case 'shortest_delivery_time':
-                $list->orderBy('pickup_at','ASC')->orderBy('transactions.id_transaction','ASC');
+                $list->orderBy('pickup_at', 'ASC')->orderBy('transactions.id_transaction', 'ASC');
                 break;
 
             case 'longest_delivery_time':
-                $list->orderBy('pickup_at','DESC')->orderBy('transactions.id_transaction','DESC');
+                $list->orderBy('pickup_at', 'DESC')->orderBy('transactions.id_transaction', 'DESC');
                 break;
-            
+
             default:
                 $list->orderBy('pickup_at', 'ASC')
                 ->orderBy('transaction_date', 'ASC')
@@ -228,7 +245,7 @@ class ApiOutletApp extends Controller
             if ($dataList['taken_by_system_at'] != null) {
                 $dataList['status'] = 'Completed';
                 $listCompleted[]    = $dataList;
-            }elseif ($dataList['reject_at'] != null) {
+            } elseif ($dataList['reject_at'] != null) {
                 $dataList['status'] = 'Rejected';
                 $listCompleted[]    = $dataList;
             } elseif ($dataList['receive_at'] == null) {
@@ -277,9 +294,9 @@ class ApiOutletApp extends Controller
         $result['completed']['count'] = count($listCompleted);
         $result['completed']['data']  = $listCompleted;
 
-        $result['unpaid']['count'] = Transaction::where('id_outlet',$request->user()->id_outlet)
+        $result['unpaid']['count'] = Transaction::where('id_outlet', $request->user()->id_outlet)
             ->where('transaction_payment_status', 'Pending')
-            ->whereDate('transaction_date',date('Y-m-d'))
+            ->whereDate('transaction_date', date('Y-m-d'))
             ->count();
 
         if (isset($post['status'])) {
@@ -306,7 +323,6 @@ class ApiOutletApp extends Controller
         }
 
         return response()->json(MyHelper::checkGet($result));
-
     }
 
     public function detailOrder(DetailOrder $request)
@@ -591,7 +607,6 @@ class ApiOutletApp extends Controller
 
         if (isset($success)) {
             $list['success'] = 1;
-
         }
 
         // $qrCode = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='.$qrTest;
@@ -703,7 +718,6 @@ class ApiOutletApp extends Controller
 
             return response()->json($send);
         }
-
     }
 
     public function acceptOrder(DetailOrder $request)
@@ -769,22 +783,22 @@ class ApiOutletApp extends Controller
             }
             $result = ['status' => 'success'];
 
-            if($order->pickup_by != 'Customer') {
-            	switch ($order->pickup_by) {
-            		case 'Wehelpyou':
-                		$result = $this->bookWehelpyou($order);
-            			break;
-            		
-            		default:
-                		$result = $this->bookGoSend($order);
-            			break;
-            	}
+            if ($order->pickup_by != 'Customer') {
+                switch ($order->pickup_by) {
+                    case 'Wehelpyou':
+                        $result = $this->bookWehelpyou($order);
+                        break;
+
+                    default:
+                        $result = $this->bookGoSend($order);
+                        break;
+                }
             }
 
-            if (($result['status']??false) != 'success') {
+            if (($result['status'] ?? false) != 'success') {
                 return response()->json([
                     'status'   => 'fail',
-                    'messages' => $result['messages']??['Failed to order GO-SEND'],
+                    'messages' => $result['messages'] ?? ['Failed to order GO-SEND'],
                 ]);
             }
         }
@@ -839,8 +853,8 @@ class ApiOutletApp extends Controller
         }
 
         $currentdate = date('Y-m-d H:i');
-        $setTime = date('Y-m-d H:i', strtotime($order->pickup_at.' - 15 minutes'));
-        if($order->pickup_type == 'set time' && $currentdate < $setTime){
+        $setTime = date('Y-m-d H:i', strtotime($order->pickup_at . ' - 15 minutes'));
+        if ($order->pickup_type == 'set time' && $currentdate < $setTime) {
             return response()->json([
                 'status'   => 'fail',
                 'messages' => ['Order dapat ditandai siap minimum 15 menit sebelum waktu pengambilan'],
@@ -848,30 +862,31 @@ class ApiOutletApp extends Controller
         }
 
         if ($order->pickup_by != 'Customer') {
-        	switch ($order->pickup_by) {
-        		case 'Wehelpyou':
-        			$pickupWHY = TransactionPickupWehelpyou::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
-		            if( !$pickupWHY 
-		            	|| !$pickupWHY['latest_status_id'] 
-		            	|| in_array($pickupWHY['latest_status_id'] ?? false, WeHelpYou::orderEndStatusId())
-		            ) {
-		                return response()->json([
-		                    'status'   => 'fail',
-		                    'messages' => ['Driver belum ditemukan']
-		                ]);
-		            }
-        			break;
-        		
-        		default:
-		            $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
-		            if(!$pickup_gosend || !$pickup_gosend['latest_status'] || in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled', 'confirmed'])) {
-		                return response()->json([
-		                    'status'   => 'fail',
-		                    'messages' => ['Driver belum ditemukan']
-		                ]);
-		            }
-        			break;
-        	}
+            switch ($order->pickup_by) {
+                case 'Wehelpyou':
+                    $pickupWHY = TransactionPickupWehelpyou::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
+                    if (
+                        !$pickupWHY
+                        || !$pickupWHY['latest_status_id']
+                        || in_array($pickupWHY['latest_status_id'] ?? false, WeHelpYou::orderEndStatusId())
+                    ) {
+                        return response()->json([
+                            'status'   => 'fail',
+                            'messages' => ['Driver belum ditemukan']
+                        ]);
+                    }
+                    break;
+
+                default:
+                    $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
+                    if (!$pickup_gosend || !$pickup_gosend['latest_status'] || in_array($pickup_gosend['latest_status'] ?? false, ['no_driver', 'rejected', 'cancelled', 'confirmed'])) {
+                        return response()->json([
+                            'status'   => 'fail',
+                            'messages' => ['Driver belum ditemukan']
+                        ]);
+                    }
+                    break;
+            }
         }
 
         DB::beginTransaction();
@@ -882,16 +897,15 @@ class ApiOutletApp extends Controller
             //send notif to customer
             $user = User::find($order->id_user);
 
-            $newTrx    = Transaction::with('user.memberships', 'outlet', 'productTransaction', 'transaction_vouchers','promo_campaign_promo_code','promo_campaign_promo_code.promo_campaign')->where('id_transaction', $order->id_transaction)->first();
+            $newTrx    = Transaction::with('user.memberships', 'outlet', 'productTransaction', 'transaction_vouchers', 'promo_campaign_promo_code', 'promo_campaign_promo_code.promo_campaign')->where('id_transaction', $order->id_transaction)->first();
             $checkType = TransactionMultiplePayment::where('id_transaction', $order->id_transaction)->get()->toArray();
             $column    = array_column($checkType, 'type');
-            
+
             $use_referral = optional(optional($newTrx->promo_campaign_promo_code)->promo_campaign)->promo_type == 'Referral';
             MyHelper::updateFlagTransactionOnline($newTrx, 'success', $newTrx->user);
 
             AchievementCheck::dispatch(['id_transaction' => $order->id_transaction, 'phone' => $user['phone']])->onConnection('achievement');
             if (!in_array('Balance', $column) || $use_referral) {
-
                 $promo_source = null;
                 if ($newTrx->id_promo_campaign_promo_code || $newTrx->transaction_vouchers) {
                     if ($newTrx->id_promo_campaign_promo_code) {
@@ -912,7 +926,6 @@ class ApiOutletApp extends Controller
                         ]);
                     }
                 }
-
             }
 
             $newTrx->update(['cashback_insert_status' => 1]);
@@ -1006,19 +1019,20 @@ class ApiOutletApp extends Controller
             //send notif to customer
             $user = User::find($order->id_user);
             $getAvailableCodeCrm = Autocrm::where('autocrm_title', 'Order Taken With Code')->first();
-            $code = NULL;
-            $idCode = NULL;
+            $code = null;
+            $idCode = null;
 
-            if($order->pickup_by == 'Customer' && !empty($getAvailableCodeCrm) &&
+            if (
+                $order->pickup_by == 'Customer' && !empty($getAvailableCodeCrm) &&
                 ($getAvailableCodeCrm['autocrm_email_toogle'] == 1 || $getAvailableCodeCrm['autocrm_sms_toogle'] == 1 ||
-                    $getAvailableCodeCrm['autocrm_push_toogle'] == 1 || $getAvailableCodeCrm['autocrm_inbox_toogle'] == 1)){
-
+                    $getAvailableCodeCrm['autocrm_push_toogle'] == 1 || $getAvailableCodeCrm['autocrm_inbox_toogle'] == 1)
+            ) {
                 $getAvailableCode = app($this->autoresponse_code)->getAvailableCode($order->id_transaction);
-                $code = $getAvailableCode['autoresponse_code']??null;
-                $idCode = $getAvailableCode['id_autoresponse_code_list']??null;
+                $code = $getAvailableCode['autoresponse_code'] ?? null;
+                $idCode = $getAvailableCode['id_autoresponse_code_list'] ?? null;
             }
 
-            if(!empty($code)){
+            if (!empty($code)) {
                 $send = app($this->autocrm)->SendAutoCRM('Order Taken With Code', $user['phone'], [
                     "outlet_name"      => $outlet['outlet_name'],
                     'id_transaction'   => $order->id_transaction,
@@ -1030,11 +1044,11 @@ class ApiOutletApp extends Controller
                 ]);
 
                 $updateCode = AutoresponseCodeList::where('id_autoresponse_code_list', $idCode)->update(['id_user' => $user['id'], 'id_transaction' => $order->id_transaction]);
-                if($updateCode){
+                if ($updateCode) {
                     app($this->autoresponse_code)->stopAutoresponse($idCode);
                 }
-            }else{
-                $send = app($this->autocrm)->SendAutoCRM($order->pickup_by == 'Customer'?'Order Taken':'Order Taken By Driver', $user['phone'], [
+            } else {
+                $send = app($this->autocrm)->SendAutoCRM($order->pickup_by == 'Customer' ? 'Order Taken' : 'Order Taken By Driver', $user['phone'], [
                     "outlet_name"      => $outlet['outlet_name'],
                     'id_transaction'   => $order->id_transaction,
                     "id_reference"     => $order->transaction_receipt_number . ',' . $order->id_outlet,
@@ -1064,8 +1078,8 @@ class ApiOutletApp extends Controller
         $profile['outlet_name']    = $outlet['outlet_name'];
         $profile['outlet_status']  = $outlet['outlet_status'] == "Active" ? "Aktif" : "Tidak Aktif";
         $profile['outlet_code']    = $outlet['outlet_code'];
-        $profile['outlet_address'] = $outlet['outlet_address']??'';
-        $profile['outlet_phone']   = $outlet['outlet_phone']??'';
+        $profile['outlet_address'] = $outlet['outlet_address'] ?? '';
+        $profile['outlet_phone']   = $outlet['outlet_phone'] ?? '';
         $profile['status']         = 'success';
 
         //save token outlet
@@ -1093,7 +1107,7 @@ class ApiOutletApp extends Controller
         // product_id = product id or modifier_id 1000 or modifier_group_id id + 100000
         $list_id = array_merge($request->available ?? [], $request->sold_out ?? []);
         foreach ($list_id as $id) {
-        	if ($id > 100000 && $id % 100000) {
+            if ($id > 100000 && $id % 100000) {
                 return $this->modifierGroupSoldOut($request);
                 break;
             }
@@ -1104,33 +1118,33 @@ class ApiOutletApp extends Controller
         }
 
         $updated     = 0;
-        if(isset($request->variants) && !empty($request->variants)){
+        if (isset($request->variants) && !empty($request->variants)) {
             $outlet = Outlet::where('id_outlet', $outlet['id_outlet'])->first();
-            foreach ($request->variants as $v){
-                if(isset($v['available']) && !empty($v['available'])){
-                    foreach ($v['available'] as $availableProductVariant){
+            foreach ($request->variants as $v) {
+                if (isset($v['available']) && !empty($v['available'])) {
+                    foreach ($v['available'] as $availableProductVariant) {
                         $status = 'Available';
-                        $updated = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$outlet['id_outlet'], 'id_product_variant_group' => $availableProductVariant], ['product_variant_group_stock_status' => $status]);
+                        $updated = ProductVariantGroupDetail::updateOrCreate(['id_outlet' => $outlet['id_outlet'], 'id_product_variant_group' => $availableProductVariant], ['product_variant_group_stock_status' => $status]);
                     }
                     Product::refreshVariantTree($v['id_product'], $outlet);
                 }
 
-                if(isset($v['sold_out']) && !empty($v['sold_out'])){
-                    foreach ($v['sold_out'] as $soldOutProductVariant){
+                if (isset($v['sold_out']) && !empty($v['sold_out'])) {
+                    foreach ($v['sold_out'] as $soldOutProductVariant) {
                         $status = 'Sold Out';
-                        $updated = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$outlet['id_outlet'], 'id_product_variant_group' => $soldOutProductVariant], ['product_variant_group_stock_status' => $status]);
+                        $updated = ProductVariantGroupDetail::updateOrCreate(['id_outlet' => $outlet['id_outlet'], 'id_product_variant_group' => $soldOutProductVariant], ['product_variant_group_stock_status' => $status]);
                     }
                     Product::refreshVariantTree($v['id_product'], $outlet);
                 }
             }
         }
 
-        if(isset($post['sold_out']) && !empty($post['sold_out'])){
+        if (isset($post['sold_out']) && !empty($post['sold_out'])) {
             $sold = array_unique($post['sold_out']);
-            foreach ($sold as $s){
+            foreach ($sold as $s) {
                 $productVariantGroup = ProductVariantGroup::where('id_product', $s)->get()->toArray();
-                foreach ($productVariantGroup as $pvg){
-                    $updated = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$outlet['id_outlet'], 'id_product_variant_group' => $pvg['id_product_variant_group']], ['product_variant_group_stock_status' => 'Sold Out']);
+                foreach ($productVariantGroup as $pvg) {
+                    $updated = ProductVariantGroupDetail::updateOrCreate(['id_outlet' => $outlet['id_outlet'], 'id_product_variant_group' => $pvg['id_product_variant_group']], ['product_variant_group_stock_status' => 'Sold Out']);
                 }
                 Product::refreshVariantTree($s, $outlet);
             }
@@ -1164,18 +1178,18 @@ class ApiOutletApp extends Controller
                 $newDetail = ProductDetail::where('id_outlet', $outlet['id_outlet'])
                     ->whereIn('id_product', $post['sold_out'])->select('id_product')->get();
 
-                if(count($newDetail) > 0){
+                if (count($newDetail) > 0) {
                     $newDetail = $newDetail->pluck('id_product')->toArray();
                     $diff = array_diff($post['sold_out'], $newDetail);
-                }else{
+                } else {
                     //all product need to be created in product_detail
                     $diff = $post['sold_out'];
                 }
-                if(count($diff) > 0){
+                if (count($diff) > 0) {
                     $insert = [];
                     $insertStatus = [];
-                    foreach($diff as $idProd){
-                        if($idProd != 0){
+                    foreach ($diff as $idProd) {
+                        if ($idProd != 0) {
                             $insert[] = [
                                 'id_product' => $idProd,
                                 'id_outlet'  => $outlet['id_outlet'],
@@ -1202,7 +1216,6 @@ class ApiOutletApp extends Controller
                     $createStatus = ProductStockStatusUpdate::insert($insertStatus);
                     $updated += $createDetail;
                 }
-
             }
             if ($post['available']) {
                 $post['available'] = array_unique($post['available']);
@@ -1229,19 +1242,19 @@ class ApiOutletApp extends Controller
                 $newDetail = ProductDetail::where('id_outlet', $outlet['id_outlet'])
                     ->whereIn('id_product', $post['available'])->select('id_product')->get();
 
-                if(count($newDetail) > 0){
+                if (count($newDetail) > 0) {
                     $newDetail = $newDetail->pluck('id_product')->toArray();
                     $diff = array_diff($post['available'], $newDetail);
-                }else{
+                } else {
                     //all product need to be created in product_detail
                     $diff = $post['available'];
                 }
 
-                if(count($diff) > 0){
+                if (count($diff) > 0) {
                     $insert = [];
                     $insertStatus = [];
-                    foreach($diff as $idProd){
-                        if($idProd != 0){
+                    foreach ($diff as $idProd) {
+                        if ($idProd != 0) {
                             $insert[] = [
                                 'id_product' => $idProd,
                                 'id_outlet'  => $outlet['id_outlet'],
@@ -1251,7 +1264,7 @@ class ApiOutletApp extends Controller
                                 'created_at' => $date_time,
                                 'updated_at' => $date_time
                             ];
-        
+
                             $insertStatus = [
                                 'id_product'        => $idProd,
                                 'id_user'           => $user_outlet['id_user'],
@@ -1265,7 +1278,7 @@ class ApiOutletApp extends Controller
                             ];
                         }
                     }
-                    $createDetail = ProductDetail::insert($insert);                
+                    $createDetail = ProductDetail::insert($insert);
                     $createStatus = ProductStockStatusUpdate::insert($insertStatus);
                     $updated += $createDetail;
                 }
@@ -1279,7 +1292,9 @@ class ApiOutletApp extends Controller
             $date_time   = date('Y-m-d H:i:s');
             if ($post['sold_out']) {
                 // modifier id = product_id / 1000
-                $post['sold_out'] = array_map(function($val){return $val/1000;},array_unique($post['sold_out']));
+                $post['sold_out'] = array_map(function ($val) {
+                    return $val / 1000;
+                }, array_unique($post['sold_out']));
                 $found = ProductModifierDetail::where('id_outlet', $outlet['id_outlet'])
                     ->whereIn('id_product_modifier', $post['sold_out'])
                     ->where('product_modifier_stock_status', '<>', 'Sold Out');
@@ -1303,18 +1318,18 @@ class ApiOutletApp extends Controller
                 $newDetail = ProductModifierDetail::where('id_outlet', $outlet['id_outlet'])
                     ->whereIn('id_product_modifier', $post['sold_out'])->select('id_product_modifier')->get();
 
-                if(count($newDetail) > 0){
+                if (count($newDetail) > 0) {
                     $newDetail = $newDetail->pluck('id_product_modifier')->toArray();
                     $diff = array_diff($post['sold_out'], $newDetail);
-                }else{
+                } else {
                     //all product need to be created in product_detail
                     $diff = $post['sold_out'];
                 }
-                if(count($diff) > 0){
+                if (count($diff) > 0) {
                     $insert = [];
                     $insertStatus = [];
-                    foreach($diff as $idProd){
-                        if($idProd != 0){
+                    foreach ($diff as $idProd) {
+                        if ($idProd != 0) {
                             $insert[] = [
                                 'id_product_modifier' => $idProd,
                                 'id_outlet'  => $outlet['id_outlet'],
@@ -1341,10 +1356,11 @@ class ApiOutletApp extends Controller
                     $createStatus = ProductModifierStockStatusUpdate::insert($insertStatus);
                     $updated += $createDetail;
                 }
-
             }
             if ($post['available']) {
-                $post['available'] = array_map(function($val){return $val/1000;},array_unique($post['available']));
+                $post['available'] = array_map(function ($val) {
+                    return $val / 1000;
+                }, array_unique($post['available']));
                 $found = ProductModifierDetail::where('id_outlet', $outlet['id_outlet'])
                     ->whereIn('id_product_modifier', $post['available'])
                     ->where('product_modifier_stock_status', '<>', 'Available');
@@ -1368,19 +1384,19 @@ class ApiOutletApp extends Controller
                 $newDetail = ProductModifierDetail::where('id_outlet', $outlet['id_outlet'])
                     ->whereIn('id_product_modifier', $post['available'])->select('id_product_modifier')->get();
 
-                if(count($newDetail) > 0){
+                if (count($newDetail) > 0) {
                     $newDetail = $newDetail->pluck('id_product_modifier')->toArray();
                     $diff = array_diff($post['available'], $newDetail);
-                }else{
+                } else {
                     //all product need to be created in product_detail
                     $diff = $post['available'];
                 }
 
-                if(count($diff) > 0){
+                if (count($diff) > 0) {
                     $insert = [];
                     $insertStatus = [];
-                    foreach($diff as $idProd){
-                        if($idProd != 0){
+                    foreach ($diff as $idProd) {
+                        if ($idProd != 0) {
                             $insert[] = [
                                 'id_product_modifier' => $idProd,
                                 'id_outlet'  => $outlet['id_outlet'],
@@ -1390,7 +1406,7 @@ class ApiOutletApp extends Controller
                                 'created_at' => $date_time,
                                 'updated_at' => $date_time
                             ];
-        
+
                             $insertStatus = [
                                 'id_product_modifier'        => $idProd,
                                 'id_user'           => $user_outlet['id_user'],
@@ -1404,7 +1420,7 @@ class ApiOutletApp extends Controller
                             ];
                         }
                     }
-                    $createDetail = ProductModifierDetail::insert($insert);                
+                    $createDetail = ProductModifierDetail::insert($insert);
                     $createStatus = ProductModifierStockStatusUpdate::insert($insertStatus);
                     $updated += $createDetail;
                 }
@@ -1432,7 +1448,7 @@ class ApiOutletApp extends Controller
                     ->groupBy('products.id_product');
             })
         // product availbale in outlet
-            ->leftjoin('product_detail', function($join) use ($outlet) {
+            ->leftjoin('product_detail', function ($join) use ($outlet) {
                 $join->on('product_detail.id_product', '=', 'products.id_product')
                     ->where('product_detail.id_outlet', '=', $outlet['id_outlet']);
             })
@@ -1448,12 +1464,12 @@ class ApiOutletApp extends Controller
                     ->orWhereNull('product_detail.product_detail_status');
             })
         // brand produk ada di outlet
-            ->join('brand_outlet', function($join)  use ($outlet) {
+            ->join('brand_outlet', function ($join) use ($outlet) {
                 $join->on('brand_outlet.id_brand', '=', 'brand_product.id_brand')
                     ->where('brand_outlet.id_outlet', '=', $outlet['id_outlet']);
             });
         if ($outlet['outlet_different_price']) {
-            $data->join('product_special_price', function($join) use ($outlet) {
+            $data->join('product_special_price', function ($join) use ($outlet) {
                 $join->on('product_special_price.id_product', '=', 'products.id_product')
                     ->where('product_special_price.id_outlet', $outlet['id_outlet']);
             })->whereNotNull('product_special_price.product_special_price');
@@ -1473,7 +1489,7 @@ class ApiOutletApp extends Controller
                     'brand_active'     => 1,
                     'brand_visibility' => 1,
                 ])->first();
-            if(!$brand) {
+            if (!$brand) {
                 return 'no_brand';
             }
             $brand['categories'] = $val;
@@ -1486,27 +1502,27 @@ class ApiOutletApp extends Controller
         });
         $modifiers = ProductModifier::select(\DB::raw('0 as id_brand, min(product_modifiers.id_product_modifier) as id_product_category, type as product_category_name, count(distinct(product_modifiers.id_product_modifier)) as total_product, 0 as total_sold_out'))
             ->where('modifier_type', '<>', 'Modifier Group')
-            ->leftJoin('product_modifier_details', function($join) use ($outlet) {
-                $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
+            ->leftJoin('product_modifier_details', function ($join) use ($outlet) {
+                $join->on('product_modifier_details.id_product_modifier', '=', 'product_modifiers.id_product_modifier')
                     ->where('product_modifier_details.id_outlet', $outlet['id_outlet']);
             })
-            ->join('product_modifier_inventory_brands', function($join) use ($outlet) {
+            ->join('product_modifier_inventory_brands', function ($join) use ($outlet) {
                 $join->on('product_modifier_inventory_brands.id_product_modifier', 'product_modifiers.id_product_modifier')
-                    ->whereIn('id_brand',$outlet->brand_outlets->pluck('id_brand'));
+                    ->whereIn('id_brand', $outlet->brand_outlets->pluck('id_brand'));
             })
-            ->where(function($q){
-                $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
+            ->where(function ($q) {
+                $q->where('product_modifier_status', 'Active')->orWhereNull('product_modifier_status');
             })
-            ->where(function($query){
-                $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
-                        ->orWhere(function($q){
+            ->where(function ($query) {
+                $query->where('product_modifier_details.product_modifier_visibility', '=', 'Visible')
+                        ->orWhere(function ($q) {
                             $q->whereNull('product_modifier_details.product_modifier_visibility')
                             ->where('product_modifiers.product_modifier_visibility', 'Visible');
                         });
             });
 
         if ($outlet['outlet_different_price']) {
-            $modifiers->join('product_modifier_prices', function($join) use ($outlet) {
+            $modifiers->join('product_modifier_prices', function ($join) use ($outlet) {
                 $join->on('product_modifier_prices.id_product_modifier', '=', 'product_modifiers.id_product_modifier')
                     ->where('product_modifier_prices.id_outlet', $outlet['id_outlet']);
             })->whereNotNull('product_modifier_prices.product_modifier_price');
@@ -1526,27 +1542,27 @@ class ApiOutletApp extends Controller
 
         $modifier_groups = ProductModifier::select(\DB::raw('0 as id_brand, 0 as id_product_category, "Variant No SKU" as product_category_name, count(distinct(product_modifiers.id_product_modifier_group)) as total_product, 0 as total_sold_out'))
             ->where('modifier_type', '=', 'Modifier Group')
-            ->leftJoin('product_modifier_details', function($join) use ($outlet) {
-                $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
+            ->leftJoin('product_modifier_details', function ($join) use ($outlet) {
+                $join->on('product_modifier_details.id_product_modifier', '=', 'product_modifiers.id_product_modifier')
                     ->where('product_modifier_details.id_outlet', $outlet['id_outlet']);
             })
-            ->join('product_modifier_group_inventory_brands', function($join) use ($outlet) {
+            ->join('product_modifier_group_inventory_brands', function ($join) use ($outlet) {
                 $join->on('product_modifier_group_inventory_brands.id_product_modifier_group', 'product_modifiers.id_product_modifier_group')
-                    ->whereIn('id_brand',$outlet->brand_outlets->pluck('id_brand'));
+                    ->whereIn('id_brand', $outlet->brand_outlets->pluck('id_brand'));
             })
-            ->where(function($q){
-                $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
+            ->where(function ($q) {
+                $q->where('product_modifier_status', 'Active')->orWhereNull('product_modifier_status');
             })
-            ->where(function($query){
-                $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
-                        ->orWhere(function($q){
+            ->where(function ($query) {
+                $query->where('product_modifier_details.product_modifier_visibility', '=', 'Visible')
+                        ->orWhere(function ($q) {
                             $q->whereNull('product_modifier_details.product_modifier_visibility')
                             ->where('product_modifiers.product_modifier_visibility', 'Visible');
                         });
             });
 
         if ($outlet['outlet_different_price']) {
-            $modifier_groups->join('product_modifier_prices', function($join) use ($outlet) {
+            $modifier_groups->join('product_modifier_prices', function ($join) use ($outlet) {
                 $join->on('product_modifier_prices.id_product_modifier', '=', 'product_modifiers.id_product_modifier')
                     ->where('product_modifier_prices.id_outlet', $outlet['id_outlet']);
             })->whereNotNull('product_modifier_prices.product_modifier_price');
@@ -1556,15 +1572,15 @@ class ApiOutletApp extends Controller
         }
 
         $modifier_groups = $modifier_groups->get();
-		
-		if ( !empty($modifier_groups[0]['total_product']) ) {
-	        $result[] = [
-	            'id_brand' => 0,
-	            'name_brand' => 'Variant No SKU',
-	            'order_brand' => 1000,
-	            'categories' => $modifier_groups
-	        ];
-		}
+
+        if (!empty($modifier_groups[0]['total_product'])) {
+            $result[] = [
+                'id_brand' => 0,
+                'name_brand' => 'Variant No SKU',
+                'order_brand' => 1000,
+                'categories' => $modifier_groups
+            ];
+        }
 
         return MyHelper::checkGet(array_values($result));
     }
@@ -1581,26 +1597,26 @@ class ApiOutletApp extends Controller
             $post['id_outlet'] = $outlet['id_outlet'];
             $products          = Product::select([
                 'products.product_variant_status',
-                'products.id_product', 'products.product_code', 'products.product_name', 
+                'products.id_product', 'products.product_code', 'products.product_name',
                 DB::raw('(CASE WHEN product_detail.product_detail_stock_status is NULL THEN "Available" ELSE product_detail.product_detail_stock_status END) AS product_stock_status'),
                 // 'product_detail.product_detail_stock_status as product_stock_status',
             ])
 
             // join brand product
-                ->join('brand_product', function($join) use ($post) {
+                ->join('brand_product', function ($join) use ($post) {
                     $join->on('brand_product.id_product', '=', 'products.id_product')
                         ->where('brand_product.id_brand', '=', $post['id_brand'])
                         ->where('brand_product.id_product_category', '=', $post['id_product_category']);
                 })
 
             // brand produk ada di outlet
-                ->join('brand_outlet', function($join) use ($post) {
+                ->join('brand_outlet', function ($join) use ($post) {
                     $join->on('brand_outlet.id_brand', '=', 'brand_product.id_brand')
                         ->where('brand_outlet.id_outlet', '=', $post['id_outlet']);
                 })
 
             // product available (active & visible)
-                ->leftJoin('product_detail', function($join) use ($post) {
+                ->leftJoin('product_detail', function ($join) use ($post) {
                     $join->on('product_detail.id_product', '=', 'products.id_product')
                         ->where('product_detail.id_outlet', '=', $post['id_outlet']);
                 })
@@ -1618,11 +1634,11 @@ class ApiOutletApp extends Controller
 
             // has product price
             if ($outlet->outlet_different_price) {
-                $products->join('product_special_price', function($join) use ($post) {
+                $products->join('product_special_price', function ($join) use ($post) {
                     $join->on('product_special_price.id_product', '=', 'products.id_product')
                         ->where('product_special_price.id_outlet', '=', $post['id_outlet']);
                 })->whereNotNull('product_special_price.product_special_price');
-            } else{
+            } else {
                 $products->join('product_global_price', 'products.id_product', '=', 'product_global_price.id_product')
                     ->whereNotNull('product_global_price.product_global_price');
             }
@@ -1637,18 +1653,18 @@ class ApiOutletApp extends Controller
                 $data = $products->paginate(30)->toArray();
                 if (empty($data['data'])) {
                     return MyHelper::checkGet($data['data']);
-                }else{
-                    foreach ($data['data'] as $key => $dt){
+                } else {
+                    foreach ($data['data'] as $key => $dt) {
                         $variants = [];
-                        if($dt['product_variant_status'] == 1){
+                        if ($dt['product_variant_status'] == 1) {
                             $variants = ProductVariantGroup::where('id_product', $dt['id_product'])
                                 ->where('product_variant_group_visibility', 'Visible')
                                 ->select([
                                     'product_variant_groups.id_product', 'product_variant_groups.id_product_variant_group', 'product_variant_groups.product_variant_group_code',
                                     DB::raw('(SELECT GROUP_CONCAT(pv.product_variant_name SEPARATOR ",") FROM product_variant_pivot pvp join product_variants pv on pv.id_product_variant = pvp.id_product_variant where pvp.id_product_variant_group = product_variant_groups.id_product_variant_group) AS product_variant_group_name'),
                                     DB::raw('(CASE
-                        WHEN (Select pvgd.product_variant_group_stock_status from product_variant_group_details as pvgd where pvgd.id_product_variant_group = product_variant_groups.id_product_variant_group AND pvgd.id_outlet = '.$outlet['id_outlet'].') is NULL THEN "Available"
-                        ELSE (Select pvgd.product_variant_group_stock_status from product_variant_group_details as pvgd where pvgd.id_product_variant_group = product_variant_groups.id_product_variant_group AND pvgd.id_outlet = '.$outlet['id_outlet'].') END) as product_variant_group_stock_status')])->get()->toArray();
+                        WHEN (Select pvgd.product_variant_group_stock_status from product_variant_group_details as pvgd where pvgd.id_product_variant_group = product_variant_groups.id_product_variant_group AND pvgd.id_outlet = ' . $outlet['id_outlet'] . ') is NULL THEN "Available"
+                        ELSE (Select pvgd.product_variant_group_stock_status from product_variant_group_details as pvgd where pvgd.id_product_variant_group = product_variant_groups.id_product_variant_group AND pvgd.id_outlet = ' . $outlet['id_outlet'] . ') END) as product_variant_group_stock_status')])->get()->toArray();
                         }
 
                         $data['data'][$key]['product_variant_group'] = $variants;
@@ -1657,17 +1673,17 @@ class ApiOutletApp extends Controller
                 return MyHelper::checkGet($data);
             } else {
                 $data = $products->get()->toArray();
-                foreach ($data as $key => $dt){
+                foreach ($data as $key => $dt) {
                     $variants = [];
-                    if($dt['product_variant_status'] == 1){
+                    if ($dt['product_variant_status'] == 1) {
                         $variants = ProductVariantGroup::where('id_product', $dt['id_product'])
                             ->where('product_variant_group_visibility', 'Visible')
                             ->select([
                                 'product_variant_groups.id_product', 'product_variant_groups.id_product_variant_group', 'product_variant_groups.product_variant_group_code',
                                 DB::raw('(SELECT GROUP_CONCAT(pv.product_variant_name SEPARATOR ",") FROM product_variant_pivot pvp join product_variants pv on pv.id_product_variant = pvp.id_product_variant where pvp.id_product_variant_group = product_variant_groups.id_product_variant_group) AS product_variant_group_name'),
                                 DB::raw('(CASE
-                        WHEN (Select pvgd.product_variant_group_stock_status from product_variant_group_details as pvgd where pvgd.id_product_variant_group = product_variant_groups.id_product_variant_group AND pvgd.id_outlet = '.$outlet['id_outlet'].') is NULL THEN "Available"
-                        ELSE (Select pvgd.product_variant_group_stock_status from product_variant_group_details as pvgd where pvgd.id_product_variant_group = product_variant_groups.id_product_variant_group AND pvgd.id_outlet = '.$outlet['id_outlet'].') END) as product_variant_group_stock_status')])->get()->toArray();
+                        WHEN (Select pvgd.product_variant_group_stock_status from product_variant_group_details as pvgd where pvgd.id_product_variant_group = product_variant_groups.id_product_variant_group AND pvgd.id_outlet = ' . $outlet['id_outlet'] . ') is NULL THEN "Available"
+                        ELSE (Select pvgd.product_variant_group_stock_status from product_variant_group_details as pvgd where pvgd.id_product_variant_group = product_variant_groups.id_product_variant_group AND pvgd.id_outlet = ' . $outlet['id_outlet'] . ') END) as product_variant_group_stock_status')])->get()->toArray();
                     }
 
                     $data[$key]['product_variant_group'] = $variants;
@@ -1678,24 +1694,24 @@ class ApiOutletApp extends Controller
             $outlet->load('brand_outlets');
             // modifiers
             $modifiers = ProductModifier::select(\DB::raw('product_modifiers.id_product_modifier * 1000 as id_product, code as product_code, text as product_name, CASE WHEN product_modifier_stock_status IS NULL THEN "Available" ELSE product_modifier_stock_status END as product_stock_status'))
-            ->leftJoin('product_modifier_details', function($join) use ($outlet) {
-                $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
+            ->leftJoin('product_modifier_details', function ($join) use ($outlet) {
+                $join->on('product_modifier_details.id_product_modifier', '=', 'product_modifiers.id_product_modifier')
                     ->where('product_modifier_details.id_outlet', $outlet['id_outlet']);
             })
-            ->where(function($q){
-                $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
+            ->where(function ($q) {
+                $q->where('product_modifier_status', 'Active')->orWhereNull('product_modifier_status');
             })
-            ->where('modifier_type','<>','Modifier Group')
-            ->where(function($query){
-                $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
-                        ->orWhere(function($q){
+            ->where('modifier_type', '<>', 'Modifier Group')
+            ->where(function ($query) {
+                $query->where('product_modifier_details.product_modifier_visibility', '=', 'Visible')
+                        ->orWhere(function ($q) {
                             $q->whereNull('product_modifier_details.product_modifier_visibility')
                             ->where('product_modifiers.product_modifier_visibility', 'Visible');
                         });
             })
-            ->join('product_modifier_inventory_brands', function($join) use ($outlet) {
+            ->join('product_modifier_inventory_brands', function ($join) use ($outlet) {
                 $join->on('product_modifier_inventory_brands.id_product_modifier', 'product_modifiers.id_product_modifier')
-                    ->whereIn('id_brand',$outlet->brand_outlets->pluck('id_brand'));
+                    ->whereIn('id_brand', $outlet->brand_outlets->pluck('id_brand'));
             })
             ->groupBy('product_modifiers.id_product_modifier');
             $modifiers = $modifiers->orderBy('text');
@@ -1711,7 +1727,7 @@ class ApiOutletApp extends Controller
                 return MyHelper::checkGet($modifiers->get()->toArray());
             }
         } else {
-        	return $this->listProductModifierGroup($request);
+            return $this->listProductModifierGroup($request);
         }
     }
 
@@ -1744,7 +1760,6 @@ class ApiOutletApp extends Controller
                 //masukin ke array result
                 $position = array_search($category['product_category']['id_product_category'], $idParent);
                 if (!is_integer($position)) {
-
                     $dataProduct['id_product']           = $category['id_product'];
                     $dataProduct['product_code']         = $category['product_code'];
                     $dataProduct['product_name']         = $category['product_name'];
@@ -1777,7 +1792,6 @@ class ApiOutletApp extends Controller
 
                         $dataCategory['products'][]                 = $dataProduct;
                         $categorized[$position]['child_category'][] = $dataCategory;
-
                     } else {
                         //masukin product child yang sudah ada
                         $dataProduct['id_product']           = $category['id_product'];
@@ -1813,9 +1827,7 @@ class ApiOutletApp extends Controller
 
                     $categorized[$position]['products'][] = $dataProduct;
                 }
-
             }
-
         }
 
         // $uncategorized = ProductPrice::join('products', 'product_prices.id_product', 'products.id_product')
@@ -1862,7 +1874,7 @@ class ApiOutletApp extends Controller
 
         if ($order->pickup_by == 'GO-SEND') {
             $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
-            if($pickup_gosend && $pickup_gosend['latest_status'] && !in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled'])) {
+            if ($pickup_gosend && $pickup_gosend['latest_status'] && !in_array($pickup_gosend['latest_status'] ?? false, ['no_driver', 'rejected', 'cancelled'])) {
                 return response()->json([
                     'status'   => 'fail',
                     'messages' => ['Driver has been booked'],
@@ -1872,8 +1884,8 @@ class ApiOutletApp extends Controller
                 goto reject;
             }
         } elseif ($order->pickup_by == 'Wehelpyou') {
-        	$pickupWhy = TransactionPickupWehelpyou::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
-            if($pickupWhy && $pickupWhy['latest_status_id'] && !in_array($pickupWhy['latest_status_id'], WeHelpYou::orderEndFailStatusId())) {
+            $pickupWhy = TransactionPickupWehelpyou::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
+            if ($pickupWhy && $pickupWhy['latest_status_id'] && !in_array($pickupWhy['latest_status_id'], WeHelpYou::orderEndFailStatusId())) {
                 return response()->json([
                     'status'   => 'fail',
                     'messages' => ['Driver has been booked'],
@@ -1891,10 +1903,10 @@ class ApiOutletApp extends Controller
                     'messages' => ['Order Has Been Ready'],
                 ]);
             } elseif ($order->pickup_by == 'Wehelpyou') {
-            	$pickupWhy = TransactionPickupWehelpyou::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
-            	$endStatus = WeHelpYou::orderEndStatusId();
-            	unset($endStatus['Rejected']);
-                if($pickupWhy['latest_status_id'] && !in_array($pickupWhy['latest_status_id'], $endStatus)) {
+                $pickupWhy = TransactionPickupWehelpyou::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
+                $endStatus = WeHelpYou::orderEndStatusId();
+                unset($endStatus['Rejected']);
+                if ($pickupWhy['latest_status_id'] && !in_array($pickupWhy['latest_status_id'], $endStatus)) {
                     return response()->json([
                         'status'   => 'fail',
                         'messages' => ['Driver has been booked'],
@@ -1904,7 +1916,7 @@ class ApiOutletApp extends Controller
                 }
             } else {
                 $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
-                if($pickup_gosend['latest_status'] && !in_array($pickup_gosend['latest_status']??false, ['no_driver', 'cancelled'])) {
+                if ($pickup_gosend['latest_status'] && !in_array($pickup_gosend['latest_status'] ?? false, ['no_driver', 'cancelled'])) {
                     return response()->json([
                         'status'   => 'fail',
                         'messages' => ['Driver has been booked'],
@@ -1957,7 +1969,6 @@ class ApiOutletApp extends Controller
                         'updated_at'            => date('Y-m-d H:i:s'),
                     ]);
                 }
-
             }
 
             $getLogFraudWeek = FraudDetectionLogTransactionWeek::where('fraud_detection_week', date('W', strtotime($order->transaction_date)))
@@ -2017,11 +2028,11 @@ class ApiOutletApp extends Controller
                     } elseif ($pay['type'] == 'Ovo') {
                         $payOvo = TransactionPaymentOvo::find($pay['id_payment']);
                         if ($payOvo) {
-                            $doRefundPayment = Configs::select('is_active')->where('config_name','refund ovo')->pluck('is_active')->first();
-                            if($doRefundPayment){
+                            $doRefundPayment = Configs::select('is_active')->where('config_name', 'refund ovo')->pluck('is_active')->first();
+                            if ($doRefundPayment) {
                                 $point = 0;
                                 $transaction = TransactionPaymentOvo::where('transaction_payment_ovos.id_transaction', $post['id_transaction'])
-                                    ->join('transactions','transactions.id_transaction','=','transaction_payment_ovos.id_transaction')
+                                    ->join('transactions', 'transactions.id_transaction', '=', 'transaction_payment_ovos.id_transaction')
                                     ->first();
                                 TransactionPickup::where('id_transaction', $order->id_transaction)->update([
                                     'reject_type'   => 'refund',
@@ -2070,7 +2081,7 @@ class ApiOutletApp extends Controller
                         $payIpay = TransactionPaymentIpay88::find($pay['id_payment']);
                         if ($payIpay) {
                             $doRefundPayment = strtolower($payIpay['payment_method']) == 'ovo' && MyHelper::setting('refund_ipay88');
-                            if($doRefundPayment){
+                            if ($doRefundPayment) {
                                 $refund = \Modules\IPay88\Lib\IPay88::create()->void($payIpay, 'trx', 'user', $message);
                                 TransactionPickup::where('id_transaction', $order['id_transaction'])->update([
                                     'reject_type'   => 'refund',
@@ -2082,7 +2093,7 @@ class ApiOutletApp extends Controller
                                     } else {
                                         $order->update(['need_manual_void' => 1]);
                                         $order2 = clone $order;
-                                        $order2->manual_refund = $payIpay['amount']/100;
+                                        $order2->manual_refund = $payIpay['amount'] / 100;
                                         $order2->payment_method = 'Ipay88';
                                         $order2->payment_detail = $payIpay['payment_method'];
                                         $order2->payment_reference_number = $payIpay['trans_id'];
@@ -2103,7 +2114,7 @@ class ApiOutletApp extends Controller
                                 TransactionPickup::where('id_transaction', $order->id_transaction)->update([
                                     'reject_type'   => 'point',
                                 ]);
-                                $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+                                $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount'] / 100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
                                 if ($refund == false) {
                                     DB::rollback();
                                     return response()->json([
@@ -2119,7 +2130,7 @@ class ApiOutletApp extends Controller
                         $payShopeepay = TransactionPaymentShopeePay::find($pay['id_payment']);
                         if ($payShopeepay) {
                             $doRefundPayment = MyHelper::setting('refund_shopeepay');
-                            if($doRefundPayment){
+                            if ($doRefundPayment) {
                                 $refund = app($this->shopeepay)->refund($payShopeepay['id_transaction'], 'trx', $errors);
                                 TransactionPickup::where('id_transaction', $order['id_transaction'])->update([
                                     'reject_type'   => 'refund',
@@ -2132,7 +2143,7 @@ class ApiOutletApp extends Controller
                                         $order->update(['need_manual_void' => 1]);
                                         $order2 = clone $order;
                                         $order2->payment_method = 'ShopeePay';
-                                        $order2->manual_refund = $payShopeepay['amount']/100;
+                                        $order2->manual_refund = $payShopeepay['amount'] / 100;
                                         $order2->payment_reference_number = $payShopeepay['transaction_sn'];
                                         if ($shared['reject_batch'] ?? false) {
                                             $shared['void_failed'][] = $order2;
@@ -2151,7 +2162,7 @@ class ApiOutletApp extends Controller
                                 TransactionPickup::where('id_transaction', $order->id_transaction)->update([
                                     'reject_type'   => 'point',
                                 ]);
-                                $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payShopeepay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+                                $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payShopeepay['amount'] / 100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
                                 if ($refund == false) {
                                     DB::rollback();
                                     return response()->json([
@@ -2168,7 +2179,7 @@ class ApiOutletApp extends Controller
                         if ($payMidtrans) {
                             $doRefundPayment = MyHelper::setting('refund_midtrans');
                             if ($doRefundPayment) {
-                                $refund = Midtrans::refund($payMidtrans['vt_transaction_id'],['reason' => $post['reason']??'']);
+                                $refund = Midtrans::refund($payMidtrans['vt_transaction_id'], ['reason' => $post['reason'] ?? '']);
                                 TransactionPickup::where('id_transaction', $order->id_transaction)->update([
                                     'reject_type'   => 'refund',
                                 ]);
@@ -2200,7 +2211,7 @@ class ApiOutletApp extends Controller
                                 TransactionPickup::where('id_transaction', $order->id_transaction)->update([
                                     'reject_type'   => 'point',
                                 ]);
-                                $refund = app($this->balance)->addLogBalance( $order['id_user'], $point = $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
+                                $refund = app($this->balance)->addLogBalance($order['id_user'], $point = $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
                                 if ($refund == false) {
                                     DB::rollback();
                                     return response()->json([
@@ -2212,7 +2223,6 @@ class ApiOutletApp extends Controller
                             }
                         }
                     }
-
                 }
             } else {
                 $payMidtrans = TransactionPaymentMidtran::where('id_transaction', $order['id_transaction'])->first();
@@ -2222,7 +2232,7 @@ class ApiOutletApp extends Controller
                     $point = 0;
                     $doRefundPayment = MyHelper::setting('refund_midtrans');
                     if ($doRefundPayment) {
-                        $refund = Midtrans::refund($payMidtrans['vt_transaction_id'],['reason' => $post['reason']??'']);
+                        $refund = Midtrans::refund($payMidtrans['vt_transaction_id'], ['reason' => $post['reason'] ?? '']);
                         TransactionPickup::where('id_transaction', $order->id_transaction)->update([
                             'reject_type'   => 'refund',
                         ]);
@@ -2253,7 +2263,7 @@ class ApiOutletApp extends Controller
                         TransactionPickup::where('id_transaction', $order->id_transaction)->update([
                             'reject_type'   => 'point',
                         ]);
-                        $refund = app($this->balance)->addLogBalance( $order['id_user'], $point = $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
+                        $refund = app($this->balance)->addLogBalance($order['id_user'], $point = $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
                         if ($refund == false) {
                             DB::rollback();
                             return response()->json([
@@ -2264,11 +2274,11 @@ class ApiOutletApp extends Controller
                         $rejectBalance = true;
                     }
                 } elseif ($payOvo) {
-                    $doRefundPayment = Configs::select('is_active')->where('config_name','refund ovo')->pluck('is_active')->first();
+                    $doRefundPayment = Configs::select('is_active')->where('config_name', 'refund ovo')->pluck('is_active')->first();
                     if ($doRefundPayment) {
                         $point = 0;
                         $transaction = TransactionPaymentOvo::where('transaction_payment_ovos.id_transaction', $post['id_transaction'])
-                            ->join('transactions','transactions.id_transaction','=','transaction_payment_ovos.id_transaction')
+                            ->join('transactions', 'transactions.id_transaction', '=', 'transaction_payment_ovos.id_transaction')
                             ->first();
                         $refund = Ovo::Void($transaction);
                         TransactionPickup::where('id_transaction', $order->id_transaction)->update([
@@ -2326,7 +2336,7 @@ class ApiOutletApp extends Controller
                                 $order2 = clone $order;
                                 $order2->payment_method = 'Ipay88';
                                 $order2->payment_detail = $payIpay['payment_method'];
-                                $order2->manual_refund = $payIpay['amount']/100;
+                                $order2->manual_refund = $payIpay['amount'] / 100;
                                 $order2->payment_reference_number = $payIpay['trans_id'];
                                 if ($shared['reject_batch'] ?? false) {
                                     $shared['void_failed'][] = $order2;
@@ -2345,7 +2355,7 @@ class ApiOutletApp extends Controller
                         TransactionPickup::where('id_transaction', $order->id_transaction)->update([
                             'reject_type'   => 'point',
                         ]);
-                        $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+                        $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount'] / 100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
                         if ($refund == false) {
                             DB::rollback();
                             return response()->json([
@@ -2369,12 +2379,10 @@ class ApiOutletApp extends Controller
                         $rejectBalance = true;
                     }
                 }
-                
             }
             // }
             // delete promo campaign report
-            if ($order->id_promo_campaign_promo_code)
-            {
+            if ($order->id_promo_campaign_promo_code) {
                 $update_promo_report = app($this->promo_campaign)->deleteReport($order->id_transaction, $order->id_promo_campaign_promo_code);
             }
             // return voucher
@@ -2402,16 +2410,19 @@ class ApiOutletApp extends Controller
             }
 
             //send notif point refund
-            if($rejectBalance == true){
-                $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $user['phone'],
-                [
+            if ($rejectBalance == true) {
+                $send = app($this->autocrm)->SendAutoCRM(
+                    'Rejected Order Point Refund',
+                    $user['phone'],
+                    [
                     "outlet_name"      => $outlet['outlet_name'],
                     "transaction_date" => $order['transaction_date'],
                     'id_transaction'   => $order['id_transaction'],
                     'receipt_number'   => $order['transaction_receipt_number'],
                     'received_point'   => (string) $point,
                     'order_id'         => $order->order_id,
-                ]);
+                    ]
+                );
                 if ($send != true) {
                     DB::rollback();
                     return response()->json([
@@ -2420,7 +2431,6 @@ class ApiOutletApp extends Controller
                     ]);
                 }
             }
-
         }
         DB::commit();
 
@@ -2433,11 +2443,11 @@ class ApiOutletApp extends Controller
         $timezone = $request->user()->time_zone_utc;
         $city = City::where('id_city', $request->user()->id_city)->with('province')->first();
         //get timezone from province
-        if(isset($city['province']['time_zone_utc'])){
+        if (isset($city['province']['time_zone_utc'])) {
             $timezone = $city['province']['time_zone_utc'];
         }
         foreach ($schedules as $key => $value) {
-        	$schedules[$key] = app($this->outlet)->getTimezone($value, $timezone);
+            $schedules[$key] = app($this->outlet)->getTimezone($value, $timezone);
         }
         return MyHelper::checkGet($schedules);
     }
@@ -2454,10 +2464,10 @@ class ApiOutletApp extends Controller
             $timezone = $request->user()->time_zone_utc;
             $city = City::where('id_city', $request->user()->id_city)->with('province')->first();
             //get timezone from province
-            if(isset($city['province']['time_zone_utc'])){
+            if (isset($city['province']['time_zone_utc'])) {
                 $timezone = $city['province']['time_zone_utc'];
             }
-        	$value = $this->setTimezone($value, $timezone);
+            $value = $this->setTimezone($value, $timezone);
 
             $old      = OutletSchedule::select('id_outlet_schedule', 'id_outlet', 'day', 'open', 'close', 'is_closed')->where(['id_outlet' => $id_outlet, 'day' => $value['day']])->first();
             $old_data = $old ? $old->toArray() : [];
@@ -2488,8 +2498,8 @@ class ApiOutletApp extends Controller
                     'id_user'            => $user_outlet['id_user'],
                     'id_outlet_app_otp'  => $otp->id_outlet_app_otp,
                     'user_type'          => $user_outlet['user_type'],
-                    'user_name'          => $user_outlet['name']??'',
-                    'user_email'         => $user_outlet['email']??'',
+                    'user_name'          => $user_outlet['name'] ?? '',
+                    'user_email'         => $user_outlet['email'] ?? '',
                     'date_time'          => $date_time,
                     'old_data'           => $old_data ? json_encode($old_data) : null,
                     'new_data'           => json_encode($new_data),
@@ -2586,37 +2596,37 @@ class ApiOutletApp extends Controller
 
         switch ($request->sort ?: $request->sort_by) {
             case 'oldest':
-                $data->orderBy('transaction_date','ASC')->orderBy('transactions.id_transaction','ASC');
+                $data->orderBy('transaction_date', 'ASC')->orderBy('transactions.id_transaction', 'ASC');
                 break;
 
             case 'newest':
-                $data->orderBy('transaction_date','DESC')->orderBy('transactions.id_transaction','DESC');
+                $data->orderBy('transaction_date', 'DESC')->orderBy('transactions.id_transaction', 'DESC');
                 break;
-            
+
             case 'price_asc':
-                $data->orderBy('transaction_grandtotal','ASC')->orderBy('transactions.id_transaction','DESC');
+                $data->orderBy('transaction_grandtotal', 'ASC')->orderBy('transactions.id_transaction', 'DESC');
                 break;
-            
+
             case 'price_desc':
-                $data->orderBy('transaction_grandtotal','DESC')->orderBy('transactions.id_transaction','DESC');
+                $data->orderBy('transaction_grandtotal', 'DESC')->orderBy('transactions.id_transaction', 'DESC');
                 break;
-            
+
             case 'shortest_pickup_time':
-                $data->orderBy('pickup_at','ASC')->orderBy('transactions.id_transaction','ASC');
+                $data->orderBy('pickup_at', 'ASC')->orderBy('transactions.id_transaction', 'ASC');
                 break;
 
             case 'longest_pickup_time':
-                $data->orderBy('pickup_at','DESC')->orderBy('transactions.id_transaction','DESC');
+                $data->orderBy('pickup_at', 'DESC')->orderBy('transactions.id_transaction', 'DESC');
                 break;
-            
+
             case 'shortest_delivery_time':
-                $data->orderBy('pickup_at','ASC')->orderBy('transactions.id_transaction','ASC');
+                $data->orderBy('pickup_at', 'ASC')->orderBy('transactions.id_transaction', 'ASC');
                 break;
 
             case 'longest_delivery_time':
-                $data->orderBy('pickup_at','DESC')->orderBy('transactions.id_transaction','DESC');
+                $data->orderBy('pickup_at', 'DESC')->orderBy('transactions.id_transaction', 'DESC');
                 break;
-            
+
             default:
                 $data->orderBy('pickup_at', 'ASC')
                 ->orderBy('transaction_date', 'ASC')
@@ -2666,7 +2676,7 @@ class ApiOutletApp extends Controller
                 $result[$id_brand]['name_brand'] = Brand::select('name_brand')->where('id_brand', $id_brand)->pluck('name_brand')->first();
             }
             $result[$id_brand]['updates'][] = [
-                'name'    => $name?:$outlet['outlet_name'],
+                'name'    => $name ?: $outlet['outlet_name'],
                 'time'    => $time,
                 'summary' => array_map(function ($vrb) {
                     return [
@@ -2674,7 +2684,8 @@ class ApiOutletApp extends Controller
                         'old_status'   => $vrb['old_status'],
                         'new_status'   => $vrb['new_status'],
                         'to_available' => $vrb['to_available'],
-                    ];}, $var),
+                    ];
+                }, $var),
             ];
         }
 
@@ -2696,7 +2707,7 @@ class ApiOutletApp extends Controller
         foreach ($grouped as $key => $var) {
             [$name, $time] = explode('#', $key);
             $result['0']['updates'][] = [
-                'name'    => $name?:$outlet['outlet_name'],
+                'name'    => $name ?: $outlet['outlet_name'],
                 'time'    => $time,
                 'summary' => array_map(function ($vrb) {
                     return [
@@ -2704,7 +2715,8 @@ class ApiOutletApp extends Controller
                         'old_status'   => $vrb['old_status'],
                         'new_status'   => $vrb['new_status'],
                         'to_available' => $vrb['to_available'],
-                    ];}, $var),
+                    ];
+                }, $var),
             ];
         }
 
@@ -2713,9 +2725,9 @@ class ApiOutletApp extends Controller
 
     public function requestOTP(Request $request)
     {
-        $af = MyHelper::setting('outlet_apps_access_feature','value','otp');
+        $af = MyHelper::setting('outlet_apps_access_feature', 'value', 'otp');
         if ($af == 'seeds') {
-            return MyHelper::checkGet(['status'=>'active','method' => 'auth-email']);
+            return MyHelper::checkGet(['status' => 'active','method' => 'auth-email']);
         } elseif ($af == 'otp') {
             if (!in_array($request->feature, ['Update Stock Status', 'Update Schedule', 'Create Holiday', 'Update Holiday', 'Delete Holiday'])) {
                 return [
@@ -2753,9 +2765,9 @@ class ApiOutletApp extends Controller
             if (!$status) {
                 return MyHelper::checkGet([], 'Failed send PIN');
             }
-            return MyHelper::checkGet(['status'=>'active','method' => 'OTP']);
+            return MyHelper::checkGet(['status' => 'active','method' => 'OTP']);
         } else {
-            return MyHelper::checkGet(['status' => 'inactive']);            
+            return MyHelper::checkGet(['status' => 'inactive']);
         }
     }
 
@@ -2769,14 +2781,14 @@ class ApiOutletApp extends Controller
 
         $request->type = $trx->shipment_method ?? $request->type;
         switch (strtolower($request->type)) {
-        	case 'go-send':
+            case 'go-send':
             case 'gosend':
                 $result = $this->bookGoSend($trx);
                 break;
 
             case 'wehelpyou':
-        		$result = $this->bookWehelpyou($trx);
-            	break;
+                $result = $this->bookWehelpyou($trx);
+                break;
 
             default:
                 $result = ['status' => 'fail', 'messages' => ['Invalid booking type']];
@@ -2787,15 +2799,15 @@ class ApiOutletApp extends Controller
 
     public function bookWehelpyou($trx, $isRetry = false)
     {
-    	$createOrder = WeHelpYou::bookingDelivery($trx, $isRetry);
-    	if ($createOrder['status'] == 'fail') {
-    		return $createOrder;
-    	}
+        $createOrder = WeHelpYou::bookingDelivery($trx, $isRetry);
+        if ($createOrder['status'] == 'fail') {
+            return $createOrder;
+        }
 
-    	return WeHelpYou::updateStatus($trx, $createOrder['result']['poNo']);
+        return WeHelpYou::updateStatus($trx, $createOrder['result']['poNo']);
     }
 
-    public function bookGoSend($trx,$fromRetry = false)
+    public function bookGoSend($trx, $fromRetry = false)
     {
         $trx->load('transaction_pickup', 'transaction_pickup.transaction_pickup_go_send', 'outlet');
         if (!($trx['transaction_pickup']['transaction_pickup_go_send']['id_transaction_pickup_go_send'] ?? false)) {
@@ -2845,24 +2857,24 @@ class ApiOutletApp extends Controller
                         case 'no_driver':
                             $text_start = 'Driver tidak ditemukan.';
                             break;
-                        
+
                         case 'rejected':
-                            $text_start = $trx['transaction_pickup']['order_id'].' Driver batal mengantar Pesanan.';
+                            $text_start = $trx['transaction_pickup']['order_id'] . ' Driver batal mengantar Pesanan.';
                             break;
 
                         case 'cancelled':
-                            $text_start = $trx['transaction_pickup']['order_id'].' Driver batal mengambil Pesanan.';
+                            $text_start = $trx['transaction_pickup']['order_id'] . ' Driver batal mengambil Pesanan.';
                             break;
                     }
                     // kirim notifikasi
                     $dataNotif = [
-                        'subject' => 'Order '.$trx['transaction_pickup']['order_id'],
+                        'subject' => 'Order ' . $trx['transaction_pickup']['order_id'],
                         'string_body' => "$text_start Segera pilih tindakan atau pesanan batal otomatis.",
                         'type' => 'trx',
-                        'id_reference'=> $trx['id_transaction'],
-                        'id_transaction'=> $trx['id_transaction']
+                        'id_reference' => $trx['id_transaction'],
+                        'id_transaction' => $trx['id_transaction']
                     ];
-                    $this->outletNotif($dataNotif,$trx->id_outlet);
+                    $this->outletNotif($dataNotif, $trx->id_outlet);
                 }
 
                 return ['status'  => 'fail', 'messages' => ['Retry reach limit']];
@@ -2916,8 +2928,8 @@ class ApiOutletApp extends Controller
             $updateGoSend->driver_photo      = $status['driverPhoto'] ?? null;
             $updateGoSend->vehicle_number    = $status['vehicleNumber'] ?? null;
             $updateGoSend->live_tracking_url = $status['liveTrackingUrl'] ?? null;
-            $updateGoSend->retry_count       = $fromRetry?($updateGoSend->retry_count+1):0;
-            $updateGoSend->manual_order_no   = $fromRetry?$updateGoSend->manual_order_no:$booking['orderNo'];
+            $updateGoSend->retry_count       = $fromRetry ? ($updateGoSend->retry_count + 1) : 0;
+            $updateGoSend->manual_order_no   = $fromRetry ? $updateGoSend->manual_order_no : $booking['orderNo'];
             $updateGoSend->stop_booking_at   = null;
             $updateGoSend->save();
 
@@ -2931,12 +2943,12 @@ class ApiOutletApp extends Controller
     public function refreshDeliveryStatus(Request $request)
     {
         $trx = Transaction::where('transactions.id_transaction', $request->id_transaction)
-        		->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-        		->with(['outlet' => function($q) {
-		            $q->select('id_outlet', 'outlet_name');
-		        }])
-		        ->where('pickup_by', '!=', 'Customer')
-		        ->first();
+                ->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
+                ->with(['outlet' => function ($q) {
+                    $q->select('id_outlet', 'outlet_name');
+                }])
+                ->where('pickup_by', '!=', 'Customer')
+                ->first();
 
         if (!$trx) {
             return [
@@ -2953,7 +2965,7 @@ class ApiOutletApp extends Controller
             return MyHelper::checkGet($trx, 'Transaction Not Found');
         }
         switch (strtolower($request->type)) {
-        	case 'go-send':
+            case 'go-send':
             case 'gosend':
                 $trxGoSend = TransactionPickupGoSend::where('id_transaction_pickup', $trx['id_transaction_pickup'])->first();
                 if (!$trxGoSend) {
@@ -2972,8 +2984,8 @@ class ApiOutletApp extends Controller
                     'On Hold' => 'on_hold',
                 ];
                 $status = GoSend::getStatus($trx['transaction_receipt_number']);
-                $status['status'] = $ref_status[$status['status']]??$status['status'];
-                if($status['receiver_name'] ?? '') {
+                $status['status'] = $ref_status[$status['status']] ?? $status['status'];
+                if ($status['receiver_name'] ?? '') {
                     $toUpdate['receiver_name'] = $status['receiver_name'];
                 }
                 if ($status['status'] ?? false) {
@@ -3010,16 +3022,15 @@ class ApiOutletApp extends Controller
                             //send notif to customer
                             $user = User::find($trx->id_user);
 
-                            $newTrx    = Transaction::with('user.memberships', 'outlet', 'productTransaction', 'transaction_vouchers','promo_campaign_promo_code','promo_campaign_promo_code.promo_campaign')->where('id_transaction', $trx->id_transaction)->first();
+                            $newTrx    = Transaction::with('user.memberships', 'outlet', 'productTransaction', 'transaction_vouchers', 'promo_campaign_promo_code', 'promo_campaign_promo_code.promo_campaign')->where('id_transaction', $trx->id_transaction)->first();
                             $checkType = TransactionMultiplePayment::where('id_transaction', $trx->id_transaction)->get()->toArray();
                             $column    = array_column($checkType, 'type');
-                            
+
                             $use_referral = optional(optional($newTrx->promo_campaign_promo_code)->promo_campaign)->promo_type == 'Referral';
                             \App\Jobs\UpdateQuestProgressJob::dispatch($trx->id_transaction)->onConnection('quest');
                             \Modules\OutletApp\Jobs\AchievementCheck::dispatch(['id_transaction' => $trx->id_transaction, 'phone' => $user['phone']])->onConnection('achievement');
 
                             if (!in_array('Balance', $column) || $use_referral) {
-
                                 $promo_source = null;
                                 if ($newTrx->id_promo_campaign_promo_code || $newTrx->transaction_vouchers) {
                                     if ($newTrx->id_promo_campaign_promo_code) {
@@ -3040,14 +3051,13 @@ class ApiOutletApp extends Controller
                                         ]);
                                     }
                                 }
-
                             }
 
                             $newTrx->update(['cashback_insert_status' => 1]);
                             $checkMembership = app($this->membership)->calculateMembership($user['phone']);
                             DB::commit();
                         }
-                        $arrived_at = date('Y-m-d H:i:s', ($status['orderClosedTime']??false)?strtotime($status['orderClosedTime']):time());
+                        $arrived_at = date('Y-m-d H:i:s', ($status['orderClosedTime'] ?? false) ? strtotime($status['orderClosedTime']) : time());
                         TransactionPickup::where('id_transaction', $trx->id_transaction)->update(['arrived_at' => $arrived_at]);
                         $dataSave = [
                             'id_transaction'                => $trx['id_transaction'],
@@ -3086,16 +3096,15 @@ class ApiOutletApp extends Controller
                         ];
                         GoSend::saveUpdate($dataSave);
                     } else {
-
-                    	if (in_array(strtolower($status['status']), ['out_for_delivery'])) {
-							$checkTrxPickup = TransactionPickup::where('id_transaction', $trx->id_transaction)->first();
-							if ($checkTrxPickup) {
-								$checkTrxPickup->update([
-									'ready_at' => $checkTrxPickup->ready_at ?? date('Y-m-d H:i:s'),
-									'taken_at' => $checkTrxPickup->taken_at ?? date('Y-m-d H:i:s')
-								]);
-							}
-						}
+                        if (in_array(strtolower($status['status']), ['out_for_delivery'])) {
+                            $checkTrxPickup = TransactionPickup::where('id_transaction', $trx->id_transaction)->first();
+                            if ($checkTrxPickup) {
+                                $checkTrxPickup->update([
+                                    'ready_at' => $checkTrxPickup->ready_at ?? date('Y-m-d H:i:s'),
+                                    'taken_at' => $checkTrxPickup->taken_at ?? date('Y-m-d H:i:s')
+                                ]);
+                            }
+                        }
 
                         $dataSave = [
                             'id_transaction'                => $trx['id_transaction'],
@@ -3110,9 +3119,9 @@ class ApiOutletApp extends Controller
                 break;
 
             case 'wehelpyou':
-            	$trx->load('transaction_pickup.transaction_pickup_wehelpyou');
-            	return WeHelpYou::updateStatus($trx, $trx['transaction_pickup']['transaction_pickup_wehelpyou']['poNo']);
-            	break;
+                $trx->load('transaction_pickup.transaction_pickup_wehelpyou');
+                return WeHelpYou::updateStatus($trx, $trx['transaction_pickup']['transaction_pickup_wehelpyou']['poNo']);
+                break;
 
             default:
                 return ['status' => 'fail', 'messages' => ['Invalid delivery type']];
@@ -3123,66 +3132,66 @@ class ApiOutletApp extends Controller
     public function cancelDelivery(Request $request)
     {
         $trx = Transaction::where('transactions.id_transaction', $request->id_transaction)
-        		->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-        		->where('pickup_by', '!=','Customer')
-        		->first();
+                ->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
+                ->where('pickup_by', '!=', 'Customer')
+                ->first();
 
         if (!$trx) {
             return MyHelper::checkGet($trx, 'Transaction Not Found');
         }
 
         switch ($trx->pickup_by) {
-        	case 'Wehelpyou':
-		        $trx->load('transaction_pickup_wehelpyou');
-		        $poNo = $trx->transaction_pickup_wehelpyou->poNo;
-        		if (!$poNo) {
-		            return [
-		                'status'   => 'fail',
-		                'messages' => ['PO number not found'],
-		            ];
-		        }
-		        $cancel = WeHelpYou::cancelOrder($poNo);
-		        if (($cancel['status_code'] ?? false) != '200') {
-		            return [
-		                'status'   => 'fail',
-		                'messages' => ['Cancel order failed']
-		            ];
-		        }
+            case 'Wehelpyou':
+                $trx->load('transaction_pickup_wehelpyou');
+                $poNo = $trx->transaction_pickup_wehelpyou->poNo;
+                if (!$poNo) {
+                    return [
+                        'status'   => 'fail',
+                        'messages' => ['PO number not found'],
+                    ];
+                }
+                $cancel = WeHelpYou::cancelOrder($poNo);
+                if (($cancel['status_code'] ?? false) != '200') {
+                    return [
+                        'status'   => 'fail',
+                        'messages' => ['Cancel order failed']
+                    ];
+                }
 
-		        if (($cancel['status_code'] ?? false) == '200') {
-		            $trx->transaction_pickup_wehelpyou->latest_status = 'Cancelled';
-		            $trx->transaction_pickup_wehelpyou->cancel_reason = $request->reason;
-		            $trx->transaction_pickup_wehelpyou->save();
-		            WeHelpYou::updateStatus($trx, $poNo);
-		            return ['status' => 'success'];
-		        }else{
-		        	return [
-		                'status'   => 'fail',
-		                'messages' => ['Cancel order failed']
-		            ];	
-		        }
-        		break;
-        	
-        	default:
-		        $trx->load('transaction_pickup_go_send');
-		        $orderNo = $trx->transaction_pickup_go_send->go_send_order_no;
-		        if (!$orderNo) {
-		            return [
-		                'status'   => 'fail',
-		                'messages' => ['Go-Send Pickup not found'],
-		            ];
-		        }
-		        $cancel = GoSend::cancelOrder($orderNo, $trx->transaction_receipt_number);
-		        if (($cancel['status'] ?? false) == 'fail') {
-		            return $cancel;
-		        }
-		        if (($cancel['statusCode'] ?? false) == '200') {
-		            $trx->transaction_pickup_go_send->latest_status = 'Cancelled';
-		            $trx->transaction_pickup_go_send->cancel_reason = $request->reason;
-		            $trx->transaction_pickup_go_send->save();
-		            return ['status' => 'success'];
-		        }
-        		break;
+                if (($cancel['status_code'] ?? false) == '200') {
+                    $trx->transaction_pickup_wehelpyou->latest_status = 'Cancelled';
+                    $trx->transaction_pickup_wehelpyou->cancel_reason = $request->reason;
+                    $trx->transaction_pickup_wehelpyou->save();
+                    WeHelpYou::updateStatus($trx, $poNo);
+                    return ['status' => 'success'];
+                } else {
+                    return [
+                        'status'   => 'fail',
+                        'messages' => ['Cancel order failed']
+                    ];
+                }
+                break;
+
+            default:
+                $trx->load('transaction_pickup_go_send');
+                $orderNo = $trx->transaction_pickup_go_send->go_send_order_no;
+                if (!$orderNo) {
+                    return [
+                        'status'   => 'fail',
+                        'messages' => ['Go-Send Pickup not found'],
+                    ];
+                }
+                $cancel = GoSend::cancelOrder($orderNo, $trx->transaction_receipt_number);
+                if (($cancel['status'] ?? false) == 'fail') {
+                    return $cancel;
+                }
+                if (($cancel['statusCode'] ?? false) == '200') {
+                    $trx->transaction_pickup_go_send->latest_status = 'Cancelled';
+                    $trx->transaction_pickup_go_send->cancel_reason = $request->reason;
+                    $trx->transaction_pickup_go_send->save();
+                    return ['status' => 'success'];
+                }
+                break;
         }
     }
 
@@ -3194,11 +3203,11 @@ class ApiOutletApp extends Controller
             // 'user.city.province',
             'user',
             'productTransaction.product.product_category',
-            'productTransaction.modifiers' => function($query) {
+            'productTransaction.modifiers' => function ($query) {
                 $query->orderByRaw('CASE WHEN id_product_modifier_group IS NULL THEN 1 ELSE 0 END');
             },
-            'productTransaction.variants' => function($query){
-                $query->select('id_transaction_product','transaction_product_variants.id_product_variant','transaction_product_variants.id_product_variant','product_variants.product_variant_name', 'transaction_product_variant_price')->join('product_variants','product_variants.id_product_variant','=','transaction_product_variants.id_product_variant');
+            'productTransaction.variants' => function ($query) {
+                $query->select('id_transaction_product', 'transaction_product_variants.id_product_variant', 'transaction_product_variants.id_product_variant', 'product_variants.product_variant_name', 'transaction_product_variant_price')->join('product_variants', 'product_variants.id_product_variant', '=', 'transaction_product_variants.id_product_variant');
             },
             'productTransaction.product.product_photos',
             'productTransaction.product.product_discounts',
@@ -3313,7 +3322,7 @@ class ApiOutletApp extends Controller
                                 break;
                             case 'Midtrans':
                                 $payMidtrans = TransactionPaymentMidtran::find($mp['id_payment']);
-                                $payment['name']      = strtoupper(str_replace('_', ' ', $payMidtrans->payment_type)).' '.strtoupper($payMidtrans->bank);
+                                $payment['name']      = strtoupper(str_replace('_', ' ', $payMidtrans->payment_type)) . ' ' . strtoupper($payMidtrans->bank);
                                 $payment['amount']    = $payMidtrans->gross_amount;
                                 $list['payment'][] = $payment;
                                 break;
@@ -3377,12 +3386,12 @@ class ApiOutletApp extends Controller
             case 'Midtrans':
                 $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
                 $payment = [];
-                foreach($multiPayment as $dataKey => $dataPay){
-                    if($dataPay['type'] == 'Midtrans'){
+                foreach ($multiPayment as $dataKey => $dataPay) {
+                    if ($dataPay['type'] == 'Midtrans') {
                         $payMidtrans = TransactionPaymentMidtran::find($dataPay['id_payment']);
-                        $payment[$dataKey]['name']      = strtoupper(str_replace('_', ' ', $payMidtrans->payment_type)).' '.strtoupper($payMidtrans->bank);
+                        $payment[$dataKey]['name']      = strtoupper(str_replace('_', ' ', $payMidtrans->payment_type)) . ' ' . strtoupper($payMidtrans->bank);
                         $payment[$dataKey]['amount']    = $payMidtrans->gross_amount;
-                    }else{
+                    } else {
                         $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
                         $payment[$dataKey] = $dataPay;
                         $list['balance'] = $dataPay['balance_nominal'];
@@ -3395,11 +3404,11 @@ class ApiOutletApp extends Controller
             case 'Ovo':
                 $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
                 $payment = [];
-                foreach($multiPayment as $dataKey => $dataPay){
-                    if($dataPay['type'] == 'Ovo'){
+                foreach ($multiPayment as $dataKey => $dataPay) {
+                    if ($dataPay['type'] == 'Ovo') {
                         $payment[$dataKey] = TransactionPaymentOvo::find($dataPay['id_payment']);
                         $payment[$dataKey]['name']    = 'OVO';
-                    }else{
+                    } else {
                         $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
                         $payment[$dataKey] = $dataPay;
                         $list['balance'] = $dataPay['balance_nominal'];
@@ -3412,12 +3421,12 @@ class ApiOutletApp extends Controller
             case 'Ipay88':
                 $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
                 $payment = [];
-                foreach($multiPayment as $dataKey => $dataPay){
-                    if($dataPay['type'] == 'IPay88'){
+                foreach ($multiPayment as $dataKey => $dataPay) {
+                    if ($dataPay['type'] == 'IPay88') {
                         $PayIpay = TransactionPaymentIpay88::find($dataPay['id_payment']);
                         $payment[$dataKey]['name']    = $PayIpay->payment_method;
                         $payment[$dataKey]['amount']    = $PayIpay->amount / 100;
-                    }else{
+                    } else {
                         $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
                         $payment[$dataKey] = $dataPay;
                         $list['balance'] = $dataPay['balance_nominal'];
@@ -3430,12 +3439,12 @@ class ApiOutletApp extends Controller
             case 'Shopeepay':
                 $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
                 $payment = [];
-                foreach($multiPayment as $dataKey => $dataPay){
-                    if($dataPay['type'] == 'Shopeepay'){
+                foreach ($multiPayment as $dataKey => $dataPay) {
+                    if ($dataPay['type'] == 'Shopeepay') {
                         $payShopee = TransactionPaymentShopeePay::find($dataPay['id_payment']);
                         $payment[$dataKey]['name']      = 'ShopeePay';
                         $payment[$dataKey]['amount']    = $payShopee->amount / 100;
-                    }else{
+                    } else {
                         $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
                         $payment[$dataKey]              = $dataPay;
                         $list['balance']                = $dataPay['balance_nominal'];
@@ -3525,14 +3534,14 @@ class ApiOutletApp extends Controller
         $list['type'] = 'trx';
 
         $currentdate = date('Y-m-d H:i');
-        $setTime = date('Y-m-d H:i', strtotime($list['pickup_at'].' - 15 minutes'));
+        $setTime = date('Y-m-d H:i', strtotime($list['pickup_at'] . ' - 15 minutes'));
         $allowReady = 1;
-        if($list['pickup_type'] == 'set time' && $currentdate < $setTime){
+        if ($list['pickup_type'] == 'set time' && $currentdate < $setTime) {
             $allowReady = 0;
         }
-      
+
         $trxType = $list['trasaction_type'];
-        if(isset($list['pickup_by']) && ($list['pickup_by'] == 'GO-SEND' || $list['pickup_by'] == 'Wehelpyou')){
+        if (isset($list['pickup_by']) && ($list['pickup_by'] == 'GO-SEND' || $list['pickup_by'] == 'Wehelpyou')) {
             $trxType = 'Delivery';
         }
 
@@ -3569,7 +3578,7 @@ class ApiOutletApp extends Controller
 
             if (empty($list['detail']['pickup_at'])) {
                 $proc_time = Setting::where('key', 'processing_time')->first();
-                $pickup_at = date('H:i', strtotime('+'.$proc_time->value.' minutes', strtotime($list['transaction_date'])));
+                $pickup_at = date('H:i', strtotime('+' . $proc_time->value . ' minutes', strtotime($list['transaction_date'])));
             }
             $result['detail']['pickup_at'] = !empty($list['detail']['pickup_at']) ? date('H:i', strtotime($list['detail']['pickup_at'])) : $pickup_at;
 
@@ -3592,7 +3601,9 @@ class ApiOutletApp extends Controller
                         $reason = 'OUTLET GAGAL MENERIMA ORDER';
                     }
                 }
-                if($reason) $reason = "\n$reason";
+                if ($reason) {
+                    $reason = "\n$reason";
+                }
                 $result['transaction_status']      = 0;
                 $result['transaction_status_text'] = "$ditolak$reason";
             } elseif ($list['detail']['taken_by_system_at'] != null) {
@@ -3618,12 +3629,12 @@ class ApiOutletApp extends Controller
                 $result['delivery_info'] = [
                     'driver'            => null,
                     'delivery_status'   => '',
-                    'delivery_address'  => $list['transaction_pickup_go_send']['destination_address']?:'',
-                    'delivery_address_note' => $list['transaction_pickup_go_send']['destination_note']?:'',
+                    'delivery_address'  => $list['transaction_pickup_go_send']['destination_address'] ?: '',
+                    'delivery_address_note' => $list['transaction_pickup_go_send']['destination_note'] ?: '',
                     'booking_status'    => 0,
                     'cancelable'        => 1,
-                    'go_send_order_no'  => $list['transaction_pickup_go_send']['go_send_order_no']?:'',
-                    'live_tracking_url' => $list['transaction_pickup_go_send']['live_tracking_url']?:'',
+                    'go_send_order_no'  => $list['transaction_pickup_go_send']['go_send_order_no'] ?: '',
+                    'live_tracking_url' => $list['transaction_pickup_go_send']['live_tracking_url'] ?: '',
                 ];
                 if ($list['transaction_pickup_go_send']['go_send_id']) {
                     $result['delivery_info']['booking_status'] = 1;
@@ -3642,11 +3653,11 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['delivery_status_code']   = 2;
                         $result['transaction_status_text']          = 'DRIVER DITEMUKAN';
                         $result['delivery_info']['driver']          = [
-                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
-                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
-                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:$this->default_driver_photo,
-                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id'] ?: '',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name'] ?: '',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'] ?: 'Data tidak tersedia dari jasa pengiriman',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'] ?: $this->default_driver_photo,
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'] ?: 'Data tidak tersedia dari jasa pengiriman',
                         ];
                         $result['rejectable']                       = 0;
                         break;
@@ -3656,11 +3667,11 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['delivery_status_code']   = 2;
                         $result['transaction_status_text']          = 'DRIVER SEDANG MENUJU OUTLET';
                         $result['delivery_info']['driver']          = [
-                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
-                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
-                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:$this->default_driver_photo,
-                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id'] ?: '',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name'] ?: '',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'] ?: 'Data tidak tersedia dari jasa pengiriman',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'] ?: $this->default_driver_photo,
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'] ?: 'Data tidak tersedia dari jasa pengiriman',
                         ];
                         $result['delivery_info']['cancelable'] = 1;
                         $result['rejectable']                  = 0;
@@ -3670,11 +3681,11 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['delivery_status_code']   = 2;
                         $result['transaction_status_text']          = 'DRIVER MENGAMBIL PESANAN DI OUTLET';
                         $result['delivery_info']['driver']          = [
-                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
-                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
-                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:$this->default_driver_photo,
-                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id'] ?: '',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name'] ?: '',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'] ?: 'Data tidak tersedia dari jasa pengiriman',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'] ?: $this->default_driver_photo,
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'] ?: 'Data tidak tersedia dari jasa pengiriman',
                         ];
                         $result['delivery_info']['cancelable'] = 0;
                         $result['rejectable']                  = 0;
@@ -3683,40 +3694,40 @@ class ApiOutletApp extends Controller
                     case 'out_for_delivery':
                         $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
                         $result['delivery_info']['delivery_status_code']   = 3;
-                        if($list['detail']['ready_at'] != null){
+                        if ($list['detail']['ready_at'] != null) {
                             $result['transaction_status_text']          = 'PROSES PENGANTARAN';
                             $result['transaction_status']               = 3;
                         }
                         $result['delivery_info']['driver']          = [
-                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
-                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
-                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:$this->default_driver_photo,
-                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id'] ?: '',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name'] ?: '',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'] ?: 'Data tidak tersedia dari jasa pengiriman',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'] ?: $this->default_driver_photo,
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'] ?: 'Data tidak tersedia dari jasa pengiriman',
                         ];
                         $result['delivery_info']['cancelable'] = 0;
                         $result['rejectable']                  = 0;
                         break;
                     case 'completed':
                     case 'delivered':
-                        if($list['detail']['ready_at'] == null){
+                        if ($list['detail']['ready_at'] == null) {
                             $result['transaction_status'] = 4;
                             $result['transaction_status_text'] = 'ORDER SEDANG DIPROSES';
-                        }elseif($list['detail']['taken_at'] == null){
+                        } elseif ($list['detail']['taken_at'] == null) {
                             $result['transaction_status'] = 3;
                             $result['transaction_status_text'] = 'ORDER SUDAH SIAP';
-                        }else{
+                        } else {
                             $result['transaction_status_text'] = 'ORDER SUDAH DIAMBIL';
                             $result['transaction_status'] = 2;
                         }
                         $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
                         $result['delivery_info']['delivery_status_code']   = 4;
                         $result['delivery_info']['driver']          = [
-                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
-                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
-                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:$this->default_driver_photo,
-                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id'] ?: '',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name'] ?: '',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'] ?: 'Data tidak tersedia dari jasa pengiriman',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'] ?: $this->default_driver_photo,
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'] ?: 'Data tidak tersedia dari jasa pengiriman',
                         ];
                         $result['delivery_info']['cancelable'] = 0;
                         break;
@@ -3738,19 +3749,19 @@ class ApiOutletApp extends Controller
                         $result['rejectable']              = ($list['transaction_pickup_go_send']['stop_booking_at']) ? 1 : 0;
                         break;
                 }
-            }elseif ($list['transaction_pickup_wehelpyou'] && !$list['detail']['reject_at']) {
+            } elseif ($list['transaction_pickup_wehelpyou'] && !$list['detail']['reject_at']) {
                 // $result['transaction_status'] = 5;
                 $result['delivery_info'] = [
                     'driver' => null,
                     'delivery_status' => '',
-                    'delivery_address' => $list['transaction_pickup_wehelpyou']['receiver_address']?:'',
+                    'delivery_address' => $list['transaction_pickup_wehelpyou']['receiver_address'] ?: '',
                     'delivery_address_note' => $list['transaction_pickup_wehelpyou']['receiver_notes'] ?: '',
                     'booking_status' => 0,
                     'cancelable' => 1,
-                    'go_send_order_no' => $list['transaction_pickup_wehelpyou']['poNo']?:'',
-                    'live_tracking_url' => $list['transaction_pickup_wehelpyou']['tracking_live_tracking_url']?:''
+                    'go_send_order_no' => $list['transaction_pickup_wehelpyou']['poNo'] ?: '',
+                    'live_tracking_url' => $list['transaction_pickup_wehelpyou']['tracking_live_tracking_url'] ?: ''
                 ];
-                if($list['transaction_pickup_wehelpyou']['poNo']){
+                if ($list['transaction_pickup_wehelpyou']['poNo']) {
                     $result['delivery_info']['booking_status'] = 1;
                 }
                 switch (strtolower($list['transaction_pickup_wehelpyou']['latest_status'])) {
@@ -3766,11 +3777,11 @@ class ApiOutletApp extends Controller
                         $result['transaction_status_text']          = 'DRIVER DITEMUKAN DAN SEDANG MENUJU OUTLET';
                         $result['delivery_info']['driver']          = [
                             'driver_id'         => 'Data tidak tersedia dari jasa pengiriman',
-                            'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
-                            'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
-                            'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:$this->default_driver_photo,
-                            'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
+                            'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name'] ?: '',
+                            'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone'] ?: 'Data tidak tersedia dari jasa pengiriman',
+                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone'] ?: '',
+                            'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo'] ?: $this->default_driver_photo,
+                            'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number'] ?: 'Data tidak tersedia dari jasa pengiriman',
                         ];
                         break;
                     case 'item picked':
@@ -3779,11 +3790,11 @@ class ApiOutletApp extends Controller
                         $result['transaction_status_text']          = 'DRIVER MENGAMBIL PESANAN DI OUTLET';
                         $result['delivery_info']['driver']          = [
                             'driver_id'         => 'Data tidak tersedia dari jasa pengiriman',
-                            'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
-                            'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
-                            'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:$this->default_driver_photo,
-                            'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
+                            'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name'] ?: '',
+                            'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone'] ?: 'Data tidak tersedia dari jasa pengiriman',
+                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone'] ?: '',
+                            'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo'] ?: $this->default_driver_photo,
+                            'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number'] ?: 'Data tidak tersedia dari jasa pengiriman',
                         ];
                         $result['delivery_info']['cancelable'] = 1;
                         break;
@@ -3794,11 +3805,11 @@ class ApiOutletApp extends Controller
                         $result['transaction_status']               = 3;
                         $result['delivery_info']['driver']          = [
                             'driver_id'         => 'Data tidak tersedia dari jasa pengiriman',
-                            'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
-                            'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
-                            'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:$this->default_driver_photo,
-                            'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
+                            'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name'] ?: '',
+                            'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone'] ?: 'Data tidak tersedia dari jasa pengiriman',
+                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone'] ?: '',
+                            'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo'] ?: $this->default_driver_photo,
+                            'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number'] ?: 'Data tidak tersedia dari jasa pengiriman',
                         ];
                         $result['delivery_info']['cancelable'] = 0;
                         break;
@@ -3809,11 +3820,11 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['delivery_status_code']   = 4;
                         $result['delivery_info']['driver']          = [
                             'driver_id'         => 'Data tidak tersedia dari jasa pengiriman',
-                            'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
-                            'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
-                            'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:$this->default_driver_photo,
-                            'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
+                            'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name'] ?: '',
+                            'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone'] ?: 'Data tidak tersedia dari jasa pengiriman',
+                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone'] ?: '',
+                            'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo'] ?: $this->default_driver_photo,
+                            'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number'] ?: 'Data tidak tersedia dari jasa pengiriman',
                         ];
                         $result['delivery_info']['cancelable'] = 0;
                         break;
@@ -3838,7 +3849,7 @@ class ApiOutletApp extends Controller
                         break;
                 }
                 $result['delivery_info_be'] = [
-                    'delivery_address' => $list['transaction_pickup_wehelpyou']['receiver_address']?:'',
+                    'delivery_address' => $list['transaction_pickup_wehelpyou']['receiver_address'] ?: '',
                     'delivery_address_note' => $list['transaction_pickup_wehelpyou']['receiver_notes'] ?: '',
                 ];
             }
@@ -3850,8 +3861,8 @@ class ApiOutletApp extends Controller
         $quantityItemBundling = 0;
         $getBundling   = TransactionBundlingProduct::join('bundling', 'bundling.id_bundling', 'transaction_bundling_products.id_bundling')
             ->where('id_transaction', $id)->get()->toArray();
-        foreach ($getBundling as $key=>$bundling){
-            $getPriceToping =  $bundling['transaction_bundling_product_subtotal']/$bundling['transaction_bundling_product_qty'];
+        foreach ($getBundling as $key => $bundling) {
+            $getPriceToping =  $bundling['transaction_bundling_product_subtotal'] / $bundling['transaction_bundling_product_qty'];
 
             $bundlingProduct = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
                 ->join('brands', 'brands.id_brand', 'transaction_products.id_brand')
@@ -3863,12 +3874,12 @@ class ApiOutletApp extends Controller
             $basePriceBundling = 0;
             $subTotalBundlingWithoutModifier = 0;
             $subItemBundlingWithoutModifie = 0;
-            foreach ($bundlingProduct as $bp){
+            foreach ($bundlingProduct as $bp) {
                 $quantityItemBundling = $quantityItemBundling + ($bp['transaction_product_bundling_qty'] * $bundling['transaction_bundling_product_qty']);
                 $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
                     ->whereNull('transaction_product_modifiers.id_product_modifier_group')
                     ->where('id_transaction_product', $bp['id_transaction_product'])
-                    ->select('transaction_product_modifiers.id_product_modifier', 'transaction_product_modifiers.text as text', DB::raw('FLOOR(transaction_product_modifier_price * '.$bp['transaction_product_bundling_qty'].' * '.$bundling['transaction_bundling_product_qty'].') as product_modifier_price'))->get()->toArray();
+                    ->select('transaction_product_modifiers.id_product_modifier', 'transaction_product_modifiers.text as text', DB::raw('FLOOR(transaction_product_modifier_price * ' . $bp['transaction_product_bundling_qty'] . ' * ' . $bundling['transaction_bundling_product_qty'] . ') as product_modifier_price'))->get()->toArray();
                 $variantPrice = TransactionProductVariant::join('product_variants', 'product_variants.id_product_variant', 'transaction_product_variants.id_product_variant')
                     ->where('id_transaction_product', $bp['id_transaction_product'])
                     ->select('product_variants.id_product_variant', 'product_variants.product_variant_name', 'transaction_product_variant_price')->get()->toArray();
@@ -3888,7 +3899,7 @@ class ApiOutletApp extends Controller
 
                 //set product per brand
                 $checkBrand = array_search($bp['id_brand'], array_column($productPerBrand, 'id_brand'));
-                if($checkBrand === false){
+                if ($checkBrand === false) {
                     $productPerBrand[] = [
                         'id_brand' => $bp['id_brand'],
                         'brand_name' => $bp['name_brand'],
@@ -3905,7 +3916,7 @@ class ApiOutletApp extends Controller
                             'variants' => array_merge($variantPrice, $variantNoPrice)
                         ]]
                     ];
-                }else{
+                } else {
                     $productPerBrand[$checkBrand]['products'][] = [
                         'id_brand' => $bp['id_brand'],
                         'id_product' => $bp['id_product'],
@@ -3929,33 +3940,33 @@ class ApiOutletApp extends Controller
                 'bundling_qty' => $bundling['transaction_bundling_product_qty'],
                 'bundling_price_no_discount' => $basePriceBundling * $bundling['transaction_bundling_product_qty'],
                 'bundling_subtotal' => $subTotalBundlingWithoutModifier * $bundling['transaction_bundling_product_qty'],
-                'bundling_sub_item' => '@'.MyHelper::requestNumber($subItemBundlingWithoutModifie,'_CURRENCY'),
+                'bundling_sub_item' => '@' . MyHelper::requestNumber($subItemBundlingWithoutModifie, '_CURRENCY'),
                 'products' => $products
             ];
 
             //set bundling per brand
             $checkBundlingPerBrand = array_search($bundling['id_bundling'], array_column($itemBundlingPerBrand, 'id_bundling'));
-            if($checkBundlingPerBrand === false){
+            if ($checkBundlingPerBrand === false) {
                 $itemBundlingPerBrand[] = [
                     'id_bundling' => $bundling['id_bundling'],
                     'bundling_name' => $bundling['bundling_name'],
                     'bundling_qty' => $bundling['transaction_bundling_product_qty'],
                     'bundling_subtotal' => (int)$bundling['transaction_bundling_product_subtotal'],
-                    'bundling_sub_item' => '@'.MyHelper::requestNumber($getPriceToping,'_CURRENCY'),
+                    'bundling_sub_item' => '@' . MyHelper::requestNumber($getPriceToping, '_CURRENCY'),
                     'brands' => $productPerBrand
                 ];
-            }else{
+            } else {
                 $dtBrands = $itemBundlingPerBrand[$checkBundlingPerBrand]['brands'];
-                foreach ($productPerBrand as $pb){
+                foreach ($productPerBrand as $pb) {
                     $checkBundlingProductBrand = array_search($pb['id_brand'], array_column($dtBrands, 'id_brand'));
-                    if($checkBundlingProductBrand === false){
+                    if ($checkBundlingProductBrand === false) {
                         $itemBundlingPerBrand[$checkBundlingPerBrand]['brands'][] = $pb;
-                    }else{
+                    } else {
                         $mergeProduct = array_merge($pb['products'], $dtBrands[$checkBundlingProductBrand]['products']);
                         $productsBrand = [];
-                        foreach ($mergeProduct as $value){
+                        foreach ($mergeProduct as $value) {
                             $check = array_search($value['id_product'], array_column($productsBrand, 'id_product'));
-                            if($check === false){
+                            if ($check === false) {
                                 $productsBrand[] = [
                                     'id_brand' => $value['id_brand'],
                                     'id_product' => $value['id_product'],
@@ -3967,7 +3978,7 @@ class ApiOutletApp extends Controller
                                     'modifiers' => $value['modifiers'],
                                     'variants' => $value['variants']
                                 ];
-                            }else{
+                            } else {
                                 $checkModifiers = $productsBrand[$check]['modifiers'];
                                 $checkNote = $productsBrand[$check]['product_note'];
                                 $checkIdProductVariantGroup = $productsBrand[$check]['id_product_variant_group'];
@@ -3975,12 +3986,14 @@ class ApiOutletApp extends Controller
                                 $mergeModifiers = array_merge($checkModifiers, $value['modifiers']);
                                 $mergeModifiersUnique = array_map("unserialize", array_unique(array_map("serialize", $mergeModifiers)));
 
-                                if($checkIdProductVariantGroup == $value['id_product_variant_group'] &&
+                                if (
+                                    $checkIdProductVariantGroup == $value['id_product_variant_group'] &&
                                     count($checkModifiers) == count($value['modifiers']) &&
                                     count($checkModifiers) == count($value['modifiers']) &&
-                                    count($mergeModifiersUnique) == count($value['modifiers']) && $checkNote == $value['product_note']){
+                                    count($mergeModifiersUnique) == count($value['modifiers']) && $checkNote == $value['product_note']
+                                ) {
                                     $productsBrand[$check]['transaction_product_qty'] = $productsBrand[$check]['transaction_product_qty'] + $value['transaction_product_qty'];
-                                }else{
+                                } else {
                                     $productsBrand[] = [
                                         'id_brand' => $value['id_brand'],
                                         'id_product' => $value['id_product'],
@@ -4018,7 +4031,7 @@ class ApiOutletApp extends Controller
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_subtotal']  = MyHelper::requestNumber($valueProduct['transaction_product_subtotal'], '_CURRENCY');
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_sub_item']  = '@' . MyHelper::requestNumber($valueProduct['transaction_product_subtotal'] / $valueProduct['transaction_product_qty'], '_CURRENCY');
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_modifier_subtotal'] = MyHelper::requestNumber($valueProduct['transaction_modifier_subtotal'], '_CURRENCY');
-                $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_variant_subtotal']  = MyHelper::requestNumber($valueProduct['transaction_variant_subtotal'],'_CURRENCY');
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_variant_subtotal']  = MyHelper::requestNumber($valueProduct['transaction_variant_subtotal'], '_CURRENCY');
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_note']      = $valueProduct['transaction_product_note'];
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_discount']  = $valueProduct['transaction_product_discount'];
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_name']       = $valueProduct['product']['product_name'];
@@ -4033,13 +4046,13 @@ class ApiOutletApp extends Controller
                 }
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'] = [];
                 foreach ($valueProduct['modifiers'] as $keyMod => $valueMod) {
-                    if(!empty($valueMod['id_product_modifier_group'])){
+                    if (!empty($valueMod['id_product_modifier_group'])) {
                         $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'][] = [
                             'product_variant_name' => $valueMod['text'],
                             'product_variant_price' => 0,
                             'is_modifier' => 1
                         ];
-                    }else{
+                    } else {
                         $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][] = [
                             'product_modifier_name' => $valueMod['text'],
                             'product_modifier_qty' => $valueMod['qty'],
@@ -4047,7 +4060,7 @@ class ApiOutletApp extends Controller
                         ];
                     }
                 }
-                $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_sub_item']      = '@'.MyHelper::requestNumber($valueProduct['transaction_product_price']+$variantsPrice, '_CURRENCY');
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_sub_item']      = '@' . MyHelper::requestNumber($valueProduct['transaction_product_price'] + $variantsPrice, '_CURRENCY');
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['product_variant_group_price'] = (int)($valueProduct['transaction_product_price'] + $variantsPrice);
             }
             $keynya++;
@@ -4069,7 +4082,7 @@ class ApiOutletApp extends Controller
                         'name'          => 'Diskon (Promo)',
                         'desc'          => null,
                         "is_discount"   => 1,
-                        'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                        'amount'        => '- ' . MyHelper::requestNumber($discount, '_CURRENCY')
                     ];
                 }
             }
@@ -4080,7 +4093,7 @@ class ApiOutletApp extends Controller
                     'name'          => 'Diskon (Promo)',
                     'desc'          => null,
                     "is_discount"   => 1,
-                    'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                    'amount'        => '- ' . MyHelper::requestNumber($discount, '_CURRENCY')
                 ];
             }
 
@@ -4089,7 +4102,7 @@ class ApiOutletApp extends Controller
                     'name'          => 'Subscription (Diskon)',
                     'desc'          => null,
                     "is_discount"   => 1,
-                    'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                    'amount'        => '- ' . MyHelper::requestNumber($discount, '_CURRENCY')
                 ];
             }
         }
@@ -4098,21 +4111,21 @@ class ApiOutletApp extends Controller
             $result['payment_detail'][] = [
                 'name'      => 'Delivery',
                 'desc'      => $list['detail']['pickup_by'],
-                'amount'    => MyHelper::requestNumber($list['transaction_shipment_go_send'],'_CURRENCY')
+                'amount'    => MyHelper::requestNumber($list['transaction_shipment_go_send'], '_CURRENCY')
             ];
-        }elseif($list['transaction_shipment'] > 0){
+        } elseif ($list['transaction_shipment'] > 0) {
             $getListDelivery = json_decode(MyHelper::setting('available_delivery', 'value_text', '[]'), true) ?? [];
-            $shipmentCode = strtolower($list['shipment_method'].'_'.$list['shipment_courier']);
-            if($list['shipment_method'] == 'GO-SEND'){
+            $shipmentCode = strtolower($list['shipment_method'] . '_' . $list['shipment_courier']);
+            if ($list['shipment_method'] == 'GO-SEND') {
                 $shipmentCode = 'gosend';
             }
 
             $search = array_search($shipmentCode, array_column($getListDelivery, 'code'));
-            $shipmentName = ($search !== false ? $getListDelivery[$search]['delivery_name']:strtoupper($list['shipment_courier']));
+            $shipmentName = ($search !== false ? $getListDelivery[$search]['delivery_name'] : strtoupper($list['shipment_courier']));
             $result['payment_detail'][] = [
                 'name'      => 'Delivery',
                 'desc'      => $shipmentName,
-                'amount'    => MyHelper::requestNumber($list['transaction_shipment'],'_CURRENCY')
+                'amount'    => MyHelper::requestNumber($list['transaction_shipment'], '_CURRENCY')
             ];
         }
 
@@ -4126,7 +4139,7 @@ class ApiOutletApp extends Controller
                         'name'          => 'Diskon (Delivery)',
                         'desc'          => null,
                         "is_discount"   => 1,
-                        'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                        'amount'        => '- ' . MyHelper::requestNumber($discount, '_CURRENCY')
                     ];
                 }
             }
@@ -4137,7 +4150,7 @@ class ApiOutletApp extends Controller
                     'name'          => 'Diskon (Delivery)',
                     'desc'          => null,
                     "is_discount"   => 1,
-                    'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                    'amount'        => '- ' . MyHelper::requestNumber($discount, '_CURRENCY')
                 ];
             }
 
@@ -4146,7 +4159,7 @@ class ApiOutletApp extends Controller
                     'name'          => 'Subscription (Delivery)',
                     'desc'          => null,
                     "is_discount"   => 1,
-                    'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                    'amount'        => '- ' . MyHelper::requestNumber($discount, '_CURRENCY')
                 ];
             }
         }
@@ -4226,11 +4239,11 @@ class ApiOutletApp extends Controller
             'user',
             'plasticTransaction.product',
             'productTransaction.product.product_category',
-            'productTransaction.modifiers' => function($query) {
+            'productTransaction.modifiers' => function ($query) {
                 $query->orderByRaw('CASE WHEN id_product_modifier_group IS NULL THEN 1 ELSE 0 END');
             },
-            'productTransaction.variants' => function($query){
-                $query->select('id_transaction_product','transaction_product_variants.id_product_variant','transaction_product_variants.id_product_variant','product_variants.product_variant_name', 'transaction_product_variant_price')->join('product_variants','product_variants.id_product_variant','=','transaction_product_variants.id_product_variant');
+            'productTransaction.variants' => function ($query) {
+                $query->select('id_transaction_product', 'transaction_product_variants.id_product_variant', 'transaction_product_variants.id_product_variant', 'product_variants.product_variant_name', 'transaction_product_variant_price')->join('product_variants', 'product_variants.id_product_variant', '=', 'transaction_product_variants.id_product_variant');
             },
             'productTransaction.product.product_photos',
             'productTransaction.product.product_discounts',
@@ -4345,7 +4358,7 @@ class ApiOutletApp extends Controller
                                 break;
                             case 'Midtrans':
                                 $payMidtrans = TransactionPaymentMidtran::find($mp['id_payment']);
-                                $payment['name']      = strtoupper(str_replace('_', ' ', $payMidtrans->payment_type)).' '.strtoupper($payMidtrans->bank);
+                                $payment['name']      = strtoupper(str_replace('_', ' ', $payMidtrans->payment_type)) . ' ' . strtoupper($payMidtrans->bank);
                                 $payment['amount']    = $payMidtrans->gross_amount;
                                 $list['payment'][] = $payment;
                                 break;
@@ -4409,12 +4422,12 @@ class ApiOutletApp extends Controller
             case 'Midtrans':
                 $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
                 $payment = [];
-                foreach($multiPayment as $dataKey => $dataPay){
-                    if($dataPay['type'] == 'Midtrans'){
+                foreach ($multiPayment as $dataKey => $dataPay) {
+                    if ($dataPay['type'] == 'Midtrans') {
                         $payMidtrans = TransactionPaymentMidtran::find($dataPay['id_payment']);
-                        $payment[$dataKey]['name']      = strtoupper(str_replace('_', ' ', $payMidtrans->payment_type)).' '.strtoupper($payMidtrans->bank);
+                        $payment[$dataKey]['name']      = strtoupper(str_replace('_', ' ', $payMidtrans->payment_type)) . ' ' . strtoupper($payMidtrans->bank);
                         $payment[$dataKey]['amount']    = $payMidtrans->gross_amount;
-                    }else{
+                    } else {
                         $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
                         $payment[$dataKey] = $dataPay;
                         $list['balance'] = $dataPay['balance_nominal'];
@@ -4427,11 +4440,11 @@ class ApiOutletApp extends Controller
             case 'Ovo':
                 $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
                 $payment = [];
-                foreach($multiPayment as $dataKey => $dataPay){
-                    if($dataPay['type'] == 'Ovo'){
+                foreach ($multiPayment as $dataKey => $dataPay) {
+                    if ($dataPay['type'] == 'Ovo') {
                         $payment[$dataKey] = TransactionPaymentOvo::find($dataPay['id_payment']);
                         $payment[$dataKey]['name']    = 'OVO';
-                    }else{
+                    } else {
                         $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
                         $payment[$dataKey] = $dataPay;
                         $list['balance'] = $dataPay['balance_nominal'];
@@ -4444,12 +4457,12 @@ class ApiOutletApp extends Controller
             case 'Ipay88':
                 $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
                 $payment = [];
-                foreach($multiPayment as $dataKey => $dataPay){
-                    if($dataPay['type'] == 'IPay88'){
+                foreach ($multiPayment as $dataKey => $dataPay) {
+                    if ($dataPay['type'] == 'IPay88') {
                         $PayIpay = TransactionPaymentIpay88::find($dataPay['id_payment']);
                         $payment[$dataKey]['name']    = $PayIpay->payment_method;
                         $payment[$dataKey]['amount']    = $PayIpay->amount / 100;
-                    }else{
+                    } else {
                         $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
                         $payment[$dataKey] = $dataPay;
                         $list['balance'] = $dataPay['balance_nominal'];
@@ -4462,12 +4475,12 @@ class ApiOutletApp extends Controller
             case 'Shopeepay':
                 $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
                 $payment = [];
-                foreach($multiPayment as $dataKey => $dataPay){
-                    if($dataPay['type'] == 'Shopeepay'){
+                foreach ($multiPayment as $dataKey => $dataPay) {
+                    if ($dataPay['type'] == 'Shopeepay') {
                         $payShopee = TransactionPaymentShopeePay::find($dataPay['id_payment']);
                         $payment[$dataKey]['name']      = 'ShopeePay';
                         $payment[$dataKey]['amount']    = $payShopee->amount / 100;
-                    }else{
+                    } else {
                         $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
                         $payment[$dataKey]              = $dataPay;
                         $list['balance']                = $dataPay['balance_nominal'];
@@ -4492,8 +4505,8 @@ class ApiOutletApp extends Controller
         }
 
         if (!empty($list['transaction_payment_subscription'])) {
-        	$payment_subscription = abs($list['transaction_payment_subscription']['subscription_nominal']);
-        	$result['promo_name'] = $list['transaction_payment_subscription']['subscription_user_voucher']['subscription_user']['subscription']['subscription_title'];
+            $payment_subscription = abs($list['transaction_payment_subscription']['subscription_nominal']);
+            $result['promo_name'] = $list['transaction_payment_subscription']['subscription_user_voucher']['subscription_user']['subscription']['subscription_title'];
             $list['payment'][] = [
                 'name'      => 'Subscription',
                 'amount'    => $payment_subscription
@@ -4557,14 +4570,14 @@ class ApiOutletApp extends Controller
         $list['date'] = $list['transaction_date'];
         $list['type'] = 'trx';
         $currentdate = date('Y-m-d H:i');
-        $setTime = date('Y-m-d H:i', strtotime($list['pickup_at'].' - 15 minutes'));
+        $setTime = date('Y-m-d H:i', strtotime($list['pickup_at'] . ' - 15 minutes'));
         $allowReady = 1;
-        if($list['pickup_type'] == 'set time' && $currentdate < $setTime){
+        if ($list['pickup_type'] == 'set time' && $currentdate < $setTime) {
             $allowReady = 0;
         }
 
         $trxType = $list['trasaction_type'];
-        if(isset($list['pickup_by']) && ($list['pickup_by'] == 'GO-SEND' || $list['pickup_by'] == 'Wehelpyou')){
+        if (isset($list['pickup_by']) && ($list['pickup_by'] == 'GO-SEND' || $list['pickup_by'] == 'Wehelpyou')) {
             $trxType = 'Delivery';
         }
 
@@ -4599,11 +4612,11 @@ class ApiOutletApp extends Controller
                 'pickup_time'     => ($list['detail']['pickup_type'] == 'right now') ? 'RIGHT NOW' : date('H : i', strtotime($list['detail']['pickup_at'])),
             ];
 
-        	if (empty($list['detail']['pickup_at'])) {
-        		$proc_time = Setting::where('key', 'processing_time')->first();
-        		$pickup_at = date('H:i', strtotime('+'.$proc_time->value.' minutes', strtotime($list['transaction_date'])));
-        	}
-        	$result['detail']['pickup_at'] = !empty($list['detail']['pickup_at']) ? date('H:i', strtotime($list['detail']['pickup_at'])) : $pickup_at;
+            if (empty($list['detail']['pickup_at'])) {
+                $proc_time = Setting::where('key', 'processing_time')->first();
+                $pickup_at = date('H:i', strtotime('+' . $proc_time->value . ' minutes', strtotime($list['transaction_date'])));
+            }
+            $result['detail']['pickup_at'] = !empty($list['detail']['pickup_at']) ? date('H:i', strtotime($list['detail']['pickup_at'])) : $pickup_at;
 
             if (isset($list['transaction_payment_status']) && $list['transaction_payment_status'] == 'Cancelled') {
                 $result['transaction_status']      = 0;
@@ -4624,7 +4637,9 @@ class ApiOutletApp extends Controller
                         $reason = 'OUTLET GAGAL MENERIMA ORDER';
                     }
                 }
-                if($reason) $reason = "\n$reason";
+                if ($reason) {
+                    $reason = "\n$reason";
+                }
                 $result['transaction_status']      = 0;
                 $result['transaction_status_text'] = "$ditolak$reason";
             } elseif ($list['detail']['taken_by_system_at'] != null) {
@@ -4650,12 +4665,12 @@ class ApiOutletApp extends Controller
                 $result['delivery_info'] = [
                     'driver'            => null,
                     'delivery_status'   => '',
-                    'delivery_address'  => $list['transaction_pickup_go_send']['destination_address']?:'',
-                    'delivery_address_note' => $list['transaction_pickup_go_send']['destination_note']?:'',
+                    'delivery_address'  => $list['transaction_pickup_go_send']['destination_address'] ?: '',
+                    'delivery_address_note' => $list['transaction_pickup_go_send']['destination_note'] ?: '',
                     'booking_status'    => 0,
                     'cancelable'        => 1,
-                    'go_send_order_no'  => $list['transaction_pickup_go_send']['go_send_order_no']?:'',
-                    'live_tracking_url' => $list['transaction_pickup_go_send']['live_tracking_url']?:'',
+                    'go_send_order_no'  => $list['transaction_pickup_go_send']['go_send_order_no'] ?: '',
+                    'live_tracking_url' => $list['transaction_pickup_go_send']['live_tracking_url'] ?: '',
                 ];
                 if ($list['transaction_pickup_go_send']['go_send_id']) {
                     $result['delivery_info']['booking_status'] = 1;
@@ -4674,11 +4689,11 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['delivery_status_code']   = 2;
                         $result['transaction_status_text']          = 'DRIVER DITEMUKAN';
                         $result['delivery_info']['driver']          = [
-                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
-                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
-                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:$this->default_driver_photo,
-                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id'] ?: '',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name'] ?: '',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'] ?: 'Data tidak tersedia dari jasa pengiriman',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'] ?: $this->default_driver_photo,
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'] ?: 'Data tidak tersedia dari jasa pengiriman',
                         ];
                         $result['rejectable']                       = 0;
                         break;
@@ -4688,11 +4703,11 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['delivery_status_code']   = 2;
                         $result['transaction_status_text']          = 'DRIVER SEDANG MENUJU OUTLET';
                         $result['delivery_info']['driver']          = [
-                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
-                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
-                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:$this->default_driver_photo,
-                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id'] ?: '',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name'] ?: '',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'] ?: 'Data tidak tersedia dari jasa pengiriman',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'] ?: $this->default_driver_photo,
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'] ?: 'Data tidak tersedia dari jasa pengiriman',
                         ];
                         $result['delivery_info']['cancelable'] = 1;
                         $result['rejectable']                  = 0;
@@ -4702,11 +4717,11 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['delivery_status_code']   = 2;
                         $result['transaction_status_text']          = 'DRIVER MENGAMBIL PESANAN DI OUTLET';
                         $result['delivery_info']['driver']          = [
-                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
-                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
-                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:$this->default_driver_photo,
-                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id'] ?: '',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name'] ?: '',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'] ?: 'Data tidak tersedia dari jasa pengiriman',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'] ?: $this->default_driver_photo,
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'] ?: 'Data tidak tersedia dari jasa pengiriman',
                         ];
                         $result['delivery_info']['cancelable'] = 0;
                         $result['rejectable']                  = 0;
@@ -4715,16 +4730,16 @@ class ApiOutletApp extends Controller
                     case 'out_for_delivery':
                         $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
                         $result['delivery_info']['delivery_status_code']   = 3;
-                        if($list['detail']['ready_at'] != null){
+                        if ($list['detail']['ready_at'] != null) {
                             $result['transaction_status_text']          = 'PROSES PENGANTARAN';
                             $result['transaction_status']               = 3;
                         }
                         $result['delivery_info']['driver']          = [
-                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
-                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
-                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:$this->default_driver_photo,
-                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id'] ?: '',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name'] ?: '',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'] ?: 'Data tidak tersedia dari jasa pengiriman',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'] ?: $this->default_driver_photo,
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'] ?: 'Data tidak tersedia dari jasa pengiriman',
                         ];
                         $result['delivery_info']['cancelable'] = 0;
                         $result['rejectable']                  = 0;
@@ -4732,14 +4747,14 @@ class ApiOutletApp extends Controller
                         break;
                     case 'completed':
                     case 'delivered':
-                        if($list['detail']['taken_by_system_at'] == null){
-                            if($list['detail']['ready_at'] == null){
+                        if ($list['detail']['taken_by_system_at'] == null) {
+                            if ($list['detail']['ready_at'] == null) {
                                 $result['transaction_status'] = 4;
                                 $result['transaction_status_text'] = 'ORDER SEDANG DIPROSES';
-                            }elseif($list['detail']['taken_at'] == null){
+                            } elseif ($list['detail']['taken_at'] == null) {
                                 $result['transaction_status'] = 3;
                                 $result['transaction_status_text'] = 'ORDER SUDAH SIAP';
-                            }else{
+                            } else {
                                 $result['transaction_status_text'] = 'ORDER SUDAH DIAMBIL';
                                 $result['transaction_status'] = 2;
                             }
@@ -4747,11 +4762,11 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
                         $result['delivery_info']['delivery_status_code']   = 4;
                         $result['delivery_info']['driver']          = [
-                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
-                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
-                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:$this->default_driver_photo,
-                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id'] ?: '',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name'] ?: '',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'] ?: 'Data tidak tersedia dari jasa pengiriman',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'] ?: $this->default_driver_photo,
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'] ?: 'Data tidak tersedia dari jasa pengiriman',
                         ];
                         $result['delivery_info']['cancelable'] = 0;
                         break;
@@ -4777,12 +4792,12 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['delivery_status'] = 'Pengiriman sedang ditahan';
                         $result['transaction_status_text']          = 'PENGIRIMAN SEDANG DITAHAN';
                         $result['delivery_info']['driver']          = [
-                            'driver_id'         => $list['transaction_pickup_go_send']['driver_id']?:'',
-                            'driver_name'       => $list['transaction_pickup_go_send']['driver_name']?:'',
-                            'driver_phone'      => $list['transaction_pickup_go_send']['driver_phone']?:'',
-                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_go_send']['driver_phone']?:'',
-                            'driver_photo'      => $list['transaction_pickup_go_send']['driver_photo']?:'',
-                            'vehicle_number'    => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                            'driver_id'         => $list['transaction_pickup_go_send']['driver_id'] ?: '',
+                            'driver_name'       => $list['transaction_pickup_go_send']['driver_name'] ?: '',
+                            'driver_phone'      => $list['transaction_pickup_go_send']['driver_phone'] ?: '',
+                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_go_send']['driver_phone'] ?: '',
+                            'driver_photo'      => $list['transaction_pickup_go_send']['driver_photo'] ?: '',
+                            'vehicle_number'    => $list['transaction_pickup_go_send']['vehicle_number'] ?: '',
                         ];
                         $result['delivery_info']['cancelable'] = 0;
                         break;
@@ -4796,19 +4811,19 @@ class ApiOutletApp extends Controller
                         $result['rejectable']              = ($list['transaction_pickup_go_send']['stop_booking_at']) ? 1 : 0;
                         break;
                 }
-            }elseif ($list['transaction_pickup_wehelpyou'] && !$list['detail']['reject_at']) {
+            } elseif ($list['transaction_pickup_wehelpyou'] && !$list['detail']['reject_at']) {
                 // $result['transaction_status'] = 5;
                 $result['delivery_info'] = [
                     'driver' => null,
                     'delivery_status' => '',
-                    'delivery_address' => $list['transaction_pickup_wehelpyou']['receiver_address']?:'',
+                    'delivery_address' => $list['transaction_pickup_wehelpyou']['receiver_address'] ?: '',
                     'delivery_address_note' => $list['transaction_pickup_wehelpyou']['receiver_notes'] ?: '',
                     'booking_status' => 0,
                     'cancelable' => 1,
-                    'go_send_order_no' => $list['transaction_pickup_wehelpyou']['poNo']?:'',
-                    'live_tracking_url' => $list['transaction_pickup_wehelpyou']['tracking_live_tracking_url']?:''
+                    'go_send_order_no' => $list['transaction_pickup_wehelpyou']['poNo'] ?: '',
+                    'live_tracking_url' => $list['transaction_pickup_wehelpyou']['tracking_live_tracking_url'] ?: ''
                 ];
-                if($list['transaction_pickup_wehelpyou']['poNo']){
+                if ($list['transaction_pickup_wehelpyou']['poNo']) {
                     $result['delivery_info']['booking_status'] = 1;
                 }
                 switch (strtolower($list['transaction_pickup_wehelpyou']['latest_status_id'])) {
@@ -4824,11 +4839,11 @@ class ApiOutletApp extends Controller
                         $result['transaction_status_text']          = 'DRIVER DITEMUKAN DAN SEDANG MENUJU OUTLET';
                         $result['delivery_info']['driver']          = [
                             'driver_id'         => 'Data tidak tersedia dari jasa pengiriman',
-                            'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
-                            'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
-                            'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:$this->default_driver_photo,
-                            'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
+                            'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name'] ?: '',
+                            'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone'] ?: 'Data tidak tersedia dari jasa pengiriman',
+                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone'] ?: '',
+                            'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo'] ?: $this->default_driver_photo,
+                            'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number'] ?: 'Data tidak tersedia dari jasa pengiriman',
                         ];
                         break;
                     case 32:
@@ -4837,11 +4852,11 @@ class ApiOutletApp extends Controller
                         $result['transaction_status_text']          = 'DRIVER MENGAMBIL PESANAN DI OUTLET';
                         $result['delivery_info']['driver']          = [
                             'driver_id'         => 'Data tidak tersedia dari jasa pengiriman',
-                            'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
-                            'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
-                            'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:$this->default_driver_photo,
-                            'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
+                            'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name'] ?: '',
+                            'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone'] ?: 'Data tidak tersedia dari jasa pengiriman',
+                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone'] ?: '',
+                            'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo'] ?: $this->default_driver_photo,
+                            'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number'] ?: 'Data tidak tersedia dari jasa pengiriman',
                         ];
                         $result['delivery_info']['cancelable'] = 1;
                         break;
@@ -4852,11 +4867,11 @@ class ApiOutletApp extends Controller
                         $result['transaction_status']               = 3;
                         $result['delivery_info']['driver']          = [
                             'driver_id'         => 'Data tidak tersedia dari jasa pengiriman',
-                            'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
-                            'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
-                            'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:$this->default_driver_photo,
-                            'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
+                            'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name'] ?: '',
+                            'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone'] ?: 'Data tidak tersedia dari jasa pengiriman',
+                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone'] ?: '',
+                            'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo'] ?: $this->default_driver_photo,
+                            'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number'] ?: 'Data tidak tersedia dari jasa pengiriman',
                         ];
                         $result['delivery_info']['cancelable'] = 0;
                         $result['already_taken']               = 1;
@@ -4868,11 +4883,11 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['delivery_status_code']   = 4;
                         $result['delivery_info']['driver']          = [
                             'driver_id'         => 'Data tidak tersedia dari jasa pengiriman',
-                            'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name']?:'',
-                            'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'Data tidak tersedia dari jasa pengiriman',
-                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone']?:'',
-                            'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo']?:$this->default_driver_photo,
-                            'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number']?:'Data tidak tersedia dari jasa pengiriman',
+                            'driver_name'       => $list['transaction_pickup_wehelpyou']['tracking_driver_name'] ?: '',
+                            'driver_phone'      => $list['transaction_pickup_wehelpyou']['tracking_driver_phone'] ?: 'Data tidak tersedia dari jasa pengiriman',
+                            'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_wehelpyou']['tracking_driver_phone'] ?: '',
+                            'driver_photo'      => $list['transaction_pickup_wehelpyou']['tracking_photo'] ?: $this->default_driver_photo,
+                            'vehicle_number'    => $list['transaction_pickup_wehelpyou']['tracking_vehicle_number'] ?: 'Data tidak tersedia dari jasa pengiriman',
                         ];
                         $result['delivery_info']['cancelable'] = 0;
                         break;
@@ -4900,12 +4915,12 @@ class ApiOutletApp extends Controller
                 }
 
                 if (!empty($list['detail']['receive_at']) && empty($list['transaction_pickup_wehelpyou']['poNo'])) {
-                	$result['transaction_status_text'] = 'GAGAL MENCARI DRIVER';
-                	$result['delivery_info']['go_send_order_no'] = '-';
+                    $result['transaction_status_text'] = 'GAGAL MENCARI DRIVER';
+                    $result['delivery_info']['go_send_order_no'] = '-';
                 }
 
                 $result['delivery_info_be'] = [
-                    'delivery_address' => $list['transaction_pickup_wehelpyou']['receiver_address']?:'',
+                    'delivery_address' => $list['transaction_pickup_wehelpyou']['receiver_address'] ?: '',
                     'delivery_address_note' => $list['transaction_pickup_wehelpyou']['receiver_notes'] ?: '',
                 ];
             }
@@ -4925,7 +4940,7 @@ class ApiOutletApp extends Controller
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_subtotal']  = MyHelper::requestNumber($valueProduct['transaction_product_subtotal'], '_CURRENCY');
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_sub_item']  = '@' . MyHelper::requestNumber($valueProduct['transaction_product_subtotal'] / $valueProduct['transaction_product_qty'], '_CURRENCY');
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_modifier_subtotal'] = MyHelper::requestNumber($valueProduct['transaction_modifier_subtotal'], '_CURRENCY');
-                $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_variant_subtotal']  = MyHelper::requestNumber($valueProduct['transaction_variant_subtotal'],'_CURRENCY');
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_variant_subtotal']  = MyHelper::requestNumber($valueProduct['transaction_variant_subtotal'], '_CURRENCY');
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_note']      = $valueProduct['transaction_product_note'];
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_discount']  = $valueProduct['transaction_product_discount'];
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_name']       = $valueProduct['product']['product_name'];
@@ -4940,14 +4955,14 @@ class ApiOutletApp extends Controller
                 }
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'] = [];
                 foreach ($valueProduct['modifiers'] as $keyMod => $valueMod) {
-                    if(!empty($valueMod['id_product_modifier_group'])){
+                    if (!empty($valueMod['id_product_modifier_group'])) {
                         $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_variants'][] = [
                             'product_variant_name' => $valueMod['text'],
                             'product_variant_price' => 0,
                             'is_modifier' => 1
                         ];
                         $extra_modifier_price += (int) ($valueMod['qty'] * $valueMod['transaction_product_modifier_price']);
-                    }else{
+                    } else {
                         $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][] = [
                             'product_modifier_name' => $valueMod['text'],
                             'product_modifier_qty' => $valueMod['qty'],
@@ -4956,7 +4971,7 @@ class ApiOutletApp extends Controller
                     }
                 }
                 $variantsPrice += $extra_modifier_price;
-                $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_sub_item']      = '@'.MyHelper::requestNumber($valueProduct['transaction_product_price']+$variantsPrice, '_CURRENCY');
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_sub_item']      = '@' . MyHelper::requestNumber($valueProduct['transaction_product_price'] + $variantsPrice, '_CURRENCY');
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['product_variant_group_price'] = (int)($valueProduct['transaction_product_price'] + $variantsPrice);
 
                 $forProdBrand[] = [
@@ -4978,7 +4993,7 @@ class ApiOutletApp extends Controller
         $productBundlingPerBrand = [];
         $getBundling   = TransactionBundlingProduct::join('bundling', 'bundling.id_bundling', 'transaction_bundling_products.id_bundling')
             ->where('id_transaction', $id)->get()->toArray();
-        foreach ($getBundling as $key=>$bundling){
+        foreach ($getBundling as $key => $bundling) {
             $bundlingProduct = TransactionProduct::join('products', 'products.id_product', 'transaction_products.id_product')
                 ->join('brands', 'brands.id_brand', 'transaction_products.id_brand')
                 ->orderBy('order_brand', 'desc')
@@ -4988,12 +5003,12 @@ class ApiOutletApp extends Controller
             $basePriceBundling = 0;
             $subTotalBundlingWithoutModifier = 0;
             $subItemBundlingWithoutModifie = 0;
-            foreach ($bundlingProduct as $bp){
+            foreach ($bundlingProduct as $bp) {
                 $quantityItemBundling = $quantityItemBundling + $bp['transaction_product_qty'];
                 $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
                     ->whereNull('transaction_product_modifiers.id_product_modifier_group')
                     ->where('id_transaction_product', $bp['id_transaction_product'])
-                    ->select('transaction_product_modifiers.id_product_modifier', 'transaction_product_modifiers.text as product_modifier_name', DB::raw('FLOOR(transaction_product_modifier_price * '.$bp['transaction_product_bundling_qty'].' * '.$bundling['transaction_bundling_product_qty'].') as product_modifier_price'))->get()->toArray();
+                    ->select('transaction_product_modifiers.id_product_modifier', 'transaction_product_modifiers.text as product_modifier_name', DB::raw('FLOOR(transaction_product_modifier_price * ' . $bp['transaction_product_bundling_qty'] . ' * ' . $bundling['transaction_bundling_product_qty'] . ') as product_modifier_price'))->get()->toArray();
                 $variantPrice = TransactionProductVariant::join('product_variants', 'product_variants.id_product_variant', 'transaction_product_variants.id_product_variant')
                     ->where('id_transaction_product', $bp['id_transaction_product'])
                     ->select('product_variants.id_product_variant', 'product_variants.product_variant_name', 'transaction_product_variant_price')->get()->toArray();
@@ -5011,11 +5026,11 @@ class ApiOutletApp extends Controller
                     'variants' => array_merge($variantPrice, $variantNoPrice)
                 ];
 
-                $bundlingGroup[$bp['name_brand'].'|'.$bundling['bundling_name']][] =
+                $bundlingGroup[$bp['name_brand'] . '|' . $bundling['bundling_name']][] =
                     [
                         'product_name' => $bp['product_name'],
                         'product_note' => $bp['transaction_product_note'],
-                        'transaction_product_qty' => $bp['transaction_product_bundling_qty']*$bundling['transaction_bundling_product_qty'],
+                        'transaction_product_qty' => $bp['transaction_product_bundling_qty'] * $bundling['transaction_bundling_product_qty'],
                         'product_modifiers' => $mod,
                         'product_variants' => array_merge($variantPrice, $variantNoPrice)
                     ];
@@ -5030,56 +5045,56 @@ class ApiOutletApp extends Controller
                 'bundling_qty' => $bundling['transaction_bundling_product_qty'],
                 'bundling_price_no_discount' => $basePriceBundling * $bundling['transaction_bundling_product_qty'],
                 'bundling_subtotal' => $subTotalBundlingWithoutModifier * $bundling['transaction_bundling_product_qty'],
-                'bundling_sub_item' => '@'.MyHelper::requestNumber($subItemBundlingWithoutModifie,'_CURRENCY'),
+                'bundling_sub_item' => '@' . MyHelper::requestNumber($subItemBundlingWithoutModifie, '_CURRENCY'),
                 'products' => $products
             ];
         }
 
-        foreach ($bundlingGroup as $key=>$bg){
+        foreach ($bundlingGroup as $key => $bg) {
             $brand = explode('|', $key)[0];
-            $merge =$this->mergeBundlingProducts($bg);
+            $merge = $this->mergeBundlingProducts($bg);
             $productBundlingPerBrand[$brand][] = [
                 'bundling_name' => explode('|', $key)[1],
                 'products' => $merge
             ];
         }
         $nameBrandBundling = Setting::where('key', 'brand_bundling_name')->first();
-        $result['name_brand_bundling'] = $nameBrandBundling['value']??'Bundling';
+        $result['name_brand_bundling'] = $nameBrandBundling['value'] ?? 'Bundling';
         $result['product_bundling_transaction_detail'] = $itemBundling;
 
         $brandProduct = array_keys($productPerBrand);
         $brandProductBundling = array_keys($productBundlingPerBrand);
-        $allBrand = array_unique(array_merge($brandProduct,$brandProductBundling));
+        $allBrand = array_unique(array_merge($brandProduct, $brandProductBundling));
 
         $perBrandResult = [];
-        foreach ($allBrand as $brand){
+        foreach ($allBrand as $brand) {
             $perBrandResult[] = [
                 'brand' => $brand,
-                'item' => $productPerBrand[$brand]??[],
-                'item_bundling' => $productBundlingPerBrand[$brand]??[],
+                'item' => $productPerBrand[$brand] ?? [],
+                'item_bundling' => $productBundlingPerBrand[$brand] ?? [],
             ];
         }
         $result['product_perbrand'] = $perBrandResult;
 
-        if(!isset($result['product_transaction'])){
+        if (!isset($result['product_transaction'])) {
             $result['product_transaction'] = [];
         }
 
         $result['plastic_transaction_detail'] = [];
         $result['plastic_name'] = '';
         $quantityPlastic = 0;
-        if(isset($list['plastic_transaction'])){
+        if (isset($list['plastic_transaction'])) {
             $result['plastic_name'] = 'Kantong Belanja';
             $subtotal_plastic = 0;
-            foreach($list['plastic_transaction'] as $key => $value){
+            foreach ($list['plastic_transaction'] as $key => $value) {
                 $quantityPlastic = $quantityPlastic + $value['transaction_product_qty'];
                 $subtotal_plastic += $value['transaction_product_subtotal'];
 
                 $result['plastic_transaction_detail'][] = [
                     'plastic_name' => $value['product']['product_name'],
                     'plasctic_qty' => $value['transaction_product_qty'],
-                    'plastic_base_price' => '@'.MyHelper::requestNumber((int)$value['transaction_product_price'],'_CURRENCY'),
-                    'plasctic_subtotal' => MyHelper::requestNumber($value['transaction_product_subtotal'],'_CURRENCY')
+                    'plastic_base_price' => '@' . MyHelper::requestNumber((int)$value['transaction_product_price'], '_CURRENCY'),
+                    'plasctic_subtotal' => MyHelper::requestNumber($value['transaction_product_subtotal'], '_CURRENCY')
                 ];
             }
 
@@ -5094,7 +5109,7 @@ class ApiOutletApp extends Controller
         ];
 
         if ($list['transaction_discount']) {
-        	$discount = abs($list['transaction_discount']);
+            $discount = abs($list['transaction_discount']);
             $p = 0;
             if (!empty($list['transaction_vouchers'])) {
                 foreach ($list['transaction_vouchers'] as $valueVoc) {
@@ -5103,7 +5118,7 @@ class ApiOutletApp extends Controller
                         'name'          => 'Diskon (Promo)',
                         'desc'          => null,
                         "is_discount"   => 1,
-                        'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                        'amount'        => '- ' . MyHelper::requestNumber($discount, '_CURRENCY')
                     ];
                 }
             }
@@ -5114,7 +5129,7 @@ class ApiOutletApp extends Controller
                     'name'          => 'Diskon (Promo)',
                     'desc'          => null,
                     "is_discount"   => 1,
-                    'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                    'amount'        => '- ' . MyHelper::requestNumber($discount, '_CURRENCY')
                 ];
             }
 
@@ -5123,7 +5138,7 @@ class ApiOutletApp extends Controller
                     'name'          => 'Subscription (Diskon)',
                     'desc'          => null,
                     "is_discount"   => 1,
-                    'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                    'amount'        => '- ' . MyHelper::requestNumber($discount, '_CURRENCY')
                 ];
             }
         }
@@ -5132,26 +5147,26 @@ class ApiOutletApp extends Controller
             $result['payment_detail'][] = [
                 'name'      => 'Delivery',
                 'desc'      => $list['detail']['pickup_by'],
-                'amount'    => MyHelper::requestNumber($list['transaction_shipment_go_send'],'_CURRENCY')
+                'amount'    => MyHelper::requestNumber($list['transaction_shipment_go_send'], '_CURRENCY')
             ];
-        }elseif($list['transaction_shipment'] > 0){
+        } elseif ($list['transaction_shipment'] > 0) {
             $getListDelivery = json_decode(MyHelper::setting('available_delivery', 'value_text', '[]'), true) ?? [];
-            $shipmentCode = strtolower($list['shipment_method'].'_'.$list['shipment_courier']);
-            if($list['shipment_method'] == 'GO-SEND'){
+            $shipmentCode = strtolower($list['shipment_method'] . '_' . $list['shipment_courier']);
+            if ($list['shipment_method'] == 'GO-SEND') {
                 $shipmentCode = 'gosend';
             }
 
             $search = array_search($shipmentCode, array_column($getListDelivery, 'code'));
-            $shipmentName = ($search !== false ? $getListDelivery[$search]['delivery_name']:strtoupper($list['shipment_courier']));
+            $shipmentName = ($search !== false ? $getListDelivery[$search]['delivery_name'] : strtoupper($list['shipment_courier']));
             $result['payment_detail'][] = [
                 'name'      => 'Delivery',
                 'desc'      => $shipmentName,
-                'amount'    => MyHelper::requestNumber($list['transaction_shipment'],'_CURRENCY')
+                'amount'    => MyHelper::requestNumber($list['transaction_shipment'], '_CURRENCY')
             ];
         }
 
         if ($list['transaction_discount_delivery']) {
-        	$discount = abs($list['transaction_discount_delivery']);
+            $discount = abs($list['transaction_discount_delivery']);
             $p = 0;
             if (!empty($list['transaction_vouchers'])) {
                 foreach ($list['transaction_vouchers'] as $valueVoc) {
@@ -5160,7 +5175,7 @@ class ApiOutletApp extends Controller
                         'name'          => 'Diskon (Delivery)',
                         'desc'          => null,
                         "is_discount"   => 1,
-                        'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                        'amount'        => '- ' . MyHelper::requestNumber($discount, '_CURRENCY')
                     ];
                 }
             }
@@ -5171,7 +5186,7 @@ class ApiOutletApp extends Controller
                     'name'          => 'Diskon (Delivery)',
                     'desc'          => null,
                     "is_discount"   => 1,
-                    'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                    'amount'        => '- ' . MyHelper::requestNumber($discount, '_CURRENCY')
                 ];
             }
 
@@ -5180,7 +5195,7 @@ class ApiOutletApp extends Controller
                     'name'          => 'Subscription (Delivery)',
                     'desc'          => null,
                     "is_discount"   => 1,
-                    'amount'        => '- '.MyHelper::requestNumber($discount,'_CURRENCY')
+                    'amount'        => '- ' . MyHelper::requestNumber($discount, '_CURRENCY')
                 ];
             }
         }
@@ -5247,7 +5262,7 @@ class ApiOutletApp extends Controller
                 ];
             }
         }
-      
+
         return response()->json(MyHelper::checkGet($result));
     }
 
@@ -5276,7 +5291,6 @@ class ApiOutletApp extends Controller
                 ];
 
                 array_push($dataArraySend, $dataOutletSend);
-
             }
 
             $curl = MyHelper::post('https://exp.host/--/api/v2/push/send', null, $dataArraySend);
@@ -5372,7 +5386,6 @@ class ApiOutletApp extends Controller
                 if ($insertOutletHoliday) {
                     DB::commit();
                     return response()->json(MyHelper::checkCreate($insertOutletHoliday));
-
                 } else {
                     DB::rollBack();
                     return response()->json([
@@ -5391,7 +5404,6 @@ class ApiOutletApp extends Controller
                     ],
                 ]);
             }
-
         } else {
             DB::rollBack();
             return response()->json([
@@ -5458,7 +5470,6 @@ class ApiOutletApp extends Controller
             if ($insertOutletHoliday) {
                 DB::commit();
                 return response()->json(MyHelper::checkCreate($insertOutletHoliday));
-
             } else {
                 DB::rollBack();
                 return response()->json([
@@ -5468,7 +5479,6 @@ class ApiOutletApp extends Controller
                     ],
                 ]);
             }
-
         } else {
             DB::rollBack();
             return response()->json([
@@ -5521,18 +5531,22 @@ class ApiOutletApp extends Controller
         return MyHelper::checkGet([], 'Holiday not found');
     }
 
-    public function isOperational($id_outlet){
-        $outlet_schedule = Outlet::with(['today' => function($query){$query->where('is_closed', 0);}])->where('id_outlet', $id_outlet)->first()['today'];
-        
-        if($outlet_schedule == null) 
-            return ['status' => false, 'message' => 'Outlet is close or not found.']; 
-        
+    public function isOperational($id_outlet)
+    {
+        $outlet_schedule = Outlet::with(['today' => function ($query) {
+            $query->where('is_closed', 0);
+        }])->where('id_outlet', $id_outlet)->first()['today'];
+
+        if ($outlet_schedule == null) {
+            return ['status' => false, 'message' => 'Outlet is close or not found.'];
+        }
+
         $spare_time['open'] = (int) Setting::where('key', 'spare_open_time')->value('value') ?? 0;
         $spare_time['close'] = (int) Setting::where('key', 'spare_close_time')->value('value') ?? 0;
-        
-        $real_time['open']  = date('H:i', strtotime('-'.$spare_time['open'].' minutes', strtotime($outlet_schedule['open'])));
-        $real_time['close'] = date('H:i', strtotime('+'.$spare_time['close'].' minutes', strtotime($outlet_schedule['close'])));
-        
+
+        $real_time['open']  = date('H:i', strtotime('-' . $spare_time['open'] . ' minutes', strtotime($outlet_schedule['open'])));
+        $real_time['close'] = date('H:i', strtotime('+' . $spare_time['close'] . ' minutes', strtotime($outlet_schedule['close'])));
+
         /* Carbon test */
         // $knownDate = Carbon::createFromTime(22,16,0,'Asia/Jakarta');
         // Carbon::setTestNow($knownDate);
@@ -5542,14 +5556,16 @@ class ApiOutletApp extends Controller
         //     return ['status' => false, 'message' => 'This is not operational time'];
         /* End Carbon Test */
 
-        if(strtotime(date('H:i')) < strtotime($real_time['open']) || strtotime(date('H:i')) > strtotime($real_time['close']))
+        if (strtotime(date('H:i')) < strtotime($real_time['open']) || strtotime(date('H:i')) > strtotime($real_time['close'])) {
             return ['status' => false, 'message' => 'This is not operational time'];
-    
+        }
+
         return ['status' => true];
     }
 
-    public function start_shift(Request $request){
-        
+    public function start_shift(Request $request)
+    {
+
         // validate request
         $validateRequest = $request->validate([
             'cash_start' => 'required|numeric'
@@ -5557,10 +5573,10 @@ class ApiOutletApp extends Controller
 
         $post = $request->all();
         $user = $request->user();
-        
+
         /* Check if operational time is set true */
         $is_operational = $this->isOperational($user['id_outlet']);
-        if(!$is_operational['status']){
+        if (!$is_operational['status']) {
             return response()->json(['status' => 'fail', 'message' => $is_operational['message']]);
         }
 
@@ -5570,7 +5586,7 @@ class ApiOutletApp extends Controller
         $is_outlet_shift_closed = (clone $outlet_shift )->whereNotNull('close_time')->first();
 
         // if this shift is not exist on curdate, continue process to running shift
-        if(!$is_outlet_shift_exist_on_curdate){
+        if (!$is_outlet_shift_exist_on_curdate) {
             // get this outlet schedule
             $cash_start = $post['cash_start'];
             $open_time = date('Y-m-d H:i:s');
@@ -5582,21 +5598,22 @@ class ApiOutletApp extends Controller
                 'open_time' => $open_time,
                 'cash_start' => $cash_start
             ]);
-    
-            if($save){
-                return response()->json(['status' => 'success', 'message' => 'Shift started at '.$open_time, 'id_shift' => $save->id]);
+
+            if ($save) {
+                return response()->json(['status' => 'success', 'message' => 'Shift started at ' . $open_time, 'id_shift' => $save->id]);
             }
             return response()->json(['status' => 'fail', 'message' => 'Failed to create new shift']);
         }
 
-        if($is_outlet_shift_closed){
+        if ($is_outlet_shift_closed) {
             return response()->json(['status' => 'fail', 'message' => 'Shift have been ended by this user outlet', 'id_shift' => $is_outlet_shift_closed['id_shift']]);
         }
         return response()->json(['status' => 'fail', 'message' => 'Shift already running', 'id_shift' => $is_outlet_shift_exist_on_curdate['id_shift']]);
     }
 
-    public function end_shift(Request $request){
-        
+    public function end_shift(Request $request)
+    {
+
         // validate request
         $validateRequest = $request->validate([
             'cash_end' => 'required|numeric',
@@ -5611,10 +5628,10 @@ class ApiOutletApp extends Controller
 
         /* Check if operational time is set true */
         $is_operational = $this->isOperational($user['id_outlet']);
-        if(!$is_operational['status']){
+        if (!$is_operational['status']) {
             return response()->json(['status' => 'fail', 'message' => $is_operational['message']]);
         }
- 
+
         // search for id shift which running today
         $shift = Shift::where('id_shift', $id_shift);
 
@@ -5622,15 +5639,12 @@ class ApiOutletApp extends Controller
         $is_outlet_shift_opened_on_curdate = (clone $shift)->whereDate('created_at', date('Y-m-d'))->first();
         $is_outlet_shift_not_closed = (clone $shift)->whereNull('close_time')->first();
 
-        // check if shift is really exist in current user outlet 
-        if($is_outlet_shift_opened_by_this_user_outlet){
-
+        // check if shift is really exist in current user outlet
+        if ($is_outlet_shift_opened_by_this_user_outlet) {
             // check if shift is really exist on current day
-            if($is_outlet_shift_opened_on_curdate){
-
+            if ($is_outlet_shift_opened_on_curdate) {
                 // check if shift is not yet closed
-                if($is_outlet_shift_not_closed){
-                    
+                if ($is_outlet_shift_not_closed) {
                     $close_time = date('Y-m-d H:i:s');
                     $cash_start = $shift->first()['cash_start'];
                     $cash_difference = $cash_end - $cash_start;
@@ -5639,21 +5653,21 @@ class ApiOutletApp extends Controller
                         'cash_end' => $cash_end,
                         'close_time' => $close_time,
                         'cash_difference' => $cash_difference,
-                        'id_user_outletapp' => $user['id_user_outletapp'], //close by 
+                        'id_user_outletapp' => $user['id_user_outletapp'], //close by
                     ]);
 
-                    if($update){
+                    if ($update) {
                         // Give warning if there is difference in total of transaction offline using CASH & today's cash difference
                         $is_different = $this->check_total_difference_offline_transaction($id_shift);
 
-                        if(isset($is_different['status']) && $is_different['status'] == 'different'){
-                            if(\Module::collections()->has('Autocrm')) {
+                        if (isset($is_different['status']) && $is_different['status'] == 'different') {
+                            if (\Module::collections()->has('Autocrm')) {
                                 $username = $request->user()->username;
                                 $autocrm = app($this->autocrm)->SendAutoCRM('Difference in Total Transaction Offline', $username, null, null, false, true);
                             }
                         }
-                        
-                        return response()->json(['status' => 'success', 'message' => 'Shift ended at '.$close_time]);
+
+                        return response()->json(['status' => 'success', 'message' => 'Shift ended at ' . $close_time]);
                     }
                     return response()->json(['status' => 'fail', 'message' => 'Failed to update current shift']);
                 }
@@ -5664,9 +5678,10 @@ class ApiOutletApp extends Controller
         return response()->json(['status' => 'fail', 'message' => 'Shift is not owned by this user outlet']);
     }
 
-    public function check_total_difference_offline_transaction($id_shift){
+    public function check_total_difference_offline_transaction($id_shift)
+    {
         // Get current data shift
-        $shift = Shift::where('id_shift',$id_shift)->first();
+        $shift = Shift::where('id_shift', $id_shift)->first();
 
         /* Used variables :
 
@@ -5678,7 +5693,7 @@ class ApiOutletApp extends Controller
 
         /* Conditions :
 
-            Get transaction payment offline where id outlet = this shift id_outlet 
+            Get transaction payment offline where id outlet = this shift id_outlet
             where transasction date between this shift open time & this shift close time
             where transaction is completed
             where transasciton payment offline - payment method = CASH
@@ -5686,65 +5701,66 @@ class ApiOutletApp extends Controller
 
         $payment = TransactionPaymentOffline::with(
             [
-                'transaction' => function($query) use($shift){
+                'transaction' => function ($query) use ($shift) {
                     $open_time = date($shift['open_time']);
                     $close_time = date($shift['close_time']);
 
                     $query->where('transactions.id_outlet', $shift['id_outlet'])->whereBetween('transactions.transaction_date', [$open_time, $close_time])->where('transactions.transaction_payment_status', 'Completed');
                 },
 
-                'payment_method' => function($query){
+                'payment_method' => function ($query) {
                     $query->where('payment_methods.payment_method_name', 'Cash');
                 }
             ]
         )->get()->toArray();
 
-        $payment = array_filter($payment, function($item){
+        $payment = array_filter($payment, function ($item) {
             return $item['transaction'] != null && $item['payment_method'] != null;
         });
 
         $total = 0;
-        foreach($payment as $item){
+        foreach ($payment as $item) {
             $total += $item['payment_amount'];
         }
 
-        if($shift['cash_difference'] != $total){
+        if ($shift['cash_difference'] != $total) {
             return ['status' => 'different', 'difference' => abs($shift['cash_difference'] - $total)];
         }
 
         return ['status' => 'not different', 'difference' => abs($shift['cash_difference'] - $total)];
     }
 
-    public function listPaymentMethod(Request $request){
+    public function listPaymentMethod(Request $request)
+    {
         $id_outlet = $request->user()['id_outlet'];
 
         //get all payment method
         $payment_method = PaymentMethod::select('id_payment_method', 'id_payment_method_category', 'payment_method_name', 'status')
-        ->with(['payment_method_category' => function($query){
-            $query->select('id_payment_method_category','payment_method_category_name');
+        ->with(['payment_method_category' => function ($query) {
+            $query->select('id_payment_method_category', 'payment_method_category_name');
         }])->get()->toArray();
 
         //get all payment method outlet
         $payment_method_outlet = PaymentMethodOutlet::where('id_outlet', $id_outlet)->get()->toArray();
 
         //update status outlet
-            foreach($payment_method as $key => $value){
-                foreach($payment_method_outlet as $key2 => $value){
-                    if($payment_method_outlet[$key2]['id_outlet'] == $id_outlet && $payment_method_outlet[$key2]['id_payment_method'] == $payment_method[$key]['id_payment_method']){
-                        $payment_method[$key]['status'] = $payment_method_outlet[$key2]['status'];
-                        break;
-                    }
+        foreach ($payment_method as $key => $value) {
+            foreach ($payment_method_outlet as $key2 => $value) {
+                if ($payment_method_outlet[$key2]['id_outlet'] == $id_outlet && $payment_method_outlet[$key2]['id_payment_method'] == $payment_method[$key]['id_payment_method']) {
+                    $payment_method[$key]['status'] = $payment_method_outlet[$key2]['status'];
+                    break;
                 }
-                $payment_method[$key]['payment_method_category'] =  $payment_method[$key]['payment_method_category']['payment_method_category_name'];
             }
-        
+            $payment_method[$key]['payment_method_category'] =  $payment_method[$key]['payment_method_category']['payment_method_category_name'];
+        }
+
 
         return MyHelper::checkGet($payment_method);
     }
 
     /**
      * Update outlet phone number
-     * @param  Request $request 
+     * @param  Request $request
      * @return Response
      */
     public function updatePhone(Request $request)
@@ -5761,46 +5777,48 @@ class ApiOutletApp extends Controller
         return MyHelper::checkUpdate($update);
     }
 
-    public function splash(Request $request){
+    public function splash(Request $request)
+    {
         $splash = Setting::where('key', '=', 'default_splash_screen_outlet_apps')->first();
         $duration = Setting::where('key', '=', 'default_splash_screen_outlet_apps_duration')->pluck('value')->first();
 
-        if(!empty($splash)){
-            $splash = $this->endPoint.$splash['value'];
+        if (!empty($splash)) {
+            $splash = $this->endPoint . $splash['value'];
         } else {
             $splash = null;
         }
-        $ext=explode('.', $splash);
+        $ext = explode('.', $splash);
         $result = [
             'status' => 'success',
             'result' => [
-                'splash_screen_url' => $splash."?update=".time(),
-                'splash_screen_duration' => $duration??5,
-                'splash_screen_ext' => '.'.end($ext)
+                'splash_screen_url' => $splash . "?update=" . time(),
+                'splash_screen_duration' => $duration ?? 5,
+                'splash_screen_ext' => '.' . end($ext)
             ]
         ];
         return $result;
     }
 
     //====================== Product Variant ======================//
-    public function listProductVariantGroup(Request $request){
+    public function listProductVariantGroup(Request $request)
+    {
         $post = $request->all();
 
         $data = ProductVariantGroup::leftJoin('product_variant_group_details as pvgd', 'pvgd.id_product_variant_group', 'product_variant_groups.id_product_variant_group');
 
-        if(isset($post['id_outlet']) && !empty($post['id_outlet'])){
-            $data = $data->where(function ($q) use($post){
+        if (isset($post['id_outlet']) && !empty($post['id_outlet'])) {
+            $data = $data->where(function ($q) use ($post) {
                 $q->where('pvgd.id_outlet', $post['id_outlet']);
                 $q->orWhereNull('pvgd.id_product_variant_group_detail');
             });
         }
 
-        if(isset($post['id_product']) && !empty($post['id_product'])){
+        if (isset($post['id_product']) && !empty($post['id_product'])) {
             $data = $data->where('product_variant_groups.id_product', $post['id_product']);
         }
 
-        if(isset($post['id_product_variant']) && !empty($post['id_product_variant'])){
-            $data = $data->whereIn('product_variant_groups.id_product_variant_group', function($query) use($post){
+        if (isset($post['id_product_variant']) && !empty($post['id_product_variant'])) {
+            $data = $data->whereIn('product_variant_groups.id_product_variant_group', function ($query) use ($post) {
                 $query->select('pvp2.id_product_variant_group')
                     ->from('product_variant_pivot as pvp2')
                     ->whereIn('pvp2.id_product_variant', $post['id_product_variant']);
@@ -5818,24 +5836,24 @@ class ApiOutletApp extends Controller
                         ELSE pvgd.product_variant_group_stock_status END) as product_variant_group_stock_status')]);
 
 
-        $data = $data->where(function ($q){
+        $data = $data->where(function ($q) {
                         $q->where('pvgd.product_variant_group_status', 'Active')
                             ->orWhereNull('pvgd.product_variant_group_status');
-                    })
-                    ->where(function ($q){
-                        $q->where(function ($q2){
+        })
+                    ->where(function ($q) {
+                        $q->where(function ($q2) {
                             $q2->whereNull('pvgd.product_variant_group_visibility')
                                 ->where('product_variant_groups.product_variant_group_visibility', 'Visible');
                         });
-                        $q->orWhere(function ($q2){
+                        $q->orWhere(function ($q2) {
                             $q2->whereNotNull('pvgd.product_variant_group_visibility')
                                 ->where('pvgd.product_variant_group_visibility', 'Visible');
                         });
                     });
 
-        if(!isset($post['id_product']) || isset($post['page'])){
+        if (!isset($post['id_product']) || isset($post['page'])) {
             $data = $data->paginate(10)->toArray();
-        }else{
+        } else {
             $data = $data->get()->toArray();
         }
 
@@ -5845,58 +5863,58 @@ class ApiOutletApp extends Controller
     public function productVariantGroupSoldOut(Request $request)
     {
         $post = $request->all();
-        $id_outlet = $post['id_outlet']??$request->user()->id_outlet;
+        $id_outlet = $post['id_outlet'] ?? $request->user()->id_outlet;
 
-        if(!$id_outlet){
+        if (!$id_outlet) {
             return response()->json(['status' => 'fail', 'messages' => 'Outlet ID is required']);
         }
 
-        if(!isset($post['id_product']) && empty($post['id_product'])){
+        if (!isset($post['id_product']) && empty($post['id_product'])) {
             return response()->json(['status' => 'fail', 'messages' => 'Product ID is required']);
         }
 
-        if(isset($post['data_stock']) && !empty($post['data_stock'])){
-            foreach ($post['data_stock'] as $dt){
-                if($dt['product_variant_group_stock_status'] == 1){
+        if (isset($post['data_stock']) && !empty($post['data_stock'])) {
+            foreach ($post['data_stock'] as $dt) {
+                if ($dt['product_variant_group_stock_status'] == 1) {
                     $status = 'Available';
-                }else{
+                } else {
                     $status = 'Sold Out';
                 }
 
-                $updateOrCreate = ProductVariantGroupDetail::updateOrCreate(['id_outlet' =>$id_outlet, 'id_product_variant_group' => $dt['id_product_variant_group']], ['product_variant_group_stock_status' => $status]);
+                $updateOrCreate = ProductVariantGroupDetail::updateOrCreate(['id_outlet' => $id_outlet, 'id_product_variant_group' => $dt['id_product_variant_group']], ['product_variant_group_stock_status' => $status]);
             }
 
             $outlet = Outlet::where('id_outlet', $id_outlet)->first();
             $basePrice = ProductVariantGroup::orderBy('product_variant_group_price', 'asc')->where('id_product', $post['id_product'])->first();
             ProductGlobalPrice::updateOrCreate(['id_product' => $post['id_product']], ['product_global_price' => $basePrice['product_variant_group_price']]);
             Product::refreshVariantTree($post['id_product'], $outlet);
-            if($outlet['outlet_different_price'] == 1){
+            if ($outlet['outlet_different_price'] == 1) {
                 $basePriceDiferrentOutlet = ProductVariantGroup::leftJoin('product_variant_group_special_prices as pgsp', 'pgsp.id_product_variant_group', 'product_variant_groups.id_product_variant_group')
                     ->orderBy('product_variant_group_price', 'asc')
                     ->select(DB::raw('(CASE
                         WHEN pgsp.product_variant_group_price is NOT NULL THEN pgsp.product_variant_group_price
                         ELSE product_variant_groups.product_variant_group_price END)  as product_variant_group_price'))
                     ->where('id_product', $post['id_product'])->where('id_outlet', $id_outlet)->first();
-                if($basePriceDiferrentOutlet){
+                if ($basePriceDiferrentOutlet) {
                     ProductSpecialPrice::updateOrCreate(['id_outlet' => $id_outlet, 'id_product' => $post['id_product']], ['product_special_price' => $basePriceDiferrentOutlet['product_variant_group_price']]);
-                }else{
+                } else {
                     ProductSpecialPrice::updateOrCreate(['id_outlet' => $id_outlet, 'id_product' => $post['id_product']], ['product_special_price' => $basePrice['product_variant_group_price']]);
                 }
             }
 
             return MyHelper::checkUpdate($updateOrCreate);
-        }else{
+        } else {
             return response()->json(['status' => 'fail', 'messages' => 'Data for update is empty']);
         }
- 
     }
-  
-    public function setTimezone($data, $time_zone_utc){
+
+    public function setTimezone($data, $time_zone_utc)
+    {
         $default_time_zone_utc = 7;
         $time_diff = $time_zone_utc - $default_time_zone_utc;
 
-        $data['open'] = date('H:i', strtotime('-'.$time_diff.' hour',strtotime($data['open'])));
-        $data['close'] = date('H:i', strtotime('-'.$time_diff.' hour', strtotime($data['close'])));
+        $data['open'] = date('H:i', strtotime('-' . $time_diff . ' hour', strtotime($data['open'])));
+        $data['close'] = date('H:i', strtotime('-' . $time_diff . ' hour', strtotime($data['close'])));
 
         return $data;
     }
@@ -5905,11 +5923,11 @@ class ApiOutletApp extends Controller
     {
         $log = MyHelper::logCron('Driver Not Found Reject Order');
         try {
-        	$endStatusWehelpyou = Wehelpyou::orderEndFailStatusId();
+            $endStatusWehelpyou = Wehelpyou::orderEndFailStatusId();
             // dd(date('Y-m-d H:i:s', strtotime('-30minutes')));
             // dd(date('Y-m-d'));
-        	$transactions = Transaction::select([
-        			DB::raw('
+            $transactions = Transaction::select([
+                    DB::raw('
         				CASE WHEN transaction_pickups.pickup_by = "Wehelpyou" 
         					THEN transaction_pickup_wehelpyous.updated_at
         					ELSE transaction_pickup_go_sends.updated_at
@@ -5934,17 +5952,17 @@ class ApiOutletApp extends Controller
                 ->where([
                     'transaction_payment_status' => 'Completed',
                 ])
-                ->where(function($q) {
-                	$q->whereNotNull('transaction_pickup_go_sends.stop_booking_at')
-                		->orWhereNotNull('transaction_pickup_wehelpyous.stop_booking_at');
+                ->where(function ($q) {
+                    $q->whereNotNull('transaction_pickup_go_sends.stop_booking_at')
+                        ->orWhereNotNull('transaction_pickup_wehelpyous.stop_booking_at');
                 })
-                ->where(function($q) {
-                	$q->where('transaction_pickup_go_sends.latest_status', '<>', 'rejected')
-                	->orWhere('transaction_pickup_wehelpyous.latest_status_id', '<>', '96');
+                ->where(function ($q) {
+                    $q->where('transaction_pickup_go_sends.latest_status', '<>', 'rejected')
+                    ->orWhere('transaction_pickup_wehelpyous.latest_status_id', '<>', '96');
                 })
-                ->where(function($q) use ($endStatusWehelpyou){
-                	$q->whereIn('transaction_pickup_go_sends.latest_status', ['no_driver', 'rejected', 'cancelled'])
-                	->orWhereIn('transaction_pickup_wehelpyous.latest_status_id', $endStatusWehelpyou);
+                ->where(function ($q) use ($endStatusWehelpyou) {
+                    $q->whereIn('transaction_pickup_go_sends.latest_status', ['no_driver', 'rejected', 'cancelled'])
+                    ->orWhereIn('transaction_pickup_wehelpyous.latest_status_id', $endStatusWehelpyou);
                 })
                 ->with('outlet')
                 ->get();
@@ -5958,15 +5976,15 @@ class ApiOutletApp extends Controller
                 if (date('Y-m-d H:i', time()) == date('Y-m-d H:i', strtotime($transaction['stop_booking_at']))) {
                     continue;
                 }
-                $difference = floor((time() - strtotime($transaction['stop_booking_at']))/60);
+                $difference = floor((time() - strtotime($transaction['stop_booking_at'])) / 60);
                 if ($difference < 5) {
                     // kirim notifikasi
                     $dataNotif = [
-                        'subject' => 'Order '.$transaction['order_id'],
+                        'subject' => 'Order ' . $transaction['order_id'],
                         'string_body' => 'Dalam ' . ( 5 - $difference ) . ' menit, pesanan batal otomatis. Segera pilih tindakan.',
                         'type' => 'trx',
-                        'id_reference'=> $transaction['id_transaction'],
-                        'id_transaction'=> $transaction['id_transaction']
+                        'id_reference' => $transaction['id_transaction'],
+                        'id_transaction' => $transaction['id_transaction']
                     ];
                     $this->outletNotif($dataNotif, $transaction->id_outlet);
                 } else {
@@ -5988,12 +6006,12 @@ class ApiOutletApp extends Controller
                     if ($reject['status'] == 'success') {
                         $dataNotif = [
                             'subject' => 'Order Dibatalkan',
-                            'string_body' => $transaction['order_id'] . ' - '. $transaction['transaction_receipt_number'],
+                            'string_body' => $transaction['order_id'] . ' - ' . $transaction['transaction_receipt_number'],
                             'type' => 'trx',
-                            'id_reference'=> $transaction['id_transaction'],
-                            'id_transaction'=> $transaction['id_transaction']
+                            'id_reference' => $transaction['id_transaction'],
+                            'id_transaction' => $transaction['id_transaction']
                         ];
-                        $this->outletNotif($dataNotif,$transaction->id_outlet);
+                        $this->outletNotif($dataNotif, $transaction->id_outlet);
                         $processed['cancelled']++;
                     } else {
                         $processed['failed_cancel']++;
@@ -6033,7 +6051,7 @@ class ApiOutletApp extends Controller
         }
     }
 
-    function mergeBundlingProducts($items)
+    public function mergeBundlingProducts($items)
     {
         $new_items = [];
         $item_qtys = [];
@@ -6044,22 +6062,24 @@ class ApiOutletApp extends Controller
             $new_item = [
                 'product_name' => $item['product_name'],
                 'product_note' => $item['product_note'],
-                'product_variants' => array_map("unserialize", array_unique(array_map("serialize", array_map(function($i){
+                'product_variants' => array_map("unserialize", array_unique(array_map("serialize", array_map(function ($i) {
                     return [
                         'id_product_variant' => $i['id_product_variant'],
                         'product_variant_name' => $i['product_variant_name']
                     ];
-                },$item['product_variants']??[])))),
-                'product_modifiers' => array_map(function($i){
+                }, $item['product_variants'] ?? [])))),
+                'product_modifiers' => array_map(function ($i) {
                     return [
-                        "id_product_modifier"=> $i['id_product_modifier'],
-                        "product_modifier_name"=> $i['product_modifier_name']
+                        "id_product_modifier" => $i['id_product_modifier'],
+                        "product_modifier_name" => $i['product_modifier_name']
                     ];
-                },$item['product_modifiers']??[]),
+                }, $item['product_modifiers'] ?? []),
             ];
-            usort($new_item['product_modifiers'],function($a, $b) { return $a['id_product_modifier'] <=> $b['id_product_modifier']; });
+            usort($new_item['product_modifiers'], function ($a, $b) {
+                return $a['id_product_modifier'] <=> $b['id_product_modifier'];
+            });
             $pos = array_search($new_item, $new_items);
-            if($pos === false) {
+            if ($pos === false) {
                 $new_items[] = $new_item;
                 $item_qtys[] = $item['transaction_product_qty'];
             } else {
@@ -6074,10 +6094,11 @@ class ApiOutletApp extends Controller
         return $new_items;
     }
 
-    public function listProductPlastic(Request $request){
+    public function listProductPlastic(Request $request)
+    {
         $outlet  = $request->user();
 
-        if($outlet['plastic_used_status'] == 'Inactive'){
+        if ($outlet['plastic_used_status'] == 'Inactive') {
             return response()->json(['status' => 'fail', 'messages' => "This outlet don't use plastic"]);
         }
 
@@ -6086,22 +6107,24 @@ class ApiOutletApp extends Controller
                 ->where('id_outlet', $outlet['id_outlet'])->orderBy('plastic_type_order', 'asc')->first();
         $plastics = 0;
         $data = [];
-        if($plastic_type['id_plastic_type']??NULL){
+        if ($plastic_type['id_plastic_type'] ?? null) {
             $plastics = Product::where('product_type', 'plastic')
-                ->leftJoin('product_detail', function($join) use($outlet)
-                {
-                    $join->on('products.id_product','product_detail.id_product')
-                        ->where('product_detail.id_outlet',$outlet['id_outlet']);
-
+                ->leftJoin('product_detail', function ($join) use ($outlet) {
+                    $join->on('products.id_product', 'product_detail.id_product')
+                        ->where('product_detail.id_outlet', $outlet['id_outlet']);
                 })
-                ->where(function ($sub) use($outlet){
+                ->where(function ($sub) use ($outlet) {
                     $sub->whereNull('product_detail.id_outlet')
                         ->orWhere('product_detail.id_outlet', $outlet['id_outlet']);
                 })
                 ->where('id_plastic_type', $plastic_type['id_plastic_type'])
-                ->where('product_visibility', 'Visible')->select('products.id_product', 'products.product_code', 'products.product_name',
+                ->where('product_visibility', 'Visible')->select(
+                    'products.id_product',
+                    'products.product_code',
+                    'products.product_name',
                     DB::raw('(CASE WHEN product_detail.product_detail_stock_status is NULL THEN "Available"
-                        ELSE product_detail.product_detail_stock_status END) as product_stock_status'))->count();
+                        ELSE product_detail.product_detail_stock_status END) as product_stock_status')
+                )->count();
 
             $data = [[
                 'id_plastic_type' => $plastic_type['id_plastic_type'],
@@ -6110,7 +6133,7 @@ class ApiOutletApp extends Controller
             ]];
         }
 
-        if(!empty($data)){
+        if (!empty($data)) {
             $data = [
                 'plastic_name' => 'Kantong Belanja',
                 'list' => $data
@@ -6119,37 +6142,40 @@ class ApiOutletApp extends Controller
         return response()->json(MyHelper::checkGet($data));
     }
 
-    public function detailProductPlastic(Request $request){
+    public function detailProductPlastic(Request $request)
+    {
         $outlet  = $request->user();
         $post = $request->all();
 
-        if($outlet['plastic_used_status'] == 'Inactive'){
+        if ($outlet['plastic_used_status'] == 'Inactive') {
             return response()->json(['status' => 'fail', 'messages' => "This outlet don't use plastic"]);
         }
 
-        if(!isset($post['id_plastic_type'])){
+        if (!isset($post['id_plastic_type'])) {
             return response()->json(['status' => 'fail', 'messages' => "ID can not be empty"]);
         }
 
         $plastics = Product::where('product_type', 'plastic')
-            ->leftJoin('product_detail', function($join) use($outlet)
-            {
-                $join->on('products.id_product','product_detail.id_product')
-                    ->where('product_detail.id_outlet',$outlet['id_outlet']);
-
+            ->leftJoin('product_detail', function ($join) use ($outlet) {
+                $join->on('products.id_product', 'product_detail.id_product')
+                    ->where('product_detail.id_outlet', $outlet['id_outlet']);
             })
-            ->where(function ($sub) use($outlet){
+            ->where(function ($sub) use ($outlet) {
                 $sub->whereNull('product_detail.id_outlet')
                     ->orWhere('product_detail.id_outlet', $outlet['id_outlet']);
             })
             ->where('id_plastic_type', $post['id_plastic_type'])
-            ->where('product_visibility', 'Visible')->select('products.id_product', 'products.product_code', 'products.product_name',
+            ->where('product_visibility', 'Visible')->select(
+                'products.id_product',
+                'products.product_code',
+                'products.product_name',
                 DB::raw('(CASE WHEN product_detail.product_detail_stock_status is NULL THEN "Available"
-                        ELSE product_detail.product_detail_stock_status END) as product_stock_status'));
+                        ELSE product_detail.product_detail_stock_status END) as product_stock_status')
+            );
 
-        if(isset($post['page'])){
+        if (isset($post['page'])) {
             $plastics = $plastics->paginate(10)->toArray();
-        }else{
+        } else {
             $plastics = $plastics->get()->toArray();
         }
 
@@ -6159,32 +6185,32 @@ class ApiOutletApp extends Controller
     public function productPlasticSoldOut(Request $request)
     {
         $post = $request->all();
-        $id_outlet = $post['id_outlet']??$request->user()->id_outlet;
+        $id_outlet = $post['id_outlet'] ?? $request->user()->id_outlet;
 
-        if(!$id_outlet){
+        if (!$id_outlet) {
             return response()->json(['status' => 'fail', 'messages' => 'Outlet ID is required']);
         }
 
-        if(empty($post['available']) && empty($post['sold_out'])){
+        if (empty($post['available']) && empty($post['sold_out'])) {
             return response()->json(['status' => 'fail', 'messages' => 'Data for update is empty']);
         }
 
-        if(isset($post['available']) && !empty($post['available'])){
+        if (isset($post['available']) && !empty($post['available'])) {
             $dataAvailable = array_unique($post['available']);
-            foreach ($dataAvailable as $id_product){
-                if($id_product){
+            foreach ($dataAvailable as $id_product) {
+                if ($id_product) {
                     $status = 'Available';
-                    $updateOrCreate = ProductDetail::updateOrCreate(['id_outlet' =>$id_outlet, 'id_product' => $id_product], ['product_detail_stock_status' => $status]);
+                    $updateOrCreate = ProductDetail::updateOrCreate(['id_outlet' => $id_outlet, 'id_product' => $id_product], ['product_detail_stock_status' => $status]);
                 }
             }
         }
 
-        if(isset($post['sold_out']) && !empty($post['sold_out'])){
+        if (isset($post['sold_out']) && !empty($post['sold_out'])) {
             $dataSoldOut = array_unique($post['sold_out']);
-            foreach ($dataSoldOut as $id_product){
-                if($id_product){
+            foreach ($dataSoldOut as $id_product) {
+                if ($id_product) {
                     $status = 'Sold Out';
-                    $updateOrCreate = ProductDetail::updateOrCreate(['id_outlet' =>$id_outlet, 'id_product' => $id_product], ['product_detail_stock_status' => $status]);
+                    $updateOrCreate = ProductDetail::updateOrCreate(['id_outlet' => $id_outlet, 'id_product' => $id_product], ['product_detail_stock_status' => $status]);
                 }
             }
         }
@@ -6194,40 +6220,40 @@ class ApiOutletApp extends Controller
 
     public function listProductModifierGroup($request)
     {
-    	$outlet = $request->user();
-    	$outlet->load('brand_outlets');
+        $outlet = $request->user();
+        $outlet->load('brand_outlets');
         // modifiers
         $modifier_groups = ProductModifier::select(
-        				\DB::raw(
-        					'product_modifier_groups.id_product_modifier_group + 100000 as id_product, 
+            \DB::raw(
+                'product_modifier_groups.id_product_modifier_group + 100000 as id_product, 
         					product_modifier_groups.product_modifier_group_name as product_name, 
 
         					product_modifiers.id_product_modifier + 100000 as id_product_variant_group, 
         					product_modifiers.code as product_variant_group_code, 
         					product_modifiers.text_detail_trx as product_variant_group_name, 
         					CASE WHEN product_modifier_stock_status IS NULL THEN "Available" ELSE product_modifier_stock_status END as product_stock_status'
-        				)
-        			)
-        ->leftJoin('product_modifier_details', function($join) use ($outlet) {
-            $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
+            )
+        )
+        ->leftJoin('product_modifier_details', function ($join) use ($outlet) {
+            $join->on('product_modifier_details.id_product_modifier', '=', 'product_modifiers.id_product_modifier')
                 ->where('product_modifier_details.id_outlet', $outlet['id_outlet']);
         })
-        ->where(function($q){
-            $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
+        ->where(function ($q) {
+            $q->where('product_modifier_status', 'Active')->orWhereNull('product_modifier_status');
         })
-        ->where('modifier_type','=','Modifier Group')
-        ->where(function($query){
-            $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
-                    ->orWhere(function($q){
+        ->where('modifier_type', '=', 'Modifier Group')
+        ->where(function ($query) {
+            $query->where('product_modifier_details.product_modifier_visibility', '=', 'Visible')
+                    ->orWhere(function ($q) {
                         $q->whereNull('product_modifier_details.product_modifier_visibility')
                         ->where('product_modifiers.product_modifier_visibility', 'Visible');
                     });
         })
-        ->join('product_modifier_group_inventory_brands', function($join) use ($outlet) {
+        ->join('product_modifier_group_inventory_brands', function ($join) use ($outlet) {
             $join->on('product_modifier_group_inventory_brands.id_product_modifier_group', 'product_modifiers.id_product_modifier_group')
-                ->whereIn('id_brand',$outlet->brand_outlets->pluck('id_brand'));
+                ->whereIn('id_brand', $outlet->brand_outlets->pluck('id_brand'));
         })
-		->join('product_modifier_groups', function($join) use ($outlet) {
+        ->join('product_modifier_groups', function ($join) use ($outlet) {
             $join->on('product_modifier_groups.id_product_modifier_group', 'product_modifiers.id_product_modifier_group');
         })
         ->groupBy('product_modifiers.id_product_modifier');
@@ -6237,35 +6263,35 @@ class ApiOutletApp extends Controller
             $modifier_groups = $modifier_groups->paginate(30)->toArray();
             $data = $modifier_groups['data'];
         } else {
-        	$modifier_groups = $modifier_groups->get()->toArray();
+            $modifier_groups = $modifier_groups->get()->toArray();
             $data = $modifier_groups;
         }
 
         // build response
         $result = [];
         foreach ($data as $key => $val) {
-        	if ( empty($result[$val['id_product']]) ) {
-        		$result[$val['id_product']] = [
-        			'product_variant_status'=> 1,
-                    'id_product' 			=> $val['id_product'],
-                    'product_code' 			=> $val['product_variant_group_code'],
-                    'product_name' 			=> $val['product_name'],
-                    'product_stock_status' 	=> 'Sold Out',
+            if (empty($result[$val['id_product']])) {
+                $result[$val['id_product']] = [
+                    'product_variant_status' => 1,
+                    'id_product'            => $val['id_product'],
+                    'product_code'          => $val['product_variant_group_code'],
+                    'product_name'          => $val['product_name'],
+                    'product_stock_status'  => 'Sold Out',
                     'product_variant_group' => []
-        		];
-        	}
+                ];
+            }
 
-        	$result[$val['id_product']]['product_variant_group'][] = [
-        		'id_product'=> $val['id_product'],
-                'id_product_variant_group'=> $val['id_product_variant_group'],
-                'product_variant_group_code'=> $val['product_variant_group_code'],
-                'product_variant_group_name'=> $val['product_variant_group_name'],
-                'product_variant_group_stock_status'=> $val['product_stock_status']
-        	];
+            $result[$val['id_product']]['product_variant_group'][] = [
+                'id_product' => $val['id_product'],
+                'id_product_variant_group' => $val['id_product_variant_group'],
+                'product_variant_group_code' => $val['product_variant_group_code'],
+                'product_variant_group_name' => $val['product_variant_group_name'],
+                'product_variant_group_stock_status' => $val['product_stock_status']
+            ];
 
-        	if ($val['product_stock_status'] == 'Available') {
-        		$result[$val['id_product']]['product_stock_status'] = 'Available';
-        	}
+            if ($val['product_stock_status'] == 'Available') {
+                $result[$val['id_product']]['product_stock_status'] = 'Available';
+            }
         }
 
         $result = array_values($result);
@@ -6282,147 +6308,151 @@ class ApiOutletApp extends Controller
 
     public function modifierGroupSoldOut($request)
     {
-    	$post        = $request->json()->all();
+        $post        = $request->json()->all();
         $outlet      = $request->user();
         $user_outlet = $request->user_outlet;
         $otp         = $request->outlet_app_otps;
         $updated     = 0;
         $date_time   = date('Y-m-d H:i:s');
 
-    	if( isset($request->variants) && !empty($request->variants) ){
-            $outlet = Outlet::where( 'id_outlet', $outlet['id_outlet'] )->first();
-            foreach ($request->variants as $m){
-                if( isset($m['available']) && !empty($m['available']) ){
-                    $m['available'] = array_map( function($val){return $val - 100000;},array_unique( $m['available']) );
+        if (isset($request->variants) && !empty($request->variants)) {
+            $outlet = Outlet::where('id_outlet', $outlet['id_outlet'])->first();
+            foreach ($request->variants as $m) {
+                if (isset($m['available']) && !empty($m['available'])) {
+                    $m['available'] = array_map(function ($val) {
+                        return $val - 100000;
+                    }, array_unique($m['available']));
                     $found = ProductModifierDetail::where('id_outlet', $outlet['id_outlet'])
-			                ->whereIn('id_product_modifier', $m['available'])
-			                ->where('product_modifier_stock_status', '<>', 'Available');
+                            ->whereIn('id_product_modifier', $m['available'])
+                            ->where('product_modifier_stock_status', '<>', 'Available');
 
-			        $x = $found->get()->toArray();
-		            foreach ($x as $product) {
-		                $create = ProductModifierStockStatusUpdate::create([
-		                    'id_product_modifier'   => $product['id_product_modifier'],
-		                    'id_user'           	=> $user_outlet['id_user'],
-		                    'user_type'         	=> $user_outlet['user_type'],
-		                    'user_name'         	=> $user_outlet['name'],
-		                    'user_email'        	=> $user_outlet['email'],
-		                    'id_outlet'         	=> $outlet->id_outlet,
-		                    'date_time'         	=> $date_time,
-		                    'new_status'        	=> 'Available',
-		                    'id_outlet_app_otp' 	=> null,
-		                ]);
-		            }
-		            $updated += $found->update(['product_modifier_stock_status' => 'Available']);
+                    $x = $found->get()->toArray();
+                    foreach ($x as $product) {
+                        $create = ProductModifierStockStatusUpdate::create([
+                            'id_product_modifier'   => $product['id_product_modifier'],
+                            'id_user'               => $user_outlet['id_user'],
+                            'user_type'             => $user_outlet['user_type'],
+                            'user_name'             => $user_outlet['name'],
+                            'user_email'            => $user_outlet['email'],
+                            'id_outlet'             => $outlet->id_outlet,
+                            'date_time'             => $date_time,
+                            'new_status'            => 'Available',
+                            'id_outlet_app_otp'     => null,
+                        ]);
+                    }
+                    $updated += $found->update(['product_modifier_stock_status' => 'Available']);
 
-		            //create detail product
-		            $newDetail = ProductModifierDetail::where('id_outlet', $outlet['id_outlet'])
-		                ->whereIn('id_product_modifier', $m['available'])->select('id_product_modifier')->get();
+                    //create detail product
+                    $newDetail = ProductModifierDetail::where('id_outlet', $outlet['id_outlet'])
+                        ->whereIn('id_product_modifier', $m['available'])->select('id_product_modifier')->get();
 
-		            if( count($newDetail) > 0){
-		                $newDetail = $newDetail->pluck('id_product_modifier')->toArray();
-		                $diff = array_diff( $m['available'], $newDetail);
-		            }else{
-		                //all product need to be created in product_detail
-		                $diff = $m['available'];
-		            }
+                    if (count($newDetail) > 0) {
+                        $newDetail = $newDetail->pluck('id_product_modifier')->toArray();
+                        $diff = array_diff($m['available'], $newDetail);
+                    } else {
+                        //all product need to be created in product_detail
+                        $diff = $m['available'];
+                    }
 
-		            if( count($diff) > 0 ){
-		                $insert = [];
-		                $insertStatus = [];
-		                foreach($diff as $idProd){
-		                    if($idProd != 0){
-		                        $insert[] = [
-		                            'id_product_modifier' => $idProd,
-		                            'id_outlet'  => $outlet['id_outlet'],
-		                            'product_modifier_stock_status' => 'Available',
-		                            'product_modifier_visibility' => null,
-		                            'product_modifier_status' => 'Active',
-		                            'created_at' => $date_time,
-		                            'updated_at' => $date_time
-		                        ];
-		    
-		                        $insertStatus = [
-		                            'id_product_modifier'        => $idProd,
-		                            'id_user'           => $user_outlet['id_user'],
-		                            'user_type'         => $user_outlet['user_type'],
-		                            'user_name'         => $user_outlet['name'],
-		                            'user_email'        => $user_outlet['email'],
-		                            'id_outlet'         => $outlet->id_outlet,
-		                            'date_time'         => $date_time,
-		                            'new_status'        => 'Available',
-		                            'id_outlet_app_otp' => null,
-		                        ];
-		                    }
-		                }
-		                $createDetail = ProductModifierDetail::insert($insert);                
-		                $createStatus = ProductModifierStockStatusUpdate::insert($insertStatus);
-		                $updated += $createDetail;
-		            }
+                    if (count($diff) > 0) {
+                        $insert = [];
+                        $insertStatus = [];
+                        foreach ($diff as $idProd) {
+                            if ($idProd != 0) {
+                                $insert[] = [
+                                    'id_product_modifier' => $idProd,
+                                    'id_outlet'  => $outlet['id_outlet'],
+                                    'product_modifier_stock_status' => 'Available',
+                                    'product_modifier_visibility' => null,
+                                    'product_modifier_status' => 'Active',
+                                    'created_at' => $date_time,
+                                    'updated_at' => $date_time
+                                ];
+
+                                $insertStatus = [
+                                    'id_product_modifier'        => $idProd,
+                                    'id_user'           => $user_outlet['id_user'],
+                                    'user_type'         => $user_outlet['user_type'],
+                                    'user_name'         => $user_outlet['name'],
+                                    'user_email'        => $user_outlet['email'],
+                                    'id_outlet'         => $outlet->id_outlet,
+                                    'date_time'         => $date_time,
+                                    'new_status'        => 'Available',
+                                    'id_outlet_app_otp' => null,
+                                ];
+                            }
+                        }
+                        $createDetail = ProductModifierDetail::insert($insert);
+                        $createStatus = ProductModifierStockStatusUpdate::insert($insertStatus);
+                        $updated += $createDetail;
+                    }
                 }
 
-                if( isset($m['sold_out']) && !empty($m['sold_out']) ){
-                	$m['sold_out'] = array_map( function($val){return $val - 100000;},array_unique($m['sold_out']) );
-		            $found = ProductModifierDetail::where('id_outlet', $outlet['id_outlet'])
-		                ->whereIn('id_product_modifier', $m['sold_out'])
-		                ->where('product_modifier_stock_status', '<>', 'Sold Out');
-		            $x = $found->get()->toArray();
-		            foreach ($x as $product) {
-		                $create = ProductModifierStockStatusUpdate::create([
-		                    'id_product_modifier'	=> $product['id_product_modifier'],
-		                    'id_user'           	=> $user_outlet['id_user'],
-		                    'user_type'         	=> $user_outlet['user_type'],
-		                    'user_name'         	=> $user_outlet['name'],
-		                    'user_email'        	=> $user_outlet['email'],
-		                    'id_outlet'         	=> $outlet->id_outlet,
-		                    'date_time'         	=> $date_time,
-		                    'new_status'        	=> 'Sold Out',
-		                    'id_outlet_app_otp' 	=> null
-		                ]);
-		            }
-		            $updated += $found->update(['product_modifier_stock_status' => 'Sold Out']);
+                if (isset($m['sold_out']) && !empty($m['sold_out'])) {
+                    $m['sold_out'] = array_map(function ($val) {
+                        return $val - 100000;
+                    }, array_unique($m['sold_out']));
+                    $found = ProductModifierDetail::where('id_outlet', $outlet['id_outlet'])
+                        ->whereIn('id_product_modifier', $m['sold_out'])
+                        ->where('product_modifier_stock_status', '<>', 'Sold Out');
+                    $x = $found->get()->toArray();
+                    foreach ($x as $product) {
+                        $create = ProductModifierStockStatusUpdate::create([
+                            'id_product_modifier'   => $product['id_product_modifier'],
+                            'id_user'               => $user_outlet['id_user'],
+                            'user_type'             => $user_outlet['user_type'],
+                            'user_name'             => $user_outlet['name'],
+                            'user_email'            => $user_outlet['email'],
+                            'id_outlet'             => $outlet->id_outlet,
+                            'date_time'             => $date_time,
+                            'new_status'            => 'Sold Out',
+                            'id_outlet_app_otp'     => null
+                        ]);
+                    }
+                    $updated += $found->update(['product_modifier_stock_status' => 'Sold Out']);
 
-		            //create detail product
-		            $newDetail = ProductModifierDetail::where('id_outlet', $outlet['id_outlet'])
-		                ->whereIn('id_product_modifier', $m['sold_out'])->select('id_product_modifier')->get();
+                    //create detail product
+                    $newDetail = ProductModifierDetail::where('id_outlet', $outlet['id_outlet'])
+                        ->whereIn('id_product_modifier', $m['sold_out'])->select('id_product_modifier')->get();
 
-		            if(count($newDetail) > 0){
-		                $newDetail = $newDetail->pluck('id_product_modifier')->toArray();
-		                $diff = array_diff($m['sold_out'], $newDetail);
-		            }else{
-		                //all product need to be created in product_detail
-		                $diff = $m['sold_out'];
-		            }
-		            if(count($diff) > 0){
-		                $insert = [];
-		                $insertStatus = [];
-		                foreach($diff as $idProd){
-		                    if($idProd != 0){
-		                        $insert[] = [
-		                            'id_product_modifier' => $idProd,
-		                            'id_outlet'  => $outlet['id_outlet'],
-		                            'product_modifier_stock_status' => 'Sold Out',
-		                            'product_modifier_visibility' => null,
-		                            'product_modifier_status' => 'Active',
-		                            'created_at' => $date_time,
-		                            'updated_at' => $date_time
-		                        ];
-		                        $insertStatus[] = [
-		                            'id_product_modifier' => $idProd,
-		                            'id_user'           => $user_outlet['id_user'],
-		                            'user_type'         => $user_outlet['user_type'],
-		                            'user_name'         => $user_outlet['name'],
-		                            'user_email'        => $user_outlet['email'],
-		                            'id_outlet'         => $outlet->id_outlet,
-		                            'date_time'         => $date_time,
-		                            'new_status'        => 'Sold Out',
-		                            'id_outlet_app_otp' => null
-		                        ];
-		                    }
-		                }
-		                $createDetail = ProductModifierDetail::insert($insert);
-		                $createStatus = ProductModifierStockStatusUpdate::insert($insertStatus);
-		                $updated += $createDetail;
-		            }
+                    if (count($newDetail) > 0) {
+                        $newDetail = $newDetail->pluck('id_product_modifier')->toArray();
+                        $diff = array_diff($m['sold_out'], $newDetail);
+                    } else {
+                        //all product need to be created in product_detail
+                        $diff = $m['sold_out'];
+                    }
+                    if (count($diff) > 0) {
+                        $insert = [];
+                        $insertStatus = [];
+                        foreach ($diff as $idProd) {
+                            if ($idProd != 0) {
+                                $insert[] = [
+                                    'id_product_modifier' => $idProd,
+                                    'id_outlet'  => $outlet['id_outlet'],
+                                    'product_modifier_stock_status' => 'Sold Out',
+                                    'product_modifier_visibility' => null,
+                                    'product_modifier_status' => 'Active',
+                                    'created_at' => $date_time,
+                                    'updated_at' => $date_time
+                                ];
+                                $insertStatus[] = [
+                                    'id_product_modifier' => $idProd,
+                                    'id_user'           => $user_outlet['id_user'],
+                                    'user_type'         => $user_outlet['user_type'],
+                                    'user_name'         => $user_outlet['name'],
+                                    'user_email'        => $user_outlet['email'],
+                                    'id_outlet'         => $outlet->id_outlet,
+                                    'date_time'         => $date_time,
+                                    'new_status'        => 'Sold Out',
+                                    'id_outlet_app_otp' => null
+                                ];
+                            }
+                        }
+                        $createDetail = ProductModifierDetail::insert($insert);
+                        $createStatus = ProductModifierStockStatusUpdate::insert($insertStatus);
+                        $updated += $createDetail;
+                    }
                 }
             }
         }
@@ -6435,30 +6465,29 @@ class ApiOutletApp extends Controller
 
     public function insertUserCashback($trx)
     {
-    	if ($trx->cashback_insert_status != 1) {
+        if ($trx->cashback_insert_status != 1) {
             //send notif to customer
             $user = User::find($trx->id_user);
 
-            $newTrx	= Transaction::with(
-		            	'user.memberships', 
-		            	'outlet', 
-		            	'productTransaction', 
-		            	'transaction_vouchers',
-		            	'promo_campaign_promo_code',
-		            	'promo_campaign_promo_code.promo_campaign'
-		            )
-		            ->where('id_transaction', $trx->id_transaction)
-		            ->first();
+            $newTrx = Transaction::with(
+                'user.memberships',
+                'outlet',
+                'productTransaction',
+                'transaction_vouchers',
+                'promo_campaign_promo_code',
+                'promo_campaign_promo_code.promo_campaign'
+            )
+                    ->where('id_transaction', $trx->id_transaction)
+                    ->first();
 
             $checkType = TransactionMultiplePayment::where('id_transaction', $trx->id_transaction)->get()->toArray();
             $column    = array_column($checkType, 'type');
-            
+
             $use_referral = optional(optional($newTrx->promo_campaign_promo_code)->promo_campaign)->promo_type == 'Referral';
             \App\Jobs\UpdateQuestProgressJob::dispatch($trx->id_transaction)->onConnection('quest');
             \Modules\OutletApp\Jobs\AchievementCheck::dispatch(['id_transaction' => $trx->id_transaction, 'phone' => $user['phone']])->onConnection('achievement');
 
             if (!in_array('Balance', $column) || $use_referral) {
-
                 $promo_source = null;
                 if ($newTrx->id_promo_campaign_promo_code || $newTrx->transaction_vouchers) {
                     if ($newTrx->id_promo_campaign_promo_code) {

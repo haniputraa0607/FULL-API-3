@@ -11,7 +11,7 @@ use Reliese\Database\Eloquent\Model as Eloquent;
 
 /**
  * Class DailyReportPayment
- * 
+ *
  * @property int $id_daily_report_payment
  * @property \Carbon\Carbon $trx_date
  * @property int $payment_count
@@ -23,18 +23,18 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  */
 class DailyReportPaymentDeals extends Eloquent
 {
-	protected $table = 'daily_report_payment_deals';
-	protected $primaryKey = 'id_daily_report_payment_deals';
+    protected $table = 'daily_report_payment_deals';
+    protected $primaryKey = 'id_daily_report_payment_deals';
 
-	protected $dates = [
-		'date'
-	];
+    protected $dates = [
+        'date'
+    ];
 
-	protected $fillable = [
-		'date',
+    protected $fillable = [
+        'date',
         'payment_type',
-		'payment',
-		'payment_count',
-		'payment_nominal'
-	];
+        'payment',
+        'payment_count',
+        'payment_nominal'
+    ];
 }

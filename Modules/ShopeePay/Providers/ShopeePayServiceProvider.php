@@ -39,10 +39,11 @@ class ShopeePayServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('shopeepay.php'),
+            __DIR__ . '/../Config/config.php' => config_path('shopeepay.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'shopeepay'
+            __DIR__ . '/../Config/config.php',
+            'shopeepay'
         );
     }
 
@@ -55,11 +56,11 @@ class ShopeePayServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/shopeepay');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/shopeepay';
@@ -78,7 +79,7 @@ class ShopeePayServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'shopeepay');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'shopeepay');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'shopeepay');
         }
     }
 

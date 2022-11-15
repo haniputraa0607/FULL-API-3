@@ -55,7 +55,7 @@ class TransactionGroup extends Model
         ]);
 
         $getTransactions = Transaction::where('id_transaction_group', $this->id_transaction_group)->get();
-        foreach ($getTransactions as $transaction){
+        foreach ($getTransactions as $transaction) {
             $transaction->triggerPaymentCompleted();
         }
 
@@ -68,9 +68,9 @@ class TransactionGroup extends Model
 
             $config_fraud_use_queue = Configs::where('config_name', 'fraud use queue')->value('is_active');
 
-            if($config_fraud_use_queue == 1){
+            if ($config_fraud_use_queue == 1) {
                 FraudJob::dispatch($this->user, $this, 'transaction')->onConnection('fraudqueue');
-            }else {
+            } else {
                 app('\Modules\SettingFraud\Http\Controllers\ApiFraud')->checkFraudTrxOnline($this->user, $this);
             }
         }
@@ -100,8 +100,8 @@ class TransactionGroup extends Model
 
         //reversal balance
         $logBalance = LogBalance::where('id_reference', $this->id_transaction_group)->whereIn('source', ['Online Transaction', 'Transaction'])->where('balance', '<', 0)->get();
-        foreach($logBalance as $logB){
-            $reversal = app('\Modules\Balance\Http\Controllers\BalanceController')->addLogBalance( $this->id_user, abs($logB['balance']), $this->id_transaction_group, 'Reversal', $this->transaction_grandtotal);
+        foreach ($logBalance as $logB) {
+            $reversal = app('\Modules\Balance\Http\Controllers\BalanceController')->addLogBalance($this->id_user, abs($logB['balance']), $this->id_transaction_group, 'Reversal', $this->transaction_grandtotal);
             if (!$reversal) {
                 \DB::rollBack();
                 return false;
@@ -109,12 +109,11 @@ class TransactionGroup extends Model
         }
 
         $getTransactions = Transaction::where('id_transaction_group', $this->id_transaction_group)->get();
-        foreach ($getTransactions as $transaction){
+        foreach ($getTransactions as $transaction) {
             $transaction->triggerPaymentCancelled();
         }
 
         \DB::commit();
         return true;
     }
-
 }

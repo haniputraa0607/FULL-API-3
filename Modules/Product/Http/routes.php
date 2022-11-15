@@ -1,12 +1,10 @@
 <?php
 
-Route::group(['prefix' => 'api/merchant','middleware' => ['log_activities','auth:api', 'scopes:apps'], 'namespace' => 'Modules\Product\Http\Controllers'], function()
-{
+Route::group(['prefix' => 'api/merchant','middleware' => ['log_activities','auth:api', 'scopes:apps'], 'namespace' => 'Modules\Product\Http\Controllers'], function () {
     Route::get('product/category/list', 'ApiCategoryController@listCategoryCustomerApps');
 });
 
-Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:api', 'scopes:apps'], 'namespace' => 'Modules\Product\Http\Controllers'], function()
-{
+Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:api', 'scopes:apps'], 'namespace' => 'Modules\Product\Http\Controllers'], function () {
     /* product */
     Route::post('search', 'ApiCategoryController@search');
     Route::any('list', 'ApiProductController@listProductMerchant');
@@ -19,15 +17,14 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
     Route::get('newest', 'ApiProductController@newest');
 
     /* category */
-    Route::group(['prefix' => 'category'], function() {
+    Route::group(['prefix' => 'category'], function () {
 
-    	Route::get('list', 'ApiCategoryController@listCategoryCustomerApps');
-    	Route::any('list/tree', 'ApiCategoryController@listCategoryTree');
+        Route::get('list', 'ApiCategoryController@listCategoryCustomerApps');
+        Route::any('list/tree', 'ApiCategoryController@listCategoryTree');
     });
 });
 
-Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:api', 'scopes:be'], 'namespace' => 'Modules\Product\Http\Controllers'], function()
-{
+Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:api', 'scopes:be'], 'namespace' => 'Modules\Product\Http\Controllers'], function () {
     Route::any('be/list', 'ApiProductController@listProduct');
     Route::any('be/list/image', 'ApiProductController@listProductImage');
     Route::any('be/list/image/detail', 'ApiProductController@listProductImageDetail');
@@ -54,7 +51,7 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
     Route::post('recommendation/save', 'ApiProductController@productRecommendation');
 
     /* photo */
-    Route::group(['prefix' => 'photo'], function() {
+    Route::group(['prefix' => 'photo'], function () {
         Route::post('create', 'ApiProductController@uploadPhotoProduct');
         Route::post('update', 'ApiProductController@updatePhotoProduct');
         Route::post('createAjax', 'ApiProductController@uploadPhotoProductAjax');
@@ -64,7 +61,7 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
     });
 
     /* product modifier */
-    Route::group(['prefix' => 'modifier'], function() {
+    Route::group(['prefix' => 'modifier'], function () {
         Route::any('/', 'ApiProductModifierController@index');
         Route::get('type', 'ApiProductModifierController@listType');
         Route::post('detail', 'ApiProductModifierController@show');
@@ -81,7 +78,7 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
     });
 
     /* product modifier group */
-    Route::group(['prefix' => 'modifier-group'], function() {
+    Route::group(['prefix' => 'modifier-group'], function () {
         Route::any('/', 'ApiProductModifierGroupController@index');
         Route::post('create', 'ApiProductModifierGroupController@store');
         Route::post('update', 'ApiProductModifierGroupController@update');
@@ -97,7 +94,7 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
         Route::post('inventory-brand', 'ApiProductModifierGroupController@inventoryBrandUpdate');
     });
 
-    Route::group(['prefix' => 'category'], function() {
+    Route::group(['prefix' => 'category'], function () {
         Route::any('be/list', 'ApiCategoryController@listCategory');
         Route::post('position/assign', 'ApiCategoryController@positionCategoryAssign');
         Route::get('all', 'ApiCategoryController@getAllCategory');
@@ -107,7 +104,7 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
         Route::post('delete', 'ApiCategoryController@delete');
     });
 
-    Route::group(['prefix' => 'promo-category'], function() {
+    Route::group(['prefix' => 'promo-category'], function () {
         Route::any('/', 'ApiPromoCategoryController@index')->middleware(['feature_control:236']);
         Route::post('assign', 'ApiPromoCategoryController@assign')->middleware(['feature_control:239']);
         Route::post('reorder', 'ApiPromoCategoryController@reorder')->middleware(['feature_control:239']);
@@ -124,7 +121,7 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
     Route::post('outlet-detail/all-product', 'ApiProductController@allProductDetail');
 
     /* tag */
-    Route::group(['prefix' => 'tag'], function() {
+    Route::group(['prefix' => 'tag'], function () {
         Route::any('list', 'ApiTagController@list');
         Route::post('create', 'ApiTagController@create');
         Route::post('update', 'ApiTagController@update');
@@ -132,7 +129,7 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
     });
 
     /* product tag */
-    Route::group(['prefix' => 'product-tag'], function() {
+    Route::group(['prefix' => 'product-tag'], function () {
         Route::post('create', 'ApiTagController@createProductTag');
         Route::post('delete', 'ApiTagController@deleteProductTag');
     });

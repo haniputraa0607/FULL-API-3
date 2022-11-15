@@ -7,8 +7,6 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\Lib\MyHelper;
-
-
 use Modules\Subscription\Entities\Subscription;
 use Modules\Subscription\Entities\SubscriptionPaymentMidtran;
 use Modules\Subscription\Entities\FeaturedSubscription;
@@ -18,27 +16,29 @@ use Modules\Subscription\Entities\SubscriptionUserVoucher;
 use Modules\Subscription\Entities\TransactionPaymentSubscription;
 use App\Http\Models\Outlet;
 use App\Http\Models\Setting;
-
 use Modules\Subscription\Http\Requests\CreateSubscriptionVoucher;
 use DB;
 
 class ApiSubscriptionVoucher extends Controller
 {
-    function __construct() {
+    public function __construct()
+    {
         date_default_timezone_set('Asia/Jakarta');
         $this->subscription = "Modules\subscription\Http\Controllers\ApiSubscription";
-        $this->claim   		= "Modules\Subscription\Http\Controllers\ApiSubscriptionClaim";
+        $this->claim        = "Modules\Subscription\Http\Controllers\ApiSubscriptionClaim";
     }
 
     /* GENERATE CODE */
-    function generateCode($id_deals) {
-        $code = 'subs'.sprintf('%03d', $id_deals).MyHelper::createRandomPIN(5);
+    public function generateCode($id_deals)
+    {
+        $code = 'subs' . sprintf('%03d', $id_deals) . MyHelper::createRandomPIN(5);
 
         return $code;
     }
 
     /* CREATE VOUCHER USER */
-    function createVoucherUser($post) {
+    public function createVoucherUser($post)
+    {
         $create = SubscriptionUser::create($post);
 
         if ($create) {
@@ -52,36 +52,32 @@ class ApiSubscriptionVoucher extends Controller
     }
 
     /* AUTO CLAIMED & ASSIGN */
-    function autoClaimedAssign($subs, $to) {
+    public function autoClaimedAssign($subs, $to)
+    {
 
-        $ret=false;
+        $ret = false;
         foreach ($to as $key => $user) {
             $generate_user = app($this->claim)->createSubscriptionUser($user, $subs);
 
-            if ($generate_user) 
-            {
-            	$update_receipt = $this->updateSubscriptionReceipt($generate_user->id_subscription_user);
-            	
-				if ($update_receipt) 
-				{
-            		$generate_voucher = $this->generateSubsVoucher($subs, $generate_user->id_subscription_user);
-	                // return first voucher
-	                if(!$ret){
-	                    $ret=$generate_voucher;
-	                }
+            if ($generate_user) {
+                $update_receipt = $this->updateSubscriptionReceipt($generate_user->id_subscription_user);
 
-	                if ($generate_user) {
-	                    continue;
-	                }
-	                else {
-	                    return false;
-	                }
-				}
-				else{
-					return false;
-				}
-            }
-            else {
+                if ($update_receipt) {
+                    $generate_voucher = $this->generateSubsVoucher($subs, $generate_user->id_subscription_user);
+                    // return first voucher
+                    if (!$ret) {
+                        $ret = $generate_voucher;
+                    }
+
+                    if ($generate_user) {
+                        continue;
+                    } else {
+                        return false;
+                    }
+                } else {
+                    return false;
+                }
+            } else {
                 return false;
             }
         }
@@ -89,12 +85,12 @@ class ApiSubscriptionVoucher extends Controller
     }
 
     /* GENERATE VOUCHER */
-    function generateSubsVoucher($dataSubs, $id_subscription_user) {
+    public function generateSubsVoucher($dataSubs, $id_subscription_user)
+    {
 
-    	$id_subscription = $dataSubs->id_subscription;
-    	$subs_voucher = [];
-    	for ($i=1; $i <= $dataSubs->subscription_voucher_total; $i++) {
-
+        $id_subscription = $dataSubs->id_subscription;
+        $subs_voucher = [];
+        for ($i = 1; $i <= $dataSubs->subscription_voucher_total; $i++) {
             // generate voucher code
             do {
                 $code = $this->generateCode($id_subscription);
@@ -117,9 +113,9 @@ class ApiSubscriptionVoucher extends Controller
         return $save;
     }
 
-    function updateSubscriptionReceipt($id_subscription_user)
+    public function updateSubscriptionReceipt($id_subscription_user)
     {
-    	$subs_receipt = 'SUBS-'.time().sprintf("%05d", $id_subscription_user);
+        $subs_receipt = 'SUBS-' . time() . sprintf("%05d", $id_subscription_user);
         $updateSubs = SubscriptionUser::where('id_subscription_user', '=', $id_subscription_user)->update(['subscription_user_receipt_number' => $subs_receipt]);
 
         return $updateSubs;
@@ -136,8 +132,8 @@ class ApiSubscriptionVoucher extends Controller
          * TransactionPaymentSubscription -> ini konsepnya sama kayak promo campaign report jadi dihapus
          * SubscriptionUserVoucher -> ini kolom used_at sama id_trx jadiin kosong
          */
-        TransactionPaymentSubscription::where('id_transaction',$id_transaction)->delete();
-        SubscriptionUserVoucher::where('id_transaction',$id_transaction)->update([
+        TransactionPaymentSubscription::where('id_transaction', $id_transaction)->delete();
+        SubscriptionUserVoucher::where('id_transaction', $id_transaction)->update([
             'used_at' => null,
             'id_transaction' => null
         ]);

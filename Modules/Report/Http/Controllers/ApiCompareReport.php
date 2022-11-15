@@ -5,29 +5,23 @@ namespace Modules\Report\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Http\Models\DailyReportTrx;
 use App\Http\Models\MonthlyReportTrx;
 use App\Http\Models\GlobalDailyReportTrx;
 use App\Http\Models\GlobalMonthlyReportTrx;
-
 use App\Http\Models\DailyReportTrxMenu;
 use App\Http\Models\MonthlyReportTrxMenu;
 use App\Http\Models\GlobalDailyReportTrxMenu;
 use App\Http\Models\GlobalMonthlyReportTrxMenu;
-
 use App\Http\Models\DailyCustomerReportRegistration;
 use App\Http\Models\MonthlyCustomerReportRegistration;
-
 use App\Http\Models\DailyMembershipReport;
 use App\Http\Models\MonthlyMembershipReport;
-
 use App\Http\Models\DealsUser;
 use App\Http\Models\Deal;
 use App\Http\Models\Outlet;
 use App\Http\Models\Product;
 use App\Http\Models\Membership;
-
 use Modules\Report\Http\Controllers\ApiSingleReport;
 use App\Lib\MyHelper;
 use DB;
@@ -38,7 +32,7 @@ class ApiCompareReport extends Controller
     {
         $post = $request->json()->all();
 
-        if ($post['time_type']!='day' && $post['time_type']!='month' && $post['time_type']!='year') {
+        if ($post['time_type'] != 'day' && $post['time_type'] != 'month' && $post['time_type'] != 'year') {
             return response()->json([
                 'status' => 'fail',
                 'messages' => ['Invalid time type']
@@ -46,7 +40,7 @@ class ApiCompareReport extends Controller
         }
 
         $data = $this->getTrxReport($request, 0);
-        
+
         $getProducts = $this->getProductReport($request, 0);
         $data['products'] = $getProducts['products'];
 
@@ -64,13 +58,13 @@ class ApiCompareReport extends Controller
 
 
     // get trx report
-    public function getTrxReport(Request $request, $flag=1)
+    public function getTrxReport(Request $request, $flag = 1)
     {
         $post = $request->json()->all();
-        if (isset($post['trx_id_outlet_1']) && $post['trx_id_outlet_1']!=0) {
+        if (isset($post['trx_id_outlet_1']) && $post['trx_id_outlet_1'] != 0) {
             $params_1['id_outlet'] = $post['trx_id_outlet_1'];
         }
-        if (isset($post['trx_id_outlet_2']) && $post['trx_id_outlet_2']!=0) {
+        if (isset($post['trx_id_outlet_2']) && $post['trx_id_outlet_2'] != 0) {
             $params_2['id_outlet'] = $post['trx_id_outlet_2'];
         }
 
@@ -137,8 +131,7 @@ class ApiCompareReport extends Controller
         $count_2 = count($transactions_2);
         if ($count_2 > $count_1) {
             $max_count = $count_2;
-        }
-        else{
+        } else {
             $max_count = $count_1;
         }
 
@@ -150,7 +143,7 @@ class ApiCompareReport extends Controller
 
         // manage if the length of compared array charts not equal
         // if data null, set placeholder "-" or "0"
-        for ($i=0; $i < $max_count; $i++) {
+        for ($i = 0; $i < $max_count; $i++) {
             $idr_1 = isset($chart_1['trx_idr_chart'][$i]) ? $chart_1['trx_idr_chart'][$i] : [];
             $idr_2 = isset($chart_2['trx_idr_chart'][$i]) ? $chart_2['trx_idr_chart'][$i] : [];
 
@@ -167,7 +160,7 @@ class ApiCompareReport extends Controller
             else{*/
                 $date_1 = isset($idr_1['date']) ? $idr_1['date'] : '-';
                 $date_2 = isset($idr_2['date']) ? $idr_2['date'] : '-';
-                $date   = $date_1 .' vs '. $date_2;
+                $date   = $date_1 . ' vs ' . $date_2;
             // }
 
             $trx_idr_chart[] = [
@@ -188,7 +181,7 @@ class ApiCompareReport extends Controller
                 'kopi_point_2' => (isset($kopi_point_2['kopi_point']) ? $kopi_point_2['kopi_point'] : 0),
             ];
         }
-        
+
         $transactions = array_merge($transactions_1, $transactions_2);
 
         // set number in datatable
@@ -201,11 +194,10 @@ class ApiCompareReport extends Controller
         $data['transactions']['trx_qty_chart'] = $trx_qty_chart;
         $data['transactions']['trx_kopi_point_chart'] = $trx_kopi_point_chart;
 
-        if ($flag==1) {
+        if ($flag == 1) {
             // if called as api
             return response()->json(MyHelper::checkGet($data));
-        }
-        else{
+        } else {
             // if called in controller
             return $data;
         }
@@ -224,12 +216,12 @@ class ApiCompareReport extends Controller
                     $chart_date = date('d M', strtotime($item['trx_date']));
                     break;
                 case 'month':
-                    $item_date = date('M', mktime(0, 0, 0, $item['trx_month'], 10)) ." ". $item['trx_year'];
+                    $item_date = date('M', mktime(0, 0, 0, $item['trx_month'], 10)) . " " . $item['trx_year'];
                     $chart_date = date('M', mktime(0, 0, 0, $item['trx_month'], 10));
                     break;
                 case 'year':
-                    $item_date = $item['trx_month'] ."-". $item['trx_year'];
-                    $chart_date = date('M', mktime(0, 0, 0, $item['trx_month'], 10)) ." ". $item['trx_year'];
+                    $item_date = $item['trx_month'] . "-" . $item['trx_year'];
+                    $chart_date = date('M', mktime(0, 0, 0, $item['trx_month'], 10)) . " " . $item['trx_year'];
                     break;
                 default:
                     break;
@@ -261,21 +253,21 @@ class ApiCompareReport extends Controller
 
 
     // get product report
-    public function getProductReport(Request $request, $flag=1)
+    public function getProductReport(Request $request, $flag = 1)
     {
         $post = $request->json()->all();
 
         $params_1['time_type'] = $post['time_type'];
         $params_2['time_type'] = $post['time_type'];
 
-        if (isset($post['product_id_outlet_1']) && $post['product_id_outlet_1']!=0) {
+        if (isset($post['product_id_outlet_1']) && $post['product_id_outlet_1'] != 0) {
             $params_1['id_outlet'] = $post['product_id_outlet_1'];
         }
-        if (isset($post['id_product']) && $post['id_product']!=0) {
+        if (isset($post['id_product']) && $post['id_product'] != 0) {
             $params_1['id_product'] = $post['id_product'];
             $params_2['id_product'] = $post['id_product'];
         }
-        if (isset($post['product_id_outlet_2']) && $post['product_id_outlet_2']!=0) {
+        if (isset($post['product_id_outlet_2']) && $post['product_id_outlet_2'] != 0) {
             $params_2['id_outlet'] = $post['product_id_outlet_2'];
         }
 
@@ -339,12 +331,12 @@ class ApiCompareReport extends Controller
         }
 
         $custom_req_1 = new Request();
-        $custom_req_1->request->add(['time_type'=> 'day']);
+        $custom_req_1->request->add(['time_type' => 'day']);
         $custom_req_2 = new Request();
         $custom_req_2->request->add($params_2);
 
         return [
-            $params_1, 
+            $params_1,
             $request->all(),
             $custom_req_1->all()
         ];
@@ -361,8 +353,7 @@ class ApiCompareReport extends Controller
         $count_2 = count($p2['data']);
         if ($count_2 > $count_1) {
             $max_count = $count_2;
-        }
-        else{
+        } else {
             $max_count = $count_1;
         }
 
@@ -374,7 +365,7 @@ class ApiCompareReport extends Controller
         // create compared data: data_1, data_2
         // manage if the length of compared array charts not equal
         // if data null, set placeholder "-" or "0"
-        for ($i=0; $i < $max_count; $i++) {
+        for ($i = 0; $i < $max_count; $i++) {
             $qty_1 = isset($p1['product_chart'][$i]) ? $p1['product_chart'][$i] : [];
             $qty_2 = isset($p2['product_chart'][$i]) ? $p2['product_chart'][$i] : [];
             $gender_1 = isset($p1['product_gender_chart'][$i]) ? $p1['product_gender_chart'][$i] : [];
@@ -386,7 +377,7 @@ class ApiCompareReport extends Controller
 
             $date_1 = isset($qty_1['date']) ? $qty_1['date'] : '-';
             $date_2 = isset($qty_2['date']) ? $qty_2['date'] : '-';
-            $date   = $date_1 .' vs '. $date_2;
+            $date   = $date_1 . ' vs ' . $date_2;
 
             $product_chart[] = [
                 'date'        => $date,
@@ -419,7 +410,7 @@ class ApiCompareReport extends Controller
                 'ios_2' => (isset($device_2['ios']) ? $device_2['ios'] : 0),
             ];
         }
-        
+
         $products = array_merge($p1['data'], $p2['data']);
 
         // set number in datatable
@@ -433,11 +424,10 @@ class ApiCompareReport extends Controller
         $data['products']['product_age_chart'] = $product_age_chart;
         $data['products']['product_device_chart'] = $product_device_chart;
 
-        if ($flag==1) {
+        if ($flag == 1) {
             // if called as api
             return response()->json(MyHelper::checkGet($data));
-        }
-        else{
+        } else {
             // if called in controller
             return $data;
         }
@@ -454,12 +444,12 @@ class ApiCompareReport extends Controller
                     $chart_date = date('d M', strtotime($item['trx_date']));
                     break;
                 case 'month':
-                    $item_date = date('M', mktime(0, 0, 0, $item['trx_month'], 10)) ." ". $item['trx_year'];
+                    $item_date = date('M', mktime(0, 0, 0, $item['trx_month'], 10)) . " " . $item['trx_year'];
                     $chart_date = date('M', mktime(0, 0, 0, $item['trx_month'], 10));
                     break;
                 case 'year':
-                    $item_date = $item['trx_month'] ."-". $item['trx_year'];
-                    $chart_date = date('M', mktime(0, 0, 0, $item['trx_month'], 10)) ." ". $item['trx_year'];
+                    $item_date = $item['trx_month'] . "-" . $item['trx_year'];
+                    $chart_date = date('M', mktime(0, 0, 0, $item['trx_month'], 10)) . " " . $item['trx_year'];
                     break;
                 default:
                     break;
@@ -479,7 +469,7 @@ class ApiCompareReport extends Controller
 
 
     // get registration report
-    public function getRegReport(Request $request, $flag=1)
+    public function getRegReport(Request $request, $flag = 1)
     {
         $post = $request->json()->all();
 
@@ -496,9 +486,11 @@ class ApiCompareReport extends Controller
                 $regs_2 = $apiSingleReport->registrationDay($params_2);
                 break;
             case 'month':
-                if ($post['param1'] == $post['param4'] &&
+                if (
+                    $post['param1'] == $post['param4'] &&
                     $post['param2'] == $post['param5'] &&
-                    $post['param3'] == $post['param6']) {
+                    $post['param3'] == $post['param6']
+                ) {
                     $check_date = 1;
                 }
                 $params_1['start_month'] = $post['param1'];
@@ -536,8 +528,7 @@ class ApiCompareReport extends Controller
         $count_2 = count($regs_2);
         if ($count_2 > $count_1) {
             $max_count = $count_2;
-        }
-        else{
+        } else {
             $max_count = $count_1;
         }
 
@@ -554,7 +545,7 @@ class ApiCompareReport extends Controller
         $reg_device_chart = [];
         $reg_provider_chart = [];
 
-        for ($i=0; $i < $max_count; $i++) {
+        for ($i = 0; $i < $max_count; $i++) {
             $gender_1 = isset($chart_1['reg_gender_chart'][$i]) ? $chart_1['reg_gender_chart'][$i] : [];
             $gender_2 = isset($chart_2['reg_gender_chart'][$i]) ? $chart_2['reg_gender_chart'][$i] : [];
             $age_1 = isset($chart_1['reg_age_chart'][$i]) ? $chart_1['reg_age_chart'][$i] : [];
@@ -566,14 +557,14 @@ class ApiCompareReport extends Controller
 
             $date_1 = isset($gender_1['date']) ? $gender_1['date'] : '-';
             $date_2 = isset($gender_2['date']) ? $gender_2['date'] : '-';
-            $date   = $date_1 .' vs '. $date_2;
+            $date   = $date_1 . ' vs ' . $date_2;
 
             $reg_gender_chart[] = $this->genderChart($date, $gender_1, $gender_2);
             $reg_age_chart[] = $this->ageChart($date, $age_1, $age_2);
             $reg_device_chart[] = $this->deviceChart($date, $device_1, $device_2);
             $reg_provider_chart[] = $this->providerChart($date, $provider_1, $provider_2);
         }
-        
+
         $registrations = array_merge($regs_1, $regs_2);
 
         // set number in datatable
@@ -587,11 +578,10 @@ class ApiCompareReport extends Controller
         $data['registrations']['reg_device_chart'] = $reg_device_chart;
         $data['registrations']['reg_provider_chart'] = $reg_provider_chart;
 
-        if ($flag==1) {
+        if ($flag == 1) {
             // if called as api
             return response()->json(MyHelper::checkGet($data));
-        }
-        else{
+        } else {
             // if called in controller
             return $data;
         }
@@ -612,12 +602,12 @@ class ApiCompareReport extends Controller
                     $chart_date = date('d M', strtotime($item['reg_date']));
                     break;
                 case 'month':
-                    $item_date = date('M', mktime(0, 0, 0, $item['reg_month'], 10)) ." ". $item['reg_year'];
+                    $item_date = date('M', mktime(0, 0, 0, $item['reg_month'], 10)) . " " . $item['reg_year'];
                     $chart_date = date('M', mktime(0, 0, 0, $item['reg_month'], 10));
                     break;
                 case 'year':
-                    $item_date = $item['reg_month'] ."-". $item['reg_year'];
-                    $chart_date = date('M', mktime(0, 0, 0, $item['reg_month'], 10)) ." ". $item['reg_year'];
+                    $item_date = $item['reg_month'] . "-" . $item['reg_year'];
+                    $chart_date = date('M', mktime(0, 0, 0, $item['reg_month'], 10)) . " " . $item['reg_year'];
                     break;
                 default:
                     break;
@@ -640,13 +630,13 @@ class ApiCompareReport extends Controller
 
 
     // get membership report
-    public function getMembershipReport(Request $request, $flag=1)
+    public function getMembershipReport(Request $request, $flag = 1)
     {
         $post = $request->json()->all();
-        if (isset($post['id_membership_1']) && $post['id_membership_1']!=0) {
+        if (isset($post['id_membership_1']) && $post['id_membership_1'] != 0) {
             $params_1['id_membership'] = $post['id_membership_1'];
         }
-        if (isset($post['id_membership_2']) && $post['id_membership_2']!=0) {
+        if (isset($post['id_membership_2']) && $post['id_membership_2'] != 0) {
             $params_2['id_membership'] = $post['id_membership_2'];
         }
 
@@ -709,8 +699,7 @@ class ApiCompareReport extends Controller
         $count_2 = count($memberships_2);
         if ($count_2 > $count_1) {
             $max_count = $count_2;
-        }
-        else{
+        } else {
             $max_count = $count_1;
         }
 
@@ -723,7 +712,7 @@ class ApiCompareReport extends Controller
         $mem_chart = [];
         // manage if the length of compared array charts not equal
         // if data null, set placeholder "-" or "0"
-        for ($i=0; $i < $max_count; $i++) {
+        for ($i = 0; $i < $max_count; $i++) {
             $qty_1 = isset($chart_1['mem_chart'][$i]) ? $chart_1['mem_chart'][$i] : [];
             $qty_2 = isset($chart_2['mem_chart'][$i]) ? $chart_2['mem_chart'][$i] : [];
 
@@ -734,7 +723,7 @@ class ApiCompareReport extends Controller
             else {*/
                 $date_1 = isset($qty_1['date']) ? $qty_1['date'] : '-';
                 $date_2 = isset($qty_2['date']) ? $qty_2['date'] : '-';
-                $date   = $date_1 .' vs '. $date_2;
+                $date   = $date_1 . ' vs ' . $date_2;
             // }
 
             $mem_chart[] = [
@@ -743,7 +732,7 @@ class ApiCompareReport extends Controller
                 'cust_total_2' => (isset($qty_2['cust_total']) ? $qty_2['cust_total'] : 0)
             ];
         }
-        
+
         $memberships = array_merge($memberships_1, $memberships_2);
 
         // set number in datatable
@@ -754,11 +743,10 @@ class ApiCompareReport extends Controller
         $data['memberships']['data'] = $memberships;
         $data['memberships']['mem_chart'] = $mem_chart;
 
-        if ($flag==1) {
+        if ($flag == 1) {
             // if called as api
             return response()->json(MyHelper::checkGet($data));
-        }
-        else{
+        } else {
             // if called in controller
             return $data;
         }
@@ -774,12 +762,12 @@ class ApiCompareReport extends Controller
                     $chart_date = date('d M', strtotime($item['mem_date']));
                     break;
                 case 'month':
-                    $item_date = date('M', mktime(0, 0, 0, $item['mem_month'], 10)) ." ". $item['mem_year'];
+                    $item_date = date('M', mktime(0, 0, 0, $item['mem_month'], 10)) . " " . $item['mem_year'];
                     $chart_date = date('M', mktime(0, 0, 0, $item['mem_month'], 10));
                     break;
                 case 'year':
-                    $item_date = $item['mem_month'] ."-". $item['mem_year'];
-                    $chart_date = date('M', mktime(0, 0, 0, $item['mem_month'], 10)) ." ". $item['mem_year'];
+                    $item_date = $item['mem_month'] . "-" . $item['mem_year'];
+                    $chart_date = date('M', mktime(0, 0, 0, $item['mem_month'], 10)) . " " . $item['mem_year'];
                     break;
                 default:
                     break;
@@ -788,7 +776,7 @@ class ApiCompareReport extends Controller
 
             $mem_chart[] = [
                 'date'      => $chart_date,
-                'cust_total'=> (is_null($item['cust_total']) ? 0 : $item['cust_total'])
+                'cust_total' => (is_null($item['cust_total']) ? 0 : $item['cust_total'])
             ];
         }
 
@@ -799,19 +787,19 @@ class ApiCompareReport extends Controller
 
 
     // get voucher report
-    public function getVoucherReport(Request $request, $flag=1)
+    public function getVoucherReport(Request $request, $flag = 1)
     {
         $post = $request->json()->all();
-        if (isset($post['voucher_id_outlet_1']) && $post['voucher_id_outlet_1']!=0) {
+        if (isset($post['voucher_id_outlet_1']) && $post['voucher_id_outlet_1'] != 0) {
             $params_1['id_outlet'] = $post['voucher_id_outlet_1'];
         }
-        if (isset($post['id_deals_1']) && $post['id_deals_1']!=0) {
+        if (isset($post['id_deals_1']) && $post['id_deals_1'] != 0) {
             $params_1['id_deals'] = $post['id_deals_1'];
         }
-        if (isset($post['voucher_id_outlet_2']) && $post['voucher_id_outlet_2']!=0) {
+        if (isset($post['voucher_id_outlet_2']) && $post['voucher_id_outlet_2'] != 0) {
             $params_2['id_outlet'] = $post['voucher_id_outlet_2'];
         }
-        if (isset($post['id_deals_2']) && $post['id_deals_2']!=0) {
+        if (isset($post['id_deals_2']) && $post['id_deals_2'] != 0) {
             $params_2['id_deals'] = $post['id_deals_2'];
         }
 
@@ -824,9 +812,11 @@ class ApiCompareReport extends Controller
                 $params_2['end_date'] = $post['param4'];
                 break;
             case 'month':
-                if ($post['param1'] == $post['param4'] &&
+                if (
+                    $post['param1'] == $post['param4'] &&
                     $post['param2'] == $post['param5'] &&
-                    $post['param3'] == $post['param6']) {
+                    $post['param3'] == $post['param6']
+                ) {
                     $check_date = 1;
                 }
                 $params_1['start_month'] = $post['param1'];
@@ -865,8 +855,7 @@ class ApiCompareReport extends Controller
         $count_2 = count($vouchers_2);
         if ($count_2 > $count_1) {
             $max_count = $count_2;
-        }
-        else{
+        } else {
             $max_count = $count_1;
         }
 
@@ -884,7 +873,7 @@ class ApiCompareReport extends Controller
 
         // manage if the length of compared array charts not equal
         // if data null, set placeholder "-" or "0"
-        for ($i=0; $i < $max_count; $i++) {
+        for ($i = 0; $i < $max_count; $i++) {
             $voucher_1 = isset($chart_1['voucher_chart'][$i]) ? $chart_1['voucher_chart'][$i] : [];
             $voucher_2 = isset($chart_2['voucher_chart'][$i]) ? $chart_2['voucher_chart'][$i] : [];
             $gender_1 = isset($chart_1['voucher_gender_chart'][$i]) ? $chart_1['voucher_gender_chart'][$i] : [];
@@ -898,7 +887,7 @@ class ApiCompareReport extends Controller
 
             $date_1 = isset($gender_1['date']) ? $gender_1['date'] : '-';
             $date_2 = isset($gender_2['date']) ? $gender_2['date'] : '-';
-            $date   = $date_1 .' vs '. $date_2;
+            $date   = $date_1 . ' vs ' . $date_2;
 
             $voucher_chart[] = [
                 'date'  => $date,
@@ -910,7 +899,7 @@ class ApiCompareReport extends Controller
             $voucher_device_chart[] = $this->deviceChart($date, $device_1, $device_2);
             $voucher_provider_chart[] = $this->providerChart($date, $provider_1, $provider_2);
         }
-        
+
         $vouchers = array_merge($vouchers_1, $vouchers_2);
 
         // set number in datatable
@@ -925,11 +914,10 @@ class ApiCompareReport extends Controller
         $data['vouchers']['voucher_device_chart'] = $voucher_device_chart;
         $data['vouchers']['voucher_provider_chart'] = $voucher_provider_chart;
 
-        if ($flag==1) {
+        if ($flag == 1) {
             // if called as api
             return response()->json(MyHelper::checkGet($data));
-        }
-        else{
+        } else {
             // if called in controller
             return $data;
         }
@@ -1001,12 +989,12 @@ class ApiCompareReport extends Controller
         return [
             'date'        => $date,
             'teens_1'     => (isset($item_1['teens']) ? $item_1['teens'] : 0),
-            'young_adult_1' => (isset($item_1['young_adult']) ? $item_1['young_adult']:0),
+            'young_adult_1' => (isset($item_1['young_adult']) ? $item_1['young_adult'] : 0),
             'adult_1'     => (isset($item_1['adult']) ? $item_1['adult'] : 0),
             'old_1'       => (isset($item_1['old']) ? $item_1['old'] : 0),
 
             'teens_2'     => (isset($item_2['teens']) ? $item_2['teens'] : 0),
-            'young_adult_2' => (isset($item_2['young_adult']) ? $item_2['young_adult']:0),
+            'young_adult_2' => (isset($item_2['young_adult']) ? $item_2['young_adult'] : 0),
             'adult_2'     => (isset($item_2['adult']) ? $item_2['adult'] : 0),
             'old_2'       => (isset($item_2['old']) ? $item_2['old'] : 0)
         ];
@@ -1043,6 +1031,4 @@ class ApiCompareReport extends Controller
             'smart_2'     => (isset($item_2['smart']) ? $item_2['smart'] : 0)
         ];
     }
-
-
 }

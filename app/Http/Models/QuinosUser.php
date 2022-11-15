@@ -14,23 +14,25 @@ use Hash;
 
 class QuinosUser extends Authenticatable
 {
-	use Notifiable, HasMultiAuthApiTokens;
+    use Notifiable;
+    use HasMultiAuthApiTokens;
 
-	public function findForPassport($username) {
+    public function findForPassport($username)
+    {
         return $this->where('username', $username)->first();
-	}
-	
-	public function getAuthPassword() {
-		return $this->password;
-	}
+    }
 
-	protected $primaryKey = 'id_quinos_user';
+    public function getAuthPassword()
+    {
+        return $this->password;
+    }
 
-	protected $hidden = ['password'];
+    protected $primaryKey = 'id_quinos_user';
 
-	protected $fillable = [
-		'username',
-		'password',
-	];
+    protected $hidden = ['password'];
 
+    protected $fillable = [
+        'username',
+        'password',
+    ];
 }

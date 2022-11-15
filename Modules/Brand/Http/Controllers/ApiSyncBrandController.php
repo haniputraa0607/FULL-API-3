@@ -6,14 +6,13 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use DB;
-
 use Modules\Brand\Http\Requests\SyncBrand;
 use Modules\Brand\Entities\Brand;
 use Modules\POS\Http\Controllers\ApiPOS;
 
 class ApiSyncBrandController extends Controller
 {
-    function __construct()
+    public function __construct()
     {
         date_default_timezone_set('Asia/Jakarta');
     }
@@ -26,7 +25,7 @@ class ApiSyncBrandController extends Controller
         if ($api['status'] != 'success') {
             return response()->json($api);
         }
-        
+
         DB::beginTransaction();
 
         $countSave = 0;
@@ -48,7 +47,7 @@ class ApiSyncBrandController extends Controller
                     ]);
                 }
             } else {
-                $data['brand_active'] = $value['brand_active']??0;
+                $data['brand_active'] = $value['brand_active'] ?? 0;
                 $save = Brand::create($data);
                 $countSave = $countSave + 1;
                 if (!$save) {

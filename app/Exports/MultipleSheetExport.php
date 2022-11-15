@@ -24,13 +24,13 @@ class MultipleSheetExport implements WithMultipleSheets
         $sheets = [];
 
         foreach ($this->data as $key => $value) {
-            if($key == 'Summary'){
+            if ($key == 'Summary') {
                 $sheets[] = new SummaryTrxBladeExport($value);
-            }elseif ($key == 'Calculation Fee'){
+            } elseif ($key == 'Calculation Fee') {
                 $sheets[] = new CalculationFeeBladeExport($value);
-            }elseif ($key == 'Detail Transaction'){
+            } elseif ($key == 'Detail Transaction') {
                 $sheets[] = new TransactionBladeExport($value);
-            }else{
+            } else {
                 $sheets[] = $value;
             }
         }

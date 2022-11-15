@@ -5,6 +5,7 @@ namespace App\Http\Requests\users;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
+
 class UserPhone extends FormRequest
 {
     /**
@@ -38,5 +39,4 @@ class UserPhone extends FormRequest
     {
         return $this->json()->all();
     }
-
 }

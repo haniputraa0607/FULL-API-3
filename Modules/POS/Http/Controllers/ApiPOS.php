@@ -7,7 +7,6 @@ use App\Jobs\FraudJob;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Http\Models\Membership;
 use App\Http\Models\UsersMembership;
 use App\Http\Models\Transaction;
@@ -47,25 +46,22 @@ use App\Http\Models\SyncTransactionFaileds;
 use App\Http\Models\SyncTransactionQueues;
 use App\Lib\MyHelper;
 use App\Lib\SendMail as Mail;
-
-use Modules\POS\Http\Requests\reqMember;
-use Modules\POS\Http\Requests\reqVoucher;
-use Modules\POS\Http\Requests\voidVoucher;
-use Modules\POS\Http\Requests\reqMenu;
-use Modules\POS\Http\Requests\reqOutlet;
-use Modules\POS\Http\Requests\reqTransaction;
-use Modules\POS\Http\Requests\reqTransactionRefund;
-use Modules\POS\Http\Requests\reqPreOrderDetail;
-use Modules\POS\Http\Requests\reqBulkMenu;
+use Modules\POS\Http\Requests\ReqMember;
+use Modules\POS\Http\Requests\ReqVoucher;
+use Modules\POS\Http\Requests\VoidVoucher;
+use Modules\POS\Http\Requests\ReqMenu;
+use Modules\POS\Http\Requests\ReqOutlet;
+use Modules\POS\Http\Requests\ReqTransaction;
+use Modules\POS\Http\Requests\ReqTransactionRefund;
+use Modules\POS\Http\Requests\ReqPreOrderDetail;
+use Modules\POS\Http\Requests\ReqBulkMenu;
 use Modules\Brand\Entities\Brand;
 use Modules\Brand\Entities\BrandOutlet;
 use Modules\Brand\Entities\BrandProduct;
 use Modules\POS\Entities\SyncMenuRequest;
 use Modules\POS\Entities\SyncMenuResult;
-
 use Modules\POS\Http\Controllers\CheckVoucher;
 use Exception;
-
 use DB;
 use DateTime;
 use GuzzleHttp\Client;
@@ -75,7 +71,7 @@ use Modules\POS\Jobs\SyncOutletSeed;
 
 class ApiPOS extends Controller
 {
-    function __construct()
+    public function __construct()
     {
         date_default_timezone_set('Asia/Jakarta');
         $this->balance    = "Modules\Balance\Http\Controllers\BalanceController";
@@ -87,7 +83,7 @@ class ApiPOS extends Controller
         $this->pos = "Modules\POS\Http\Controllers\ApiPos";
     }
 
-    public function transactionDetail(reqPreOrderDetail $request)
+    public function transactionDetail(ReqPreOrderDetail $request)
     {
         $post = $request->json()->all();
 
@@ -184,9 +180,9 @@ class ApiPOS extends Controller
                 }
             }
 
-            // 			$transactions['payment_type'] = null;
-            // 			$transactions['payment_code'] = null;
-            // 			$transactions['payment_nominal'] = null;
+            //          $transactions['payment_type'] = null;
+            //          $transactions['payment_code'] = null;
+            //          $transactions['payment_nominal'] = null;
             $transactions['menu'] = [];
             $transactions['tax'] = 0;
             $transactions['total'] = 0;
@@ -221,7 +217,7 @@ class ApiPOS extends Controller
                 "id_reference" => $check['transaction_receipt_number'] . ',' . $outlet['id_outlet'],
                 'id_transaction' => $check['id_transaction'],
                 "transaction_date" => $check['transaction_date'],
-                'order_id'         => $trxPickup->order_id??'',
+                'order_id'         => $trxPickup->order_id ?? '',
                 'receipt_number'   => $check['transaction_receipt_number'],
             ]);
 
@@ -236,10 +232,11 @@ class ApiPOS extends Controller
     {
         $post = $request->json()->all();
 
-        if(!empty($post['api_key']) && !empty($post['api_secret']) &&
-            !empty($post['store_code']) && !empty($post['uid'])){
-
-            if(strlen($post['uid']) < 35){
+        if (
+            !empty($post['api_key']) && !empty($post['api_secret']) &&
+            !empty($post['store_code']) && !empty($post['uid'])
+        ) {
+            if (strlen($post['uid']) < 35) {
                 DB::rollback();
                 return ['status' => 'fail', 'messages' => 'Minimum length of member uid is 35'];
             }
@@ -332,7 +329,7 @@ class ApiPOS extends Controller
             $result['saldo'] = $user->balance;
 
             return response()->json(['status' => 'success', 'result' => $result]);
-        }else{
+        } else {
             return response()->json(['status' => 'fail', 'messages' => 'Input is incomplete']);
         }
     }
@@ -341,27 +338,29 @@ class ApiPOS extends Controller
     {
         $post = $request->json()->all();
 
-        if(!empty($post['api_key']) && !empty($post['api_secret']) && !empty($post['store_code']) &&
-        (!empty($post['qrcode']) || !empty($post['code']))){
-
+        if (
+            !empty($post['api_key']) && !empty($post['api_secret']) && !empty($post['store_code']) &&
+            (!empty($post['qrcode']) || !empty($post['code']))
+        ) {
             $api = $this->checkApi($post['api_key'], $post['api_secret']);
             if ($api['status'] != 'success') {
                 return response()->json($api);
             }
 
             return CheckVoucher::check($post);
-        }else{
+        } else {
             return response()->json(['status' => 'fail', 'messages' => ['Input is incomplete']]);
         }
     }
 
-    public function voidVoucher(Request $request)
+    public function VoidVoucher(Request $request)
     {
         $post = $request->json()->all();
 
-        if(!empty($post['api_key']) && !empty($post['api_secret']) &&
-            !empty($post['store_code']) && !empty($post['voucher_code'])){
-
+        if (
+            !empty($post['api_key']) && !empty($post['api_secret']) &&
+            !empty($post['store_code']) && !empty($post['voucher_code'])
+        ) {
             $api = $this->checkApi($post['api_key'], $post['api_secret']);
             if ($api['status'] != 'success') {
                 return response()->json($api);
@@ -378,21 +377,21 @@ class ApiPOS extends Controller
                 ->leftJoin('transaction_vouchers', 'deals_vouchers.id_deals_voucher', 'transaction_vouchers.id_deals_voucher')
                 ->leftJoin('transaction_vouchers as transaction_vouchers2', 'deals_vouchers.voucher_code', 'transaction_vouchers2.deals_voucher_invalid')
                 ->where('deals_vouchers.voucher_code', $post['voucher_code'])
-                ->select('deals_vouchers.*','deals_users.id_outlet', 'transaction_vouchers.id_deals_voucher as id_deals_voucher_transaction', 'transaction_vouchers2.deals_voucher_invalid as voucher_code_transaction')
+                ->select('deals_vouchers.*', 'deals_users.id_outlet', 'transaction_vouchers.id_deals_voucher as id_deals_voucher_transaction', 'transaction_vouchers2.deals_voucher_invalid as voucher_code_transaction')
                 ->first();
 
             if (!$voucher) {
                 return response()->json(['status' => 'fail', 'messages' => 'Voucher not found']);
-            }elseif ($voucher['id_deals_voucher_transaction'] || $voucher['voucher_code_transaction']){
+            } elseif ($voucher['id_deals_voucher_transaction'] || $voucher['voucher_code_transaction']) {
                 return response()->json(['status' => 'fail', 'messages' => 'Void voucher failed, voucher has already been used.']);
             }
 
-            if(isset($voucher['id_outlet']) && $voucher['id_outlet'] != $outlet['id_outlet']){
+            if (isset($voucher['id_outlet']) && $voucher['id_outlet'] != $outlet['id_outlet']) {
                 $outletDeals = Outlet::find($voucher['deals_user'][0]['id_outlet']);
-                if($outletDeals){
-                    return response()->json(['status' => 'fail', 'messages' => 'Void voucher  '.$post['voucher_code'].'. Void vouchers can only be done at '.$outletDeals['outlet_name'].' outlets.']);
+                if ($outletDeals) {
+                    return response()->json(['status' => 'fail', 'messages' => 'Void voucher  ' . $post['voucher_code'] . '. Void vouchers can only be done at ' . $outletDeals['outlet_name'] . ' outlets.']);
                 }
-                return response()->json(['status' => 'fail', 'messages' => 'Void voucher failed '.$post['voucher_code'].'. Void vouchers can only be done at '.$outlet['outlet_name'].' outlets.']);
+                return response()->json(['status' => 'fail', 'messages' => 'Void voucher failed ' . $post['voucher_code'] . '. Void vouchers can only be done at ' . $outlet['outlet_name'] . ' outlets.']);
             }
 
             //update voucher redeem
@@ -421,13 +420,13 @@ class ApiPOS extends Controller
 
             DB::commit();
             return response()->json(['status' => 'success', 'messages' => 'Voucher ' . $post['voucher_code'] . ' was successfully voided']);
-        }else{
+        } else {
             return response()->json(['status' => 'fail', 'messages' => 'Input is incomplete']);
         }
-
     }
 
-    function getAuthSeed() {
+    public function getAuthSeed()
+    {
         $accurateAuth = new Client([
             'base_uri'  => env('POS_URL'),
         ]);
@@ -445,7 +444,8 @@ class ApiPOS extends Controller
         return $accurateToken;
     }
 
-    function getPerPageOutlet($bearer, $url = null) {
+    public function getPerPageOutlet($bearer, $url = null)
+    {
         $accurateAuth = new Client([
             'base_uri'  => env('POS_URL'),
         ]);
@@ -459,7 +459,8 @@ class ApiPOS extends Controller
         return $outlet;
     }
 
-    public function syncOutletSeed() {
+    public function syncOutletSeed()
+    {
         $auth = $this->getAuthSeed();
 
         if ($auth['success'] == true) {
@@ -468,7 +469,7 @@ class ApiPOS extends Controller
                 SyncOutletSeed::dispatch($outlet['result']['data']);
                 if (!is_null($outlet['result']['next_page_url'])) {
                     for ($i = 2; $i <= $outlet['result']['last_page']; $i++) {
-                        $outlet = $this->getPerPageOutlet('Bearer ' . $auth['result']['access_token'], '?page='.$i);
+                        $outlet = $this->getPerPageOutlet('Bearer ' . $auth['result']['access_token'], '?page=' . $i);
                         SyncOutletSeed::dispatch($outlet['result']['data']);
                     }
                 }
@@ -479,7 +480,7 @@ class ApiPOS extends Controller
         ];
     }
 
-    public function syncOutlet(reqOutlet $request)
+    public function syncOutlet(ReqOutlet $request)
     {
         $post = $request->json()->all();
         $api = $this->checkApi($post['api_key'], $post['api_secret']);
@@ -593,9 +594,10 @@ class ApiPOS extends Controller
      * @param  Request $request laravel Request object
      * @return array        status update
      */
-    public function syncMenu(Request $request) {
+    public function syncMenu(Request $request)
+    {
         $post = $request->json()->all();
-        return $this->syncMenuProcess($post,'partial');
+        return $this->syncMenuProcess($post, 'partial');
     }
     public function syncMenuProcess($data, $flag)
     {
@@ -693,13 +695,14 @@ class ApiPOS extends Controller
                             if (empty($product->product_name_pos) || $product->product_name_pos == $menu['name']) {
                                 // update modifiers
                                 if (isset($menu['modifiers'])) {
-                                    ProductModifierProduct::where('id_product',$product['id_product'])->delete();
+                                    ProductModifierProduct::where('id_product', $product['id_product'])->delete();
                                     foreach ($menu['modifiers'] as $mod) {
                                         $dataProductMod['type'] = $mod['type'];
-                                        if (isset($mod['text']))
+                                        if (isset($mod['text'])) {
                                             $dataProductMod['text'] = $mod['text'];
-                                        else
+                                        } else {
                                             $dataProductMod['text'] = null;
+                                        }
                                         $dataProductMod['modifier_type'] = 'Specific';
                                         $updateProductMod = ProductModifier::updateOrCreate([
                                             'code'  => $mod['code']
@@ -800,9 +803,8 @@ class ApiPOS extends Controller
                                 array_push($rejectedProduct, ['backend' => $dataBackend, 'raptor' => $dataRaptor]);
                             }
                         }
-                    }
+                    } else {
                     // insert product
-                    else {
                         $create = Product::create(['product_code' => $menu['plu_id'], 'product_name_pos' => $menu['name'], 'product_name' => $menu['name']]);
                         if ($create) {
                             // update price
@@ -881,10 +883,10 @@ class ApiPOS extends Controller
                     DB::commit();
                 }
             }
-            if($modifier_prices = ($data['modifier']??false)){
+            if ($modifier_prices = ($data['modifier'] ?? false)) {
                 foreach ($modifier_prices as $modifier) {
-                    $promod = ProductModifier::select('id_product_modifier')->where('code',$modifier['code'])->first();
-                    if(!$promod){
+                    $promod = ProductModifier::select('id_product_modifier')->where('code', $modifier['code'])->first();
+                    if (!$promod) {
                         continue;
                     }
                     $data_key = [
@@ -892,16 +894,16 @@ class ApiPOS extends Controller
                         'id_product_modifier' => $promod->id_product_modifier
                     ];
                     $data_price = [];
-                    if(isset($modifier['price'])){
+                    if (isset($modifier['price'])) {
                         $data_price['product_modifier_price'] = $modifier['price'];
                     }
-                    if($modifier['status']??false){
+                    if ($modifier['status'] ?? false) {
                         ProductModifierDetail::updateOrCreate(['id_product_modifier' => $promod->id_product_modifier], ['product_modifier_status' => $modifier['status']]);
                     }
-                    if($outlet->outlet_different_price){
-                        ProductModifierPrice::updateOrCreate($data_key,$data_price);
-                    }else{
-                        ProductModifierGlobalPrice::updateOrCreate(['id_product_modifier' => $promod->id_product_modifier],['product_modifier_price' => $modifier['price']]);
+                    if ($outlet->outlet_different_price) {
+                        ProductModifierPrice::updateOrCreate($data_key, $data_price);
+                    } else {
+                        ProductModifierGlobalPrice::updateOrCreate(['id_product_modifier' => $promod->id_product_modifier], ['product_modifier_price' => $modifier['price']]);
                     }
                 }
             }
@@ -1035,9 +1037,9 @@ class ApiPOS extends Controller
                 );
                 Mail::send('pos::email_sync_menu', $data, function ($message) use ($to, $subject, $setting) {
                     $message->to($to)->subject($subject);
-                    if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+                    if (!empty($setting['email_from']) && !empty($setting['email_sender'])) {
                         $message->from($setting['email_sender'], $setting['email_from']);
-                    }else if(!empty($setting['email_sender'])){
+                    } elseif (!empty($setting['email_sender'])) {
                         $message->from($setting['email_sender']);
                     }
                     if (!empty($setting['email_reply_to'])) {
@@ -1054,7 +1056,7 @@ class ApiPOS extends Controller
         }
     }
 
-    public function syncMenuReturn(reqMenu $request)
+    public function syncMenuReturn(ReqMenu $request)
     {
         // call function syncMenu
         $url = config('url.api_url') . 'api/v1/pos/menu/sync';
@@ -1076,9 +1078,10 @@ class ApiPOS extends Controller
     {
         $post = $request->json()->all();
 
-        if(!empty($post['api_key']) && !empty($post['api_secret']) &&
-            !empty($post['store_code']) && !empty($post['transactions'])){
-
+        if (
+            !empty($post['api_key']) && !empty($post['api_secret']) &&
+            !empty($post['store_code']) && !empty($post['transactions'])
+        ) {
             $api = $this->checkApi($post['api_key'], $post['api_secret']);
             if ($api['status'] != 'success') {
                 return response()->json($api);
@@ -1097,7 +1100,7 @@ class ApiPOS extends Controller
             $countTransactionDuplicate = 0;
             $detailTransactionFail = [];
 
-            if($countTransaction <= $x){
+            if ($countTransaction <= $x) {
                 $config['point']    = Configs::where('config_name', 'point')->first()->is_active;
                 $config['balance']  = Configs::where('config_name', 'balance')->first()->is_active;
                 $config['fraud_use_queue'] = Configs::where('config_name', 'fraud use queue')->first()->is_active;
@@ -1115,10 +1118,10 @@ class ApiPOS extends Controller
                 $convertTranscToArray = $checkReceipt->toArray();
                 $receiptExist = $checkReceipt->pluck('transaction_receipt_number')->toArray();
 
-                $validReceipt = array_diff($receipt,$receiptExist);
+                $validReceipt = array_diff($receipt, $receiptExist);
 
-                $invalidReceipt = array_intersect($receipt,$receiptExist);
-                foreach($invalidReceipt as $key => $invalid){
+                $invalidReceipt = array_intersect($receipt, $receiptExist);
+                foreach ($invalidReceipt as $key => $invalid) {
                     $countTransactionDuplicate++;
                     unset($post['transactions'][$key]);
                 }
@@ -1137,17 +1140,17 @@ class ApiPOS extends Controller
 
                 $receiptDuplicate = array_intersect($receipt, $receiptDuplicate);
                 $contentDuplicate = [];
-                foreach($receiptDuplicate as $key => $receipt){
-                    if(in_array($receipt, $transactionDuplicate)){
+                foreach ($receiptDuplicate as $key => $receipt) {
+                    if (in_array($receipt, $transactionDuplicate)) {
                         $countTransactionDuplicate++;
                         unset($post['transactions'][$key]);
-                    }else{
+                    } else {
                         $duplicate = $this->processDuplicate($post['transactions'][$key], $checkOutlet);
-                        if(isset($duplicate['status']) && $duplicate['status'] == 'duplicate'){
+                        if (isset($duplicate['status']) && $duplicate['status'] == 'duplicate') {
                             $countTransactionDuplicate++;
                             $data = [
                                 'trx' => $duplicate['trx'],
-                                'duplicate' =>$duplicate['duplicate']
+                                'duplicate' => $duplicate['duplicate']
                             ];
                             $contentDuplicate[] = $data;
                             unset($post['transactions'][$key]);
@@ -1156,24 +1159,25 @@ class ApiPOS extends Controller
                 }
 
                 $countSettingCashback = TransactionSetting::get();
-                $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->where('fraud_settings_status','Active')->first();
-                $fraudTrxWeek = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->where('fraud_settings_status','Active')->first();
+                $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->where('fraud_settings_status', 'Active')->first();
+                $fraudTrxWeek = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->where('fraud_settings_status', 'Active')->first();
                 foreach ($post['transactions'] as $key => $trx) {
-                    if(!empty($trx['date_time']) &&
+                    if (
+                        !empty($trx['date_time']) &&
                         isset($trx['total']) &&
                         isset($trx['service']) && isset($trx['tax']) &&
                         isset($trx['discount']) && isset($trx['grand_total']) &&
-                        isset($trx['menu'])){
-
+                        isset($trx['menu'])
+                    ) {
                         $insertTrx = $this->insertTransaction($checkOutlet, $trx, $config, $settingPoint, $countSettingCashback, $fraudTrxDay, $fraudTrxWeek);
-                        if(isset($insertTrx['id_transaction'])){
+                        if (isset($insertTrx['id_transaction'])) {
                                 $countTransactionSuccess++;
                                 $result[] = $insertTrx;
-                        }else{
+                        } else {
                             $countTransactionFail++;
-                            if(isset($trx['trx_id'])){
+                            if (isset($trx['trx_id'])) {
                                 $id = $trx['trx_id'];
-                            }else{
+                            } else {
                                 $id = 'trx_id does not exist';
                             }
                             array_push($detailTransactionFail, $id);
@@ -1186,11 +1190,11 @@ class ApiPOS extends Controller
                             ];
                             SyncTransactionFaileds::create($data);
                         }
-                    }else{
+                    } else {
                         $countTransactionFail++;
-                        if(isset($trx['trx_id'])){
+                        if (isset($trx['trx_id'])) {
                             $id = $trx['trx_id'];
-                        }else{
+                        } else {
                             $id = 'trx_id does not exist';
                         }
 
@@ -1215,16 +1219,16 @@ class ApiPOS extends Controller
                         'detail_transaction_failed' => $detailTransactionFail
                     ]
                 ]);
-            }else{
+            } else {
                 $countDataTransToSave = $countTransaction / $x;
                 $checkFloat = is_float($countDataTransToSave);
                 $getDataFrom = 0;
 
-                if($checkFloat === true){
+                if ($checkFloat === true) {
                     $countDataTransToSave = (int)$countDataTransToSave + 1;
                 }
 
-                for($i=0;$i<$countDataTransToSave;$i++){
+                for ($i = 0; $i < $countDataTransToSave; $i++) {
                     $dataTransToSave = array_slice($post['transactions'], $getDataFrom, $x);
                     $data = [
                         'outlet_code' => $post['store_code'],
@@ -1232,17 +1236,16 @@ class ApiPOS extends Controller
                         'created_at' => date('Y-m-d H:i:s'),
                         'updated_at' => date('Y-m-d H:i:s')
                     ];
-                    try{
+                    try {
                         $insertTransactionQueue = SyncTransactionQueues::create($data);
 
-                        if(!$insertTransactionQueue){
+                        if (!$insertTransactionQueue) {
                             $countTransactionFail = $countTransactionFail + count($dataTransToSave);
                             array_push($detailTransactionFail, array_column($dataTransToSave, 'trx_id'));
-                        }else{
+                        } else {
                             $countTransactionSuccess = $countTransactionSuccess + count($dataTransToSave);
                         }
-
-                    }catch (Exception $e) {
+                    } catch (Exception $e) {
                         $countTransactionFail = $countTransactionFail + count($dataTransToSave);
                         array_push($detailTransactionFail, array_column($dataTransToSave, 'trx_id'));
                     }
@@ -1260,17 +1263,17 @@ class ApiPOS extends Controller
                     ]
                 ]);
             }
-
-        }else{
+        } else {
             return response()->json(['status' => 'fail', 'messages' => 'Input is incomplete']);
         }
     }
 
-    function insertTransaction($outlet, $trx, $config, $settingPoint, $countSettingCashback, $fraudTrxDay, $fraudTrxWeek){
+    public function insertTransaction($outlet, $trx, $config, $settingPoint, $countSettingCashback, $fraudTrxDay, $fraudTrxWeek)
+    {
         DB::beginTransaction();
-        try{
-            if(!isset($trx['order_id'])){
-                if(count($trx['menu']) >= 0 && isset($trx['trx_id'])){
+        try {
+            if (!isset($trx['order_id'])) {
+                if (count($trx['menu']) >= 0 && isset($trx['trx_id'])) {
                     $countTrxDay = 0;
                     $countTrxWeek = 0;
 
@@ -1290,7 +1293,7 @@ class ApiPOS extends Controller
                             'transaction_payment_status'  => 'Completed'
                     ];
 
-                    if(!empty($trx['sales_type'])){
+                    if (!empty($trx['sales_type'])) {
                         $dataTrx['sales_type']  = $trx['sales_type'];
                     }
 
@@ -1299,7 +1302,7 @@ class ApiPOS extends Controller
                     $pointValue = 0;
 
                     if (isset($trx['member_uid'])) {
-                        if(strlen($trx['member_uid']) < 35){
+                        if (strlen($trx['member_uid']) < 35) {
                             DB::rollback();
                             return ['status' => 'fail', 'messages' => 'Minimum length of member uid is 35'];
                         }
@@ -1311,38 +1314,38 @@ class ApiPOS extends Controller
                         if (empty($user)) {
                             DB::rollback();
                             return ['status' => 'fail', 'messages' => 'User not found'];
-                        }elseif(isset($user['is_suspended']) && $user['is_suspended'] == '1'){
+                        } elseif (isset($user['is_suspended']) && $user['is_suspended'] == '1') {
                             $user['id'] = null;
                             $dataTrx['membership_level']    = null;
                             $dataTrx['membership_promo_id'] = null;
-                        }else{
+                        } else {
                             //insert to disburse job for calculation income outlet
                             DisburseJob::dispatch(['id_transaction' => $trx['id_transaction']])->onConnection('disbursequeue');
 
-                            if($config['fraud_use_queue'] == 1){
+                            if ($config['fraud_use_queue'] == 1) {
                                 FraudJob::dispatch($user, $trx, 'transaction')->onConnection('fraudqueue');
-                            }else{
+                            } else {
                                 //========= This process to check if user have fraud ============//
                                 $geCountTrxDay = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-                                    ->where('transactions.id_user',$user['id'])
-                                    ->whereRaw('DATE(transactions.transaction_date) = "'.date('Y-m-d', strtotime($trx['date_time'])).'"')
-                                    ->where('transactions.transaction_payment_status','Completed')
+                                    ->where('transactions.id_user', $user['id'])
+                                    ->whereRaw('DATE(transactions.transaction_date) = "' . date('Y-m-d', strtotime($trx['date_time'])) . '"')
+                                    ->where('transactions.transaction_payment_status', 'Completed')
                                     ->whereNull('transaction_pickups.reject_at')
                                     ->count();
 
-                                $currentWeekNumber = date('W',strtotime($trx['date_time']));
-                                $currentYear = date('Y',strtotime($trx['date_time']));
+                                $currentWeekNumber = date('W', strtotime($trx['date_time']));
+                                $currentYear = date('Y', strtotime($trx['date_time']));
                                 $dto = new DateTime();
-                                $dto->setISODate($currentYear,$currentWeekNumber);
+                                $dto->setISODate($currentYear, $currentWeekNumber);
                                 $start = $dto->format('Y-m-d');
                                 $dto->modify('+6 days');
                                 $end = $dto->format('Y-m-d');
 
                                 $geCountTrxWeek = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-                                    ->where('id_user',$user['id'])
-                                    ->where('transactions.transaction_payment_status','Completed')
+                                    ->where('id_user', $user['id'])
+                                    ->where('transactions.transaction_payment_status', 'Completed')
                                     ->whereNull('transaction_pickups.reject_at')
-                                    ->whereRaw('Date(transactions.transaction_date) BETWEEN "'.$start.'" AND "'.$end.'"')
+                                    ->whereRaw('Date(transactions.transaction_date) BETWEEN "' . $start . '" AND "' . $end . '"')
                                     ->count();
 
                                 $countTrxDay = $geCountTrxDay + 1;
@@ -1371,13 +1374,13 @@ class ApiPOS extends Controller
                                     if (empty($checkVoucher)) {
                                         // for invalid voucher
                                         $dataVoucher['deals_voucher_invalid'] = $valueV['voucher_code'];
-                                    }else{
+                                    } else {
                                         $dataVoucher['id_deals_voucher'] =  $checkVoucher['id_deals_voucher'];
                                     }
                                     $trxVoucher[] = $dataVoucher;
                                 }
-                            }else{
-                                if($config['point'] == '1'){
+                            } else {
+                                if ($config['point'] == '1') {
                                     if (isset($user['memberships'][0]['membership_name'])) {
                                         $level = $user['memberships'][0]['membership_name'];
                                         $percentageP = $user['memberships'][0]['benefit_point_multiplier'] / 100;
@@ -1390,7 +1393,7 @@ class ApiPOS extends Controller
                                     $dataTrx['transaction_point_earned'] = $point;
                                 }
 
-                                if($config['balance'] == '1'){
+                                if ($config['balance'] == '1') {
                                     if (isset($user['memberships'][0]['membership_name'])) {
                                         $level = $user['memberships'][0]['membership_name'];
                                         $percentageB = $user['memberships'][0]['benefit_cashback_multiplier'] / 100;
@@ -1406,8 +1409,8 @@ class ApiPOS extends Controller
 
                                     //count some trx user
                                     $countUserTrx = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-                                        ->where('id_user',$user['id'])
-                                        ->where('transactions.transaction_payment_status','Completed')
+                                        ->where('id_user', $user['id'])
+                                        ->where('transactions.transaction_payment_status', 'Completed')
                                         ->whereNull('transaction_pickups.reject_at')
                                         ->count();
                                     if ($countUserTrx < count($countSettingCashback)) {
@@ -1415,8 +1418,8 @@ class ApiPOS extends Controller
                                         if ($cashback > $countSettingCashback[$countUserTrx]['cashback_maximum']) {
                                             $cashback = $countSettingCashback[$countUserTrx]['cashback_maximum'];
                                         }
-                                    } else{
-                                        if(isset($cashMax) && $cashback > $cashMax){
+                                    } else {
+                                        if (isset($cashMax) && $cashback > $cashMax) {
                                             $cashback = $cashMax;
                                         }
                                     }
@@ -1427,10 +1430,10 @@ class ApiPOS extends Controller
                         $dataTrx['id_user'] = $user['id'];
                     }
 
-                    if(isset($qr['device'])){
+                    if (isset($qr['device'])) {
                         $dataTrx['transaction_device_type'] = $qr['device'];
                     }
-                    if(isset($trx['cashier'])){
+                    if (isset($trx['cashier'])) {
                         $dataTrx['transaction_cashier'] = $trx['cashier'];
                     }
 
@@ -1441,10 +1444,12 @@ class ApiPOS extends Controller
                     }
 
                     $dataPayments = [];
-                    if(!empty($trx['payments'])){
+                    if (!empty($trx['payments'])) {
                         foreach ($trx['payments'] as $col => $pay) {
-                            if(isset($pay['type']) && isset($pay['name'])
-                                && isset($pay['nominal'])){
+                            if (
+                                isset($pay['type']) && isset($pay['name'])
+                                && isset($pay['nominal'])
+                            ) {
                                 $dataPay = [
                                     'id_transaction' => $createTrx['id_transaction'],
                                     'payment_type'   => $pay['type'],
@@ -1453,13 +1458,13 @@ class ApiPOS extends Controller
                                     'created_at' => date('Y-m-d H:i:s'),
                                     'updated_at' => date('Y-m-d H:i:s')
                                 ];
-                                array_push($dataPayments,$dataPay);
-                            }else{
+                                array_push($dataPayments, $dataPay);
+                            } else {
                                 DB::rollback();
                                 return ['status' => 'fail', 'messages' => 'There is an incomplete input in the payment list'];
                             }
                         }
-                    }else{
+                    } else {
                         $dataPayments = [
                             'id_transaction' => $createTrx['id_transaction'],
                             'payment_type'   => 'offline',
@@ -1482,12 +1487,13 @@ class ApiPOS extends Controller
 
                     $allProductCode = array_column($checkProduct, 'product_code');
                     foreach ($trx['menu'] as $row => $menu) {
-                        if(!empty($menu['plu_id']) && !empty($menu['name'])
-                            && isset($menu['price']) && isset($menu['qty'])){
-
+                        if (
+                            !empty($menu['plu_id']) && !empty($menu['name'])
+                            && isset($menu['price']) && isset($menu['qty'])
+                        ) {
                             $getIndexProduct = array_search($menu['plu_id'], $allProductCode);
 
-                            if($getIndexProduct === false){
+                            if ($getIndexProduct === false) {
                                 //create new product
                                 $dataProduct['product_code']      = $menu['plu_id'];
                                 $dataProduct['product_name']      = $menu['name'];
@@ -1509,7 +1515,7 @@ class ApiPOS extends Controller
                                 }
 
                                 $product = $newProduct;
-                            }else{
+                            } else {
                                 $product = $checkProduct[$getIndexProduct];
                             }
                             $dataProduct = [
@@ -1529,9 +1535,8 @@ class ApiPOS extends Controller
 
                             // update modifiers
                             if (!empty($menu['modifiers'])) {
-
                                 $allModCode = array_column($menu['modifiers'], 'code');
-                                $detailMod = ProductModifier::select('id_product_modifier','type','text','code')
+                                $detailMod = ProductModifier::select('id_product_modifier', 'type', 'text', 'code')
                                         ->whereIn('code', $allModCode)
                                         ->where('id_product', '=', $product['id_product'])->get()->toArray();
 
@@ -1591,16 +1596,17 @@ class ApiPOS extends Controller
                                 DB::rollback();
                                 return ['status' => 'fail', 'messages' => 'Transaction product sync failed'];
                             }
-                        }else{
+                        } else {
                             DB::rollback();
                             return['status' => 'fail', 'messages' => 'There is an incomplete input in the menu list'];
                         }
-
                     }
 
                     if (!empty($createTrx['id_user']) && $config['fraud_use_queue'] != 1) {
-                        if((($fraudTrxDay && $countTrxDay <= $fraudTrxDay['parameter_detail']) && ($fraudTrxWeek && $countTrxWeek <= $fraudTrxWeek['parameter_detail']))
-                            || (!$fraudTrxDay && !$fraudTrxWeek)){
+                        if (
+                            (($fraudTrxDay && $countTrxDay <= $fraudTrxDay['parameter_detail']) && ($fraudTrxWeek && $countTrxWeek <= $fraudTrxWeek['parameter_detail']))
+                            || (!$fraudTrxDay && !$fraudTrxWeek)
+                        ) {
                             if ($createTrx['transaction_point_earned']) {
                                 $dataLog = [
                                     'id_user'                     => $createTrx['id_user'],
@@ -1637,7 +1643,6 @@ class ApiPOS extends Controller
                             }
 
                             if ($createTrx['transaction_cashback_earned']) {
-
                                 $insertDataLogCash = app($this->balance)->addLogBalance($createTrx['id_user'], $createTrx['transaction_cashback_earned'], $createTrx['id_transaction'], 'Offline Transaction', $createTrx['transaction_grandtotal']);
                                 if (!$insertDataLogCash) {
                                     DB::rollback();
@@ -1646,19 +1651,21 @@ class ApiPOS extends Controller
                                         'messages'  => 'Insert Cashback Failed'
                                     ];
                                 }
-                                $usere= User::where('id',$createTrx['id_user'])->first();
+                                $usere = User::where('id', $createTrx['id_user'])->first();
                                 $order_id = TransactionPickup::select('order_id')->where('id_transaction', $createTrx['id_transaction'])->pluck('order_id')->first();
-                                $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone,
+                                $send = app($this->autocrm)->SendAutoCRM(
+                                    'Transaction Point Achievement',
+                                    $usere->phone,
                                     [
                                         "outlet_name"       => $outlet['outlet_name'],
                                         "transaction_date"  => $createTrx['transaction_date'],
                                         'id_transaction'    => $createTrx['id_transaction'],
                                         'receipt_number'    => $createTrx['transaction_receipt_number'],
                                         'received_point'    => (string) $createTrx['transaction_cashback_earned'],
-                                        'order_id'          => $order_id??'',
+                                        'order_id'          => $order_id ?? '',
                                     ]
                                 );
-                                if($send != true){
+                                if ($send != true) {
                                     DB::rollback();
                                     return response()->json([
                                         'status' => 'fail',
@@ -1667,24 +1674,23 @@ class ApiPOS extends Controller
                                 }
                                 $pointValue = $insertDataLogCash->balance;
                             }
-
-                        }else{
-                            if($countTrxDay > $fraudTrxDay['parameter_detail'] && $fraudTrxDay){
+                        } else {
+                            if ($countTrxDay > $fraudTrxDay['parameter_detail'] && $fraudTrxDay) {
                                 $fraudFlag = 'transaction day';
-                            }elseif($countTrxWeek > $fraudTrxWeek['parameter_detail'] && $fraudTrxWeek){
+                            } elseif ($countTrxWeek > $fraudTrxWeek['parameter_detail'] && $fraudTrxWeek) {
                                 $fraudFlag = 'transaction week';
-                            }else{
-                                $fraudFlag = NULL;
+                            } else {
+                                $fraudFlag = null;
                             }
 
                             $updatePointCashback = Transaction::where('id_transaction', $createTrx['id_transaction'])
                                 ->update([
-                                    'transaction_point_earned' => NULL,
-                                    'transaction_cashback_earned' => NULL,
+                                    'transaction_point_earned' => null,
+                                    'transaction_cashback_earned' => null,
                                     'fraud_flag' => $fraudFlag
                                 ]);
 
-                            if(!$updatePointCashback){
+                            if (!$updatePointCashback) {
                                 DB::rollback();
                                 return response()->json([
                                     'status' => 'fail',
@@ -1695,7 +1701,7 @@ class ApiPOS extends Controller
                     }
 
                     //insert voucher
-                    foreach($trxVoucher as $dataTrxVoucher){
+                    foreach ($trxVoucher as $dataTrxVoucher) {
                         $dataTrxVoucher['id_transaction'] = $createTrx['id_transaction'];
                         $create = TransactionVoucher::create($dataTrxVoucher);
                     }
@@ -1720,21 +1726,22 @@ class ApiPOS extends Controller
                         'point_after'       => $pointBefore + $pointValue,
                         'point_value'       => $pointValue
                     ];
-                }else{
+                } else {
                     DB::rollback();
                     return ['status' => 'fail', 'messages' => 'trx_id does not exist'];
                 }
             }
-        }catch (Exception $e) {
+        } catch (Exception $e) {
             DB::rollback();
             return ['status' => 'fail', 'messages' => $e];
         }
     }
 
-    function processDuplicate($trx, $outlet){
+    public function processDuplicate($trx, $outlet)
+    {
         DB::beginTransaction();
-        try{
-            $trxDuplicate = Transaction::where('transaction_receipt_number',  $trx['trx_id'])
+        try {
+            $trxDuplicate = Transaction::where('transaction_receipt_number', $trx['trx_id'])
                 ->with('user', 'outlet', 'productTransaction.product')
                 ->whereNotIn('transactions.id_outlet', [$outlet['id_outlet']])
                 ->where('transaction_date', date('Y-m-d H:i:s', strtotime($trx['date_time'])))
@@ -1742,12 +1749,12 @@ class ApiPOS extends Controller
                 ->where('transaction_subtotal', $trx['total'])
                 ->where('trasaction_type', 'Offline');
 
-            if(isset($trx['cashier'])){
+            if (isset($trx['cashier'])) {
                 $trxDuplicate = $trxDuplicate->where('transaction_cashier', $trx['cashier']);
             }
 
             $trxDuplicate = $trxDuplicate->first();
-            if($trxDuplicate){
+            if ($trxDuplicate) {
                 //cek detail productnya
                 $statusDuplicate = true;
 
@@ -1756,10 +1763,10 @@ class ApiPOS extends Controller
 
                 foreach ($trx['menu'] as $row => $menu) {
                     $productDuplicate = false;
-                    foreach($trxDuplicate['productTransaction'] as $i => $dataProduct){
-                        if($menu['plu_id'] == $dataProduct['product']['product_code']){
+                    foreach ($trxDuplicate['productTransaction'] as $i => $dataProduct) {
+                        if ($menu['plu_id'] == $dataProduct['product']['product_code']) {
                             //cek jumlah quantity
-                            if($menu['qty'] == $dataProduct['transaction_product_qty']){
+                            if ($menu['qty'] == $dataProduct['transaction_product_qty']) {
                                 //set status product duplicate true
                                 $productDuplicate = true;
                                 $menu['id_product'] = $dataProduct['id_product'];
@@ -1772,7 +1779,7 @@ class ApiPOS extends Controller
                     }
 
                     //jika status product duplicate false maka detail product ada yg berbeda
-                    if($productDuplicate == false){
+                    if ($productDuplicate == false) {
                         $statusDuplicate = false;
                         break;
                     }
@@ -1780,7 +1787,7 @@ class ApiPOS extends Controller
 
                 $trxDuplicate['product'] = $detailproduct;
 
-                if($statusDuplicate == true){
+                if ($statusDuplicate == true) {
                     //insert into table transaction_duplicates
                     if (isset($trx['member_uid'])) {
                         $qr = MyHelper::readQR($trx['member_uid']);
@@ -1801,16 +1808,16 @@ class ApiPOS extends Controller
                     $dataDuplicate['outlet_name_duplicate'] = $trxDuplicate['outlet']['outlet_name'];
                     $dataDuplicate['outlet_name'] = $outlet['outlet_name'];
 
-                    if(isset($user['name'])){
+                    if (isset($user['name'])) {
                         $dataDuplicate['user_name'] = $user['name'];
                     }
 
-                    if(isset($user['phone'])){
+                    if (isset($user['phone'])) {
                         $dataDuplicate['user_phone'] = $user['phone'];
                     }
 
                     $dataDuplicate['transaction_cashier'] = $trx['cashier'];
-                    $dataDuplicate['transaction_date'] = date('Y-m-d H:i:s',strtotime($trx['date_time']));
+                    $dataDuplicate['transaction_date'] = date('Y-m-d H:i:s', strtotime($trx['date_time']));
                     $dataDuplicate['transaction_subtotal'] = $trx['total'];
                     $dataDuplicate['transaction_tax'] = $trx['tax'];
                     $dataDuplicate['transaction_service'] = $trx['service'];
@@ -1818,7 +1825,7 @@ class ApiPOS extends Controller
                     $dataDuplicate['sync_datetime_duplicate'] = $trxDuplicate['created_at'];
                     $dataDuplicate['sync_datetime'] = date('Y-m-d H:i:s');
                     $insertDuplicate = TransactionDuplicate::create($dataDuplicate);
-                    if(!$insertDuplicate){
+                    if (!$insertDuplicate) {
                         DB::rollback();
                         return ['status' => 'Transaction sync failed'];
                     }
@@ -1834,7 +1841,7 @@ class ApiPOS extends Controller
                         $dataTrxDuplicateProd['transaction_product_qty'] = $menu['qty'];
                         $dataTrxDuplicateProd['transaction_product_price'] = $menu['price'];
                         $dataTrxDuplicateProd['transaction_product_subtotal'] = $menu['qty'] * $menu['price'];
-                        if(isset($menu['open_modifier'])){
+                        if (isset($menu['open_modifier'])) {
                             $dataTrxDuplicateProd['transaction_product_note'] = $menu['open_modifier'];
                         }
                         $dataTrxDuplicateProd['created_at'] = date('Y-m-d H:i:s');
@@ -1844,15 +1851,15 @@ class ApiPOS extends Controller
                     }
 
                     $insertTrxDuplicateProd = TransactionDuplicateProduct::insert($prodDuplicate);
-                    if(!$insertTrxDuplicateProd){
+                    if (!$insertTrxDuplicateProd) {
                         DB::rollback();
                         return ['status' => 'Transaction sync failed'];
                     }
 
                     //insert payment
                     $payDuplicate = [];
-                    if(!empty($trx['payments'])){
-                        foreach($trx['payments'] as $pay){
+                    if (!empty($trx['payments'])) {
+                        foreach ($trx['payments'] as $pay) {
                             $dataTrxDuplicatePay['id_transaction_duplicate'] = $insertDuplicate['id_transaction_duplicate'];
                             $dataTrxDuplicatePay['payment_name'] = $pay['name'];
                             $dataTrxDuplicatePay['payment_type'] = $pay['type'];
@@ -1861,8 +1868,7 @@ class ApiPOS extends Controller
                             $dataTrxDuplicatePay['updated_at'] = date('Y-m-d H:i:s');
                             $payDuplicate[] = $dataTrxDuplicatePay;
                         }
-
-                    }else{
+                    } else {
                         $dataTrxDuplicatePay = [
                             'id_transaction_duplicate' => $insertDuplicate['id_transaction_duplicate'],
                             'payment_name' => 'Offline',
@@ -1875,7 +1881,7 @@ class ApiPOS extends Controller
                     }
 
                     $insertTrxDuplicatePay = TransactionDuplicatePayment::create($dataTrxDuplicatePay);
-                    if(!$insertTrxDuplicatePay){
+                    if (!$insertTrxDuplicatePay) {
                         DB::rollback();
                         return ['status' => 'Transaction sync failed'];
                     }
@@ -1894,13 +1900,13 @@ class ApiPOS extends Controller
             }
 
             return ['status' => 'not duplicate'];
-        }catch (Exception $e){
+        } catch (Exception $e) {
             DB::rollback();
             return ['status' => 'fail', 'messages' => $e];
         }
     }
 
-    public function transactionRefund(reqTransactionRefund $request)
+    public function transactionRefund(ReqTransactionRefund $request)
     {
         $post = $request->json()->all();
 
@@ -2017,7 +2023,7 @@ class ApiPOS extends Controller
         return ['status' => 'success'];
     }
 
-    function count($value, $data)
+    public function count($value, $data)
     {
         if ($value == 'point') {
             $subtotal     = $data['total'];
@@ -2047,7 +2053,6 @@ class ApiPOS extends Controller
             // } else {
             return $count;
             // }
-
         }
     }
 
@@ -2182,7 +2187,7 @@ class ApiPOS extends Controller
             $syncDatetime = date('d F Y h:i');
             $getRequest = SyncMenuRequest::get()->first();
             // is $getRequest null
-            if(!$getRequest){
+            if (!$getRequest) {
                 $log->success('empty synch menu request');
                 return '';
             }

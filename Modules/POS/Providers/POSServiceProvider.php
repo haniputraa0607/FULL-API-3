@@ -46,10 +46,11 @@ class POSServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('pos.php'),
+            __DIR__ . '/../Config/config.php' => config_path('pos.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'pos'
+            __DIR__ . '/../Config/config.php',
+            'pos'
         );
     }
 
@@ -62,11 +63,11 @@ class POSServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/pos');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/pos';
@@ -85,7 +86,7 @@ class POSServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'pos');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'pos');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'pos');
         }
     }
 

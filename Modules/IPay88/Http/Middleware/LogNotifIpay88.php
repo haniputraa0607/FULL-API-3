@@ -23,15 +23,15 @@ class LogNotifIpay88
         $response = $next($request);
         $url = $request->url();
         $toLog = [
-            'type' => $request->route('type').'_notif',
-            'triggers' => (strpos($url,'detail')!==false)?'user':'backend',
+            'type' => $request->route('type') . '_notif',
+            'triggers' => (strpos($url, 'detail') !== false) ? 'user' : 'backend',
             'id_reference' => $request->RefNo,
             'request' => $req,
             'request_header' => $head,
             'request_url' => $url,
             'response' => json_encode($response)
         ];
-        try{
+        try {
             LogIpay88::create($toLog);
         } catch (\Exception $e) {
             Log::error($e->getMessage());

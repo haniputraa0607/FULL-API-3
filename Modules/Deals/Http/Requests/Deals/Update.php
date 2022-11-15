@@ -42,10 +42,10 @@ class Update extends FormRequest
             'id_outlet'                 => 'sometimes|array',
         ];
 
-        if($this->deals_voucher_start){
-        	$rules['deals_voucher_expired']	= 'nullable|date|date_format:"Y-m-d H:i:s"|after:deals_voucher_start';
-        }else{
-        	$rules['deals_voucher_expired']	= 'nullable|date|date_format:"Y-m-d H:i:s"|after:'.date('Y-m-d H:i:s').'';
+        if ($this->deals_voucher_start) {
+            $rules['deals_voucher_expired'] = 'nullable|date|date_format:"Y-m-d H:i:s"|after:deals_voucher_start';
+        } else {
+            $rules['deals_voucher_expired'] = 'nullable|date|date_format:"Y-m-d H:i:s"|after:' . date('Y-m-d H:i:s') . '';
         }
 
         return $rules;
@@ -72,12 +72,12 @@ class Update extends FormRequest
     }
 
     public function attributes()
-	{
-		$attributes = [
-            'deals_voucher_expired'		=> 'Voucher Expiry',
-            'deals_voucher_start'		=> 'Voucher Start Date'
+    {
+        $attributes = [
+            'deals_voucher_expired'     => 'Voucher Expiry',
+            'deals_voucher_start'       => 'Voucher Start Date'
         ];
 
-	    return $attributes;
-	}
+        return $attributes;
+    }
 }

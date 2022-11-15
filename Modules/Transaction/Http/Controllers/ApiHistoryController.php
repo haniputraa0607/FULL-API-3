@@ -7,7 +7,6 @@ use App\Http\Models\TransactionProduct;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Http\Models\Transaction;
 use App\Http\Models\DealsUser;
 use App\Http\Models\LogPoint;
@@ -20,7 +19,6 @@ use Modules\ProductVariant\Entities\ProductVariantPivot;
 use Modules\UserFeedback\Entities\UserFeedback;
 use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\PointInjection\Entities\PointInjection;
-
 use App\Lib\MyHelper;
 
 class ApiHistoryController extends Controller
@@ -202,10 +200,10 @@ class ApiHistoryController extends Controller
         $transaction = [];
         $voucher = [];
 
-        if($post['online_order'] == 1 || $post['offline_order'] == 1 || ($post['online_order'] == null && $post['offline_order'] == null && $post['voucher'] == null)) {
+        if ($post['online_order'] == 1 || $post['offline_order'] == 1 || ($post['online_order'] == null && $post['offline_order'] == null && $post['voucher'] == null)) {
             $transaction = $this->transaction($post, $id);
         }
-        if($post['voucher'] == 1 || ($post['online_order'] == null && $post['offline_order'] == null && $post['voucher'] == null)){
+        if ($post['voucher'] == 1 || ($post['online_order'] == null && $post['offline_order'] == null && $post['voucher'] == null)) {
             $voucher = $this->voucher($post, $id);
         }
 
@@ -243,7 +241,6 @@ class ApiHistoryController extends Controller
             }
             $result = MyHelper::checkGet($result);
         } else {
-
             if (
                 $request->json('date_start') ||
                 $request->json('date_end') ||
@@ -633,9 +630,9 @@ class ApiHistoryController extends Controller
                 $last_status = $lastStatusText['completed'];
             } elseif (($value['transaction_pickup_go_send']['latest_status'] ?? false) == 'out_for_delivery') {
                 $last_status = $lastStatusText['on_delivery'];
-            } elseif(($value['transaction_pickup_wehelpyou']['latest_status_id'] ?? false) == 9){
+            } elseif (($value['transaction_pickup_wehelpyou']['latest_status_id'] ?? false) == 9) {
                 $last_status = $lastStatusText['on_delivery'];
-            }elseif ($value['ready_at']) {
+            } elseif ($value['ready_at']) {
                 $last_status = $lastStatusText['ready'];
             } elseif ($value['receive_at']) {
                 $last_status = $lastStatusText['received'];
@@ -744,7 +741,7 @@ class ApiHistoryController extends Controller
                 $last_status = $lastStatusText['completed'];
             } elseif (($value['transaction_pickup_go_send']['latest_status'] ?? false) == 'out_for_delivery') {
                 $last_status = $lastStatusText['on_delivery'];
-            }elseif(($value['transaction_pickup_wehelpyou']['latest_status_id'] ?? false) == 9){
+            } elseif (($value['transaction_pickup_wehelpyou']['latest_status_id'] ?? false) == 9) {
                 $last_status = $lastStatusText['on_delivery'];
             } elseif ($value['ready_at']) {
                 $last_status = $lastStatusText['ready'];
@@ -945,20 +942,20 @@ class ApiHistoryController extends Controller
         return $listPoint;
     }
 
-    function pointTest($post)
+    public function pointTest($post)
     {
         $log = DB::table('log_points')->paginate();
     }
 
     public function balance($post, $id)
     {
-        $log = LogBalance::where('log_balances.id_user', $id)->where('balance','!=',0);
+        $log = LogBalance::where('log_balances.id_user', $id)->where('balance', '!=', 0);
 
         if (isset($post['outlet']) || isset($post['brand'])) {
             $log->where(function ($query) use ($post) {
                 $query->whereIn(
                     'log_balances.id_log_balance',
-                    function ($query) use ($post) {
+                    public function ($query) use ($post) {
                         $query->select('id_log_balance')
                             ->from('log_balances')
                             ->join('transactions', 'log_balances.id_reference', '=', 'transactions.id_transaction')
@@ -977,7 +974,7 @@ class ApiHistoryController extends Controller
                 );
                 $query->orWhereIn(
                     'log_balances.id_log_balance',
-                    function ($query) use ($post) {
+                    public function ($query) use ($post) {
                         $query->select('id_log_balance')
                             ->from('log_balances')
                             ->join('deals_users', 'log_balances.id_reference', '=', 'deals_users.id_deals_user')
@@ -1030,9 +1027,9 @@ class ApiHistoryController extends Controller
                 });
         }
 
-        if($post['voucher'] == 1 && $post['online_order'] == null && $post['offline_order'] == null){
+        if ($post['voucher'] == 1 && $post['online_order'] == null && $post['offline_order'] == null) {
             $log->where('source', 'Deals Balance');
-        }elseif(!is_null($post['voucher'])){
+        } elseif (!is_null($post['voucher'])) {
             $log->orWhere(function ($queryLog) {
                 $queryLog->where('source', 'Deals Balance');
             });
@@ -1104,7 +1101,6 @@ class ApiHistoryController extends Controller
                 $dataList['amount'] = '- ' . ltrim(number_format($value['balance'], 0, ',', '.'), '-');
                 // $dataList['amount'] = number_format($value['balance'], 0, ',', '.');
                 // $dataList['online'] = 1;
-
             } elseif ($value['source'] == 'Subscription Balance') {
                 $dataSubscription = SubscriptionUser::where('id_subscription_user', $value['id_reference'])->first();
                 if ($dataSubscription) {
@@ -1115,7 +1111,7 @@ class ApiHistoryController extends Controller
                     $dataList['amount'] = '- ' . ltrim(number_format($value['balance'], 0, ',', '.'), '-');
                 }
             } elseif ($value['source'] == 'Subscription Reversal') {
-                if($post['voucher'] != 1){
+                if ($post['voucher'] != 1) {
                     unset($log[$key]);
                 }
                 $dataList['type']   = 'profile';
@@ -1124,7 +1120,7 @@ class ApiHistoryController extends Controller
                 $dataList['outlet'] = 'Reversal';
                 $dataList['amount'] = number_format($value['balance'], 0, ',', '.');
             } elseif ($value['source'] == 'Deals Reversal' || $value['source'] == 'Claim Deals Failed') {
-                if($post['voucher'] != 1){
+                if ($post['voucher'] != 1) {
                     unset($log[$key]);
                 }
                 $dataList['type']   = 'profile';
@@ -1169,7 +1165,7 @@ class ApiHistoryController extends Controller
                 $dataList['id']      = $value['id_log_balance'];
                 $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
                 $dataList['outlet'] = $value['source'];
-                $dataList['amount'] = ($value['balance'] < 0 ? '- ': '+ ').number_format(abs($value['balance']), 0, ',', '.');
+                $dataList['amount'] = ($value['balance'] < 0 ? '- ' : '+ ') . number_format(abs($value['balance']), 0, ',', '.');
             }
 
             $dataList['date_v2'] = MyHelper::indonesian_date_v2($dataList['date'], 'd F Y H:i');
@@ -1218,7 +1214,6 @@ class ApiHistoryController extends Controller
             //         }
             //     }
             // }
-
         }
 
         return array_values($listBalance);
@@ -1227,7 +1222,7 @@ class ApiHistoryController extends Controller
      * Group some array based on a column
      * @param  array        $array        data
      * @param  string       $col          column as key for grouping
-     * @param  function     $modifier     function to modify key value
+     * @param  function     $modifier     public function to modify key value
      * @return array                      grouped array
      */
     public function groupIt($array, $col, $col_modifier = null, $key_modifier = null)
@@ -1254,7 +1249,7 @@ class ApiHistoryController extends Controller
     /*============================= Start Filter & Sort V2 ================================*/
     public function balanceV2($post, $id)
     {
-        $log = LogBalance::where('log_balances.id_user', $id)->where('balance','!=',0);
+        $log = LogBalance::where('log_balances.id_user', $id)->where('balance', '!=', 0);
 
         $log->where(function ($query) use ($post) {
             if (!is_null($post['use_point'])) {
@@ -1408,29 +1403,29 @@ class ApiHistoryController extends Controller
     {
         $post = $request->json()->all();
         $id = $request->user()->id;
-        $log = LogBalance::where('log_balances.id_user', $id)->where('balance','!=',0)->orderBy('id_log_balance', 'desc')->paginate($post['pagination_total_row']??10)->toArray();
+        $log = LogBalance::where('log_balances.id_user', $id)->where('balance', '!=', 0)->orderBy('id_log_balance', 'desc')->paginate($post['pagination_total_row'] ?? 10)->toArray();
 
-        foreach ($log['data']??[] as $key=>$dt){
+        foreach ($log['data'] ?? [] as $key => $dt) {
             $title = '';
             $description = '';
 
-            if($dt['source'] == 'Online Transaction' && $dt['balance'] < 0){
+            if ($dt['source'] == 'Online Transaction' && $dt['balance'] < 0) {
                 $title = 'Transaksi Pembelian';
                 $description = 'Total point terpakai';
-            }elseif($dt['source'] == 'Transaction Completed' || ($dt['source'] == 'Online Transaction' && $dt['balance'] > 0 )){
+            } elseif ($dt['source'] == 'Transaction Completed' || ($dt['source'] == 'Online Transaction' && $dt['balance'] > 0 )) {
                 $title = 'Cashback Point';
                 $description = 'Total point didapatkan';
-            }elseif($dt['source'] == 'Welcome Point'){
+            } elseif ($dt['source'] == 'Welcome Point') {
                 $title = 'Welcome Point';
                 $description = 'Total point didapatkan';
-            }elseif(strpos($dt['source'],'Rejected Order') !== false){
+            } elseif (strpos($dt['source'], 'Rejected Order') !== false) {
                 $title = 'Pembatalan Order';
                 $description = 'Total point dikembalikan';
             }
 
-            if($dt['balance'] < 0){
+            if ($dt['balance'] < 0) {
                 $amount = '- ' . abs(number_format($dt['balance'], 0, ',', '.'));
-            }else{
+            } else {
                 $amount = '+ ' . number_format($dt['balance'], 0, ',', '.');
             }
 
@@ -1445,7 +1440,8 @@ class ApiHistoryController extends Controller
     }
     /*============================= End Filter & Sort V2 ================================*/
 
-    public function historyTrxV2(Request $request){
+    public function historyTrxV2(Request $request)
+    {
         $post = $request->json()->all();
         $idUser = $request->user()->id;
 
@@ -1490,18 +1486,18 @@ class ApiHistoryController extends Controller
                 ->where('trasaction_type', 'Delivery')
                 ->orderBy('transaction_date', 'desc');
 
-        if(!empty($post['filter_date_start'])){
+        if (!empty($post['filter_date_start'])) {
             $list = $list->whereDate('transaction_date', '>=', date('Y-m-d', strtotime($post['filter_date_start'])));
         }
 
-        if(!empty($post['filter_date_end'])){
+        if (!empty($post['filter_date_end'])) {
             $list = $list->whereDate('transaction_date', '<=', date('Y-m-d', strtotime($post['filter_date_end'])));
         }
 
-        if(!empty($post['filter_status_code'])){
+        if (!empty($post['filter_status_code'])) {
             $filterStatus = [];
-            foreach ($post['filter_status_code'] as $code){
-                if(!empty($filterCode[$code])){
+            foreach ($post['filter_status_code'] as $code) {
+                if (!empty($filterCode[$code])) {
                     $filterStatus[] = $filterCode[$code];
                 }
             }
@@ -1512,39 +1508,39 @@ class ApiHistoryController extends Controller
         $list = $list->get()->toArray();
 
         $resultDate = [];
-        foreach ($list as $value){
+        foreach ($list as $value) {
             $trxDate = date('Y-m-d', strtotime($value['transaction_date']));
             $product = TransactionProduct::where('id_transaction', $value['id_transaction'])
                             ->join('products', 'products.id_product', 'transaction_products.id_product')->first();
             $variant = '';
-            if(!empty($product['id_product_variant_group'])){
+            if (!empty($product['id_product_variant_group'])) {
                 $variant = ProductVariantPivot::join('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant')
                             ->where('id_product_variant_group', $product['id_product_variant_group'])->pluck('product_variant_name')->toArray();
                 $variant = implode(', ', $variant);
             }
 
-            $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first()['url_product_photo']??config('url.storage_url_api').'img/default.jpg';
+            $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first()['url_product_photo'] ?? config('url.storage_url_api') . 'img/default.jpg';
             $resultDate[$trxDate][] = [
                 'id_transaction' => $value['id_transaction'],
                 'id_transaction_group' => $value['id_transaction_group'],
                 'show_rate_popup' => $value['show_rate_popup'],
                 'transaction_receipt_number' => $value['transaction_receipt_number'],
-                'transaction_status_code' => $codeIndo[$value['transaction_status']]['code']??'',
-                'transaction_status_text' => $codeIndo[$value['transaction_status']]['text']??'',
+                'transaction_status_code' => $codeIndo[$value['transaction_status']]['code'] ?? '',
+                'transaction_status_text' => $codeIndo[$value['transaction_status']]['text'] ?? '',
                 'transaction_grandtotal' => $value['transaction_grandtotal'],
                 'outlet_name' => $value['outlet_name'],
-                'outlet_logo' => (empty($value['outlet_image_logo_portrait']) ? config('url.storage_url_api').'img/default.jpg': config('url.storage_url_api').$value['outlet_image_logo_portrait']),
+                'outlet_logo' => (empty($value['outlet_image_logo_portrait']) ? config('url.storage_url_api') . 'img/default.jpg' : config('url.storage_url_api') . $value['outlet_image_logo_portrait']),
                 'product_name' => $product['product_name'],
                 'product_qty' => $product['transaction_product_qty'],
-                'product_image' => (empty($image) ? config('url.storage_url_api').'img/default.jpg': $image),
+                'product_image' => (empty($image) ? config('url.storage_url_api') . 'img/default.jpg' : $image),
                 'product_variants' => $variant,
                 'reject_at' => (!empty($value['transaction_reject_at']) ? MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($value['transaction_reject_at'])), true) : null),
-                'reject_reason' => (!empty($value['transaction_reject_reason'])? $value['transaction_reject_reason']:''),
+                'reject_reason' => (!empty($value['transaction_reject_reason']) ? $value['transaction_reject_reason'] : ''),
             ];
         }
 
         $result = [];
-        foreach ($resultDate as $key=>$data){
+        foreach ($resultDate as $key => $data) {
             $result[] = [
                 'date' => MyHelper::dateFormatInd($key, false, false),
                 'transactions' => $data

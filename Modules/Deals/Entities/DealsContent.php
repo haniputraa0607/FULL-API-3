@@ -11,7 +11,7 @@ use Reliese\Database\Eloquent\Model as Eloquent;
 
 /**
  * Class DealsContent
- * 
+ *
  * @property int $id_deals_content
  * @property int $id_deals
  * @property string $title
@@ -19,7 +19,7 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  * @property bool $is_active
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
- * 
+ *
  * @property \Modules\Deals\Entities\Deal $deal
  * @property \Illuminate\Database\Eloquent\Collection $deals_content_details
  *
@@ -27,28 +27,28 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  */
 class DealsContent extends Eloquent
 {
-	protected $primaryKey = 'id_deals_content';
+    protected $primaryKey = 'id_deals_content';
 
-	protected $casts = [
-		'id_deals' => 'int',
-		'order' => 'int',
-		'is_active' => 'bool'
-	];
+    protected $casts = [
+        'id_deals' => 'int',
+        'order' => 'int',
+        'is_active' => 'bool'
+    ];
 
-	protected $fillable = [
-		'id_deals',
-		'title',
-		'order',
-		'is_active'
-	];
+    protected $fillable = [
+        'id_deals',
+        'title',
+        'order',
+        'is_active'
+    ];
 
-	public function deal()
-	{
-		return $this->belongsTo(\App\Models\Deal::class, 'id_deals');
-	}
+    public function deal()
+    {
+        return $this->belongsTo(\App\Models\Deal::class, 'id_deals');
+    }
 
-	public function deals_content_details()
-	{
-		return $this->hasMany(\Modules\Deals\Entities\DealsContentDetail::class, 'id_deals_content');
-	}
+    public function deals_content_details()
+    {
+        return $this->hasMany(\Modules\Deals\Entities\DealsContentDetail::class, 'id_deals_content');
+    }
 }

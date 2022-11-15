@@ -29,7 +29,7 @@ class Step1PromoCampaignRequest extends FormRequest
             // 'number_last_code'      => 'sometimes|required_if:code_type,==,multiple|max:2',
             // 'limitation_usage'      => 'required_unless:used_code_update,1',
             'total_coupon'          => 'required_unless:used_code_update,1',
-            'used_code_update'		=> 'nullable'
+            'used_code_update'      => 'nullable'
         ];
     }
 
@@ -43,18 +43,19 @@ class Step1PromoCampaignRequest extends FormRequest
         return true;
     }
 
-    protected function getValidatorInstance() {
+    protected function getValidatorInstance()
+    {
         $validator = parent::getValidatorInstance();
 
-        $validator->sometimes('promo_code', 'required|max:30|regex:/^[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789]+$/u', function($input) {
+        $validator->sometimes('promo_code', 'required|max:30|regex:/^[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789]+$/u', function ($input) {
             return ($input->code_type == 'single');
         });
 
-        $validator->sometimes('prefix_code', 'required|max:30|regex:/^[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789]+$/u', function($input) {
+        $validator->sometimes('prefix_code', 'required|max:30|regex:/^[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789]+$/u', function ($input) {
             return ($input->code_type == 'multiple');
         });
 
-        $validator->sometimes('number_last_code', 'required|max:2', function($input) {
+        $validator->sometimes('number_last_code', 'required|max:2', function ($input) {
             return ($input->code_type == 'multiple');
         });
 

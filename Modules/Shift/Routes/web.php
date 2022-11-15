@@ -11,6 +11,6 @@
 |
 */
 
-Route::prefix('shift')->group(function() {
+Route::prefix('shift')->group(function () {
     Route::get('/', 'ShiftController@index');
 });

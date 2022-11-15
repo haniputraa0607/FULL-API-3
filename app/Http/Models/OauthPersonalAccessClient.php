@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class OauthPersonalAccessClient
- * 
+ *
  * @property int $id
  * @property int $client_id
  * @property \Carbon\Carbon $created_at
@@ -21,11 +21,11 @@ use Illuminate\Database\Eloquent\Model;
  */
 class OauthPersonalAccessClient extends Model
 {
-	protected $casts = [
-		'client_id' => 'int'
-	];
+    protected $casts = [
+        'client_id' => 'int'
+    ];
 
-	protected $fillable = [
-		'client_id'
-	];
+    protected $fillable = [
+        'client_id'
+    ];
 }

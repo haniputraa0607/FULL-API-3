@@ -7,12 +7,12 @@ use Modules\ProductBundling\Entities\BundlingCategory;
 
 class NewsFavorite extends Model
 {
-	protected $connection = 'mysql';
+    protected $connection = 'mysql';
     protected $table = 'news_favorites';
     protected $primaryKey = 'id_news_favorite';
 
     protected $fillable = [
-    	'id_user',
-    	'id_news'
-	];
+        'id_user',
+        'id_news'
+    ];
 }

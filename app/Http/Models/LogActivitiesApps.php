@@ -16,16 +16,16 @@ use Illuminate\Database\Eloquent\Model;
  */
 class LogActivitiesApps extends Model
 {
-	/**
-	 * The database name used by the model.
-	 *
-	 * @var string
-	 */
-	protected $connection = 'mysql2';
-	
+    /**
+     * The database name used by the model.
+     *
+     * @var string
+     */
+    protected $connection = 'mysql2';
+
     /**
      * The table associated with the model.
-     * 
+     *
      * @var string
      */
     protected $table = 'log_activities_apps';
@@ -34,19 +34,18 @@ class LogActivitiesApps extends Model
      * @var array
      */
     protected $fillable = [
-        'id_log_activities_apps',  
-        'module', 
-        'url', 
+        'id_log_activities_apps',
+        'module',
+        'url',
         'subject',
         'phone',
-        'user', 
-        'request', 
-        'response_status', 
-        'response', 
-        'ip', 
-        'useragent', 
-        'created_at', 
+        'user',
+        'request',
+        'response_status',
+        'response',
+        'ip',
+        'useragent',
+        'created_at',
         'updated_at'
     ];
-
 }

@@ -39,10 +39,11 @@ class UserFeedbackServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('userfeedback.php'),
+            __DIR__ . '/../Config/config.php' => config_path('userfeedback.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'userfeedback'
+            __DIR__ . '/../Config/config.php',
+            'userfeedback'
         );
     }
 
@@ -55,11 +56,11 @@ class UserFeedbackServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/userfeedback');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/userfeedback';
@@ -78,7 +79,7 @@ class UserFeedbackServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'userfeedback');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'userfeedback');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'userfeedback');
         }
     }
 

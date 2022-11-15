@@ -36,18 +36,15 @@ use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\TransactionPayment;
 use Modules\Brand\Entities\Brand;
-
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Client;
 use Guzzle\Http\EntityBody;
 use Guzzle\Http\Message\Request as RequestGuzzle;
 use Guzzle\Http\Message\Response as ResponseGuzzle;
 use Guzzle\Http\Exception\ServerErrorResponseException;
-
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Lib\MyHelper;
 use App\Lib\PushNotificationHelper;
 use App\Lib\Midtrans;
@@ -59,9 +56,10 @@ use Mail;
 use DateTime;
 use Modules\Transaction\Entities\TransactionGroup;
 
-class ApiNotification extends Controller {
-
-    function __construct() {
+class ApiNotification extends Controller
+{
+    public function __construct()
+    {
         date_default_timezone_set('Asia/Jakarta');
         $this->balance       = "Modules\Balance\Http\Controllers\BalanceController";
         $this->autocrm       = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
@@ -73,13 +71,14 @@ class ApiNotification extends Controller {
         $this->oauth_id  = env('OUTLET_OAUTH_ID');
         $this->oauth_secret  = env('OUTLET_OAUTH_SECRET');
         $this->voucher  = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
-        $this->promo_campaign	= "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
+        $this->promo_campaign   = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
         $this->subscription  = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
         $this->transaction  = "Modules\Transaction\Http\Controllers\ApiTransaction";
     }
 
     /* RECEIVE NOTIFICATION */
-    public function receiveNotification(Request $request) {
+    public function receiveNotification(Request $request)
+    {
         $midtrans = $request->json()->all();
 
         try {
@@ -111,7 +110,7 @@ class ApiNotification extends Controller {
                 ]);
             }
 
-            if($transac['transaction_payment_status'] == 'Completed'){
+            if ($transac['transaction_payment_status'] == 'Completed') {
                 DB::commit();
                 return response()->json(['status' => 'success']);
             }
@@ -130,7 +129,7 @@ class ApiNotification extends Controller {
             $column = array_column($checkType, 'type');
 
             if ($midtrans['status_code'] == 200) {
-                if($midtrans['transaction_status'] == 'settlement' || ($midtrans['transaction_status'] == 'capture' && $midtrans['payment_type'] == 'credit_card')){
+                if ($midtrans['transaction_status'] == 'settlement' || ($midtrans['transaction_status'] == 'capture' && $midtrans['payment_type'] == 'credit_card')) {
                     DB::commit();
                 }
             } elseif ($midtrans['status_code'] == 201) {
@@ -163,8 +162,7 @@ class ApiNotification extends Controller {
 
             DB::commit();
             return response()->json(['status' => 'success']);
-        }
-        else if (stristr($midtrans['order_id'], "SUBS")) {
+        } elseif (stristr($midtrans['order_id'], "SUBS")) {
             // SUBSCRIPTION
             $subs = SubscriptionPaymentMidtran::where('order_id', $midtrans['order_id'])->first();
 
@@ -176,8 +174,7 @@ class ApiNotification extends Controller {
                     return response()->json(['status' => 'success']);
                 }
             }
-        }
-        else {
+        } else {
             if (stristr($midtrans['order_id'], "TOP")) {
                 //topup
                 DB::beginTransaction();
@@ -254,7 +251,6 @@ class ApiNotification extends Controller {
                     }
                 }
             }
-
         }
 
         DB::rollback();
@@ -269,7 +265,7 @@ class ApiNotification extends Controller {
         $name    = $trx['user']['name'];
         $phone   = $trx['user']['phone'];
         $date    = $trx['transaction_date'];
-        $outlet  = $trx['outlet']['outlet_name']??'';
+        $outlet  = $trx['outlet']['outlet_name'] ?? '';
         $receipt = $trx['transaction_receipt_number'];
         $detail = $this->htmlDetailOrder($trx['id_transaction_group'], 'Pending');
 
@@ -300,7 +296,7 @@ class ApiNotification extends Controller {
             'name'  => $trx->user->name,
             'id' => $mid['order_id'],
             'order_id' => $mid['order_id'],
-            'outlet_name' => $outlet??'',
+            'outlet_name' => $outlet ?? '',
             'detail' => $detail,
             'payment' => $payment,
             'id_reference' => $mid['order_id']
@@ -314,7 +310,7 @@ class ApiNotification extends Controller {
         $name    = $trx['user']['name'];
         $phone   = $trx['user']['phone'];
         $date    = $trx['transaction_date'];
-        $outlet  = $trx['outlet']['outlet_name']??'';
+        $outlet  = $trx['outlet']['outlet_name'] ?? '';
         $receipt = $trx['transaction_receipt_number'];
         $detail = $this->htmlDetailOrder($trx['id_transaction_group'], 'Expired');
 
@@ -343,7 +339,7 @@ class ApiNotification extends Controller {
             'name'  => $trx->user->name,
             'id' => $mid['order_id'],
             'order_id' => $mid['order_id'],
-            'outlet_name' => $outlet??'',
+            'outlet_name' => $outlet ?? '',
             'detail' => $detail,
             'id_reference' => $mid['order_id']
         ]);
@@ -356,7 +352,7 @@ class ApiNotification extends Controller {
         $name    = $trx['user']['name'];
         $phone   = $trx['user']['phone'];
         $date    = $trx['transaction_date'];
-        $outlet  = $trx['outlet']['outlet_name']??'';
+        $outlet  = $trx['outlet']['outlet_name'] ?? '';
         $receipt = $trx['transaction_receipt_number'];
         $detail = $this->htmlDetailOrder($trx['id_transaction_group'], 'Denied');
 
@@ -385,7 +381,7 @@ class ApiNotification extends Controller {
             'name'  => $trx->user->name,
             'id' => $mid['order_id'],
             'order_id' => $mid['order_id'],
-            'outlet_name' => $outlet??'',
+            'outlet_name' => $outlet ?? '',
             'detail' => $detail,
             'id_reference' => $mid['order_id']
         ]);
@@ -398,11 +394,11 @@ class ApiNotification extends Controller {
         $send = app($this->autocrm)->SendAutoCRM('Topup Success', $user->phone, ['notif_type' => 'topup', 'date' => $data['created_at'], 'status' => $data['transaction_payment_status'], 'name'  => $user->name, 'id' => $mid['order_id'], 'id_reference' => $mid['order_id']]);
     }
 
-    function notification($mid, $trx)
+    public function notification($mid, $trx)
     {
         $phone   = $trx['user']['phone'];
         $date    = $trx['transaction_date'];
-        $outlet  = $trx['outlet']['outlet_name']??'';
+        $outlet  = $trx['outlet']['outlet_name'] ?? '';
         $receipt = $trx['transaction_receipt_number'];
         $shipment = TransactionShipment::where('id_transaction', $trx['id_transaction'])->first();
         $detail = $this->htmlDetailTrxSuccessV2($trx['id_transaction']);
@@ -414,7 +410,7 @@ class ApiNotification extends Controller {
             'id_transaction' => $trx['id_transaction'],
             'date' => MyHelper::dateFormatInd($date),
             'status' => 'Transaksi Selesai',
-            'delivery_number' => $shipment['order_id']??'',
+            'delivery_number' => $shipment['order_id'] ?? '',
             'outlet_name' => $outlet,
             'receipt_number' => $receipt,
             'detail' => $detail,
@@ -424,7 +420,7 @@ class ApiNotification extends Controller {
         return $send;
     }
 
-    function savePoint($data)
+    public function savePoint($data)
     {
         if (!empty($data['user']['memberships'][0]['membership_name'])) {
             $level = $data['user']['memberships'][0]['membership_name'];
@@ -457,7 +453,7 @@ class ApiNotification extends Controller {
             }
 
             //update point user
-            $totalPoint = LogPoint::where('id_user',$data['id_user'])->sum('point');
+            $totalPoint = LogPoint::where('id_user', $data['id_user'])->sum('point');
             $updateUserPoint = User::where('id', $data['id_user'])->update(['points' => $totalPoint]);
         }
 
@@ -466,14 +462,15 @@ class ApiNotification extends Controller {
             \Modules\PromoCampaign\Lib\PromoCampaignTools::applyReferrerCashback(Transaction::find($data['id_transaction']));
 
             if ($data['transaction_cashback_earned'] != 0) {
-
-                $insertDataLogCash = app($this->balance)->addLogBalance( $data['id_user'], $data['transaction_cashback_earned'], $data['id_transaction'], 'Online Transaction', $data['transaction_grandtotal']);
+                $insertDataLogCash = app($this->balance)->addLogBalance($data['id_user'], $data['transaction_cashback_earned'], $data['id_transaction'], 'Online Transaction', $data['transaction_grandtotal']);
                 if (!$insertDataLogCash) {
                     DB::rollback();
                     return false;
                 }
-                $usere= User::where('id',$data['id_user'])->first();
-                $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone,
+                $usere = User::where('id', $data['id_user'])->first();
+                $send = app($this->autocrm)->SendAutoCRM(
+                    'Transaction Point Achievement',
+                    $usere->phone,
                     [
                         "outlet_name"       => $data['outlet']['outlet_name'],
                         "transaction_date"  => $data['transaction_date'],
@@ -482,7 +479,7 @@ class ApiNotification extends Controller {
                         'received_point'    => (string) $data['transaction_cashback_earned']
                     ]
                 );
-                if($send != true){
+                if ($send != true) {
                     DB::rollback();
                     return false;
                 }
@@ -495,7 +492,7 @@ class ApiNotification extends Controller {
         return true;
     }
 
-    function sendNotif($data)
+    public function sendNotif($data)
     {
         if ($data['trasaction_type'] == 'Delivery') {
             $table = 'transaction_shipments';
@@ -506,7 +503,7 @@ class ApiNotification extends Controller {
         }
 
         $detail = DB::table($table)->where('id_transaction', $data['id_transaction'])->first();
-        $link = MyHelper::get(env('SHORT_LINK_URL').'/?key='.env('SHORT_LINK_KEY').'&url='.$detail->short_link);
+        $link = MyHelper::get(env('SHORT_LINK_URL') . '/?key=' . env('SHORT_LINK_KEY') . '&url=' . $detail->short_link);
 
         if (isset($link['error']) && $link['error'] == 0) {
             $admin = UserOutlet::with('outlet')->where('id_outlet', $data['id_outlet'])->where($field, 1)->get()->toArray();
@@ -514,10 +511,10 @@ class ApiNotification extends Controller {
             foreach ($admin as $key => $value) {
                 $send = app($this->autocrm)->SendAutoCRM('Admin Notification', $value['phone'], [
                     'title'  => "
-Outlet Name : ".$value['outlet']['outlet_name']."
-Order ID: ".$detail['order_id']."
-Tanggal: ".$data['transaction_date']."
-Detail: ".$link['short'],
+Outlet Name : " . $value['outlet']['outlet_name'] . "
+Order ID: " . $detail['order_id'] . "
+Tanggal: " . $data['transaction_date'] . "
+Detail: " . $link['short'],
                 ]);
 
                 if (!$send) {
@@ -530,7 +527,8 @@ Detail: ".$link['short'],
     }
 
     /* CHECK PAYMENT */
-    function checkPayment($trx, $midtrans) {
+    public function checkPayment($trx, $midtrans)
+    {
         if (isset($trx['logTopup'])) {
             $mid = $this->processMidtrans($midtrans);
 
@@ -587,7 +585,8 @@ Detail: ".$link['short'],
     }
 
     /* CHECNK DEALS PAYMENT */
-    function checkDealsPayment($deals, $midtrans) {
+    public function checkDealsPayment($deals, $midtrans)
+    {
         DB::beginTransaction();
         $midtrans = $this->processMidtrans($midtrans);
         unset($midtrans['store']);
@@ -601,19 +600,19 @@ Detail: ".$link['short'],
                 // if($midtrans['transaction_status'] != 'settlement' && $midtrans['payment_type'] != 'credit_card'){
                     $deals = DealsUser::with(['userMid', 'deals'])->where('id_deals_user', $deals->id_deals_user)->first();
 
-                    if ($deals['paid_status'] == 'Cancelled') {
-                        Midtrans::refund($deals['order_id'], null, $midtrans['transaction_status']);
-                        return true;
-                    }
+                if ($deals['paid_status'] == 'Cancelled') {
+                    Midtrans::refund($deals['order_id'], null, $midtrans['transaction_status']);
+                    return true;
+                }
 
                     $title = "";
-                    if(isset($deals['deals']['deals_title']) && $deals['deals']['deals_title'] != null){
-                        $title = $deals['deals']['deals_title'];
-                    }
+                if (isset($deals['deals']['deals_title']) && $deals['deals']['deals_title'] != null) {
+                    $title = $deals['deals']['deals_title'];
+                }
 
-                    if(isset($deals['deals']['deals_second_title']) && $deals['deals']['deals_second_title']){
-                        $title = $title.' '.$deals['deals']['deals_second_title'];
-                    }
+                if (isset($deals['deals']['deals_second_title']) && $deals['deals']['deals_second_title']) {
+                    $title = $title . ' ' . $deals['deals']['deals_second_title'];
+                }
                     // dd($deals);
                     $send = app($this->autocrm)->SendAutoCRM(
                         'Payment Deals Success',
@@ -625,9 +624,9 @@ Detail: ".$link['short'],
                     );
                 // }
                 $statusPay = 'Completed';
-            }elseif (isset($midtrans['status_code']) && $midtrans['status_code'] == 201){
+            } elseif (isset($midtrans['status_code']) && $midtrans['status_code'] == 201) {
                 $statusPay = 'Pending';
-            }elseif (isset($midtrans['status_code']) && $midtrans['status_code'] == 202) {
+            } elseif (isset($midtrans['status_code']) && $midtrans['status_code'] == 202) {
                  $statusPay = 'Cancelled';
             }
             // UPDATE STATUS PEMBAYARAN
@@ -643,7 +642,8 @@ Detail: ".$link['short'],
     }
 
     /* CHECK SUBSCRIPTION PAYMENT */
-    function checkSubsPayment($subs, $midtrans) {
+    public function checkSubsPayment($subs, $midtrans)
+    {
         DB::beginTransaction();
         $midtrans = $this->processMidtrans($midtrans);
         // UPDATE
@@ -657,19 +657,19 @@ Detail: ".$link['short'],
                 // if($midtrans['transaction_status'] != 'settlement' && $midtrans['payment_type'] != 'credit_card'){
                     $subs = SubscriptionUser::with(['user', 'subscription'])->where('id_subscription_user', $subs->id_subscription_user)->first();
 
-                    if ($subs['paid_status'] == 'Cancelled') {
-                        Midtrans::refund($subs['subscription_user_receipt_number'], null, $midtrans['transaction_status']);
-                        return true;
-                    }
+                if ($subs['paid_status'] == 'Cancelled') {
+                    Midtrans::refund($subs['subscription_user_receipt_number'], null, $midtrans['transaction_status']);
+                    return true;
+                }
 
                     $title = "";
-                    if( $subs['subscription']['subscription_title'] ?? false){
-                        $title = $subs['subscription']['subscription_title'];
-                    }
+                if ($subs['subscription']['subscription_title'] ?? false) {
+                    $title = $subs['subscription']['subscription_title'];
+                }
 
-                    if( $subs['subscription']['subscription_sub_title'] ?? false){
-                        $title = $title.' '.$subs['subs']['subscription_sub_title'];
-                    }
+                if ($subs['subscription']['subscription_sub_title'] ?? false) {
+                    $title = $title . ' ' . $subs['subs']['subscription_sub_title'];
+                }
                     // dd($deals);
                     $send = app($this->autocrm)->SendAutoCRM(
                         'Payment Subscription Success',
@@ -681,9 +681,9 @@ Detail: ".$link['short'],
                     );
                 // }
                 $statusPay = 'Completed';
-            }elseif (isset($midtrans['status_code']) && $midtrans['status_code'] == 201){
+            } elseif (isset($midtrans['status_code']) && $midtrans['status_code'] == 201) {
                 $statusPay = 'Pending';
-            }elseif (isset($midtrans['status_code']) && $midtrans['status_code'] == 202) {
+            } elseif (isset($midtrans['status_code']) && $midtrans['status_code'] == 202) {
                  $statusPay = 'Cancelled';
             }
             // UPDATE STATUS PEMBAYARAN
@@ -699,7 +699,8 @@ Detail: ".$link['short'],
     }
 
     /* DATA MIDTRANS */
-    function processMidtrans($midtrans) {
+    public function processMidtrans($midtrans)
+    {
         $transaction_time   = isset($midtrans['transaction_time']) ? $midtrans['transaction_time'] : null;
         $transaction_status = isset($midtrans['transaction_status']) ? $midtrans['transaction_status'] : null;
         $transaction_id     = isset($midtrans['transaction_id']) ? $midtrans['transaction_id'] : null;
@@ -719,7 +720,7 @@ Detail: ".$link['short'],
             $eci  = isset($midtrans['permata_va_number']) ? $midtrans['permata_va_number'] : null;
             $bank = 'Permata';
         } elseif (isset($midtrans['bill_key'])) {
-            $eci = $midtrans['biller_code'].$midtrans['bill_key'];
+            $eci = $midtrans['biller_code'] . $midtrans['bill_key'];
             $bank = 'Mandiri';
         } elseif (isset($midtrans['payment_code'])) {
             $eci = $midtrans['payment_code'];
@@ -751,7 +752,8 @@ Detail: ".$link['short'],
     }
 
     /* CHECK PAYMENT MIDTRANS */
-    function paymentMidtrans($trx, $midtrans) {
+    public function paymentMidtrans($trx, $midtrans)
+    {
         $data = $this->processMidtrans($midtrans);
 
         // UPDATE
@@ -769,9 +771,9 @@ Detail: ".$link['short'],
                 Midtrans::refund($tpm['vt_transaction_id'], null, $midtrans['transaction_status']);
                 return true;
             }
-            if ($midtrans['transaction_status'] == 'refund' ) {
+            if ($midtrans['transaction_status'] == 'refund') {
                 return true;
-            }elseif ($midtrans['transaction_status'] == 'capture' || $midtrans['transaction_status'] == 'settlement') {
+            } elseif ($midtrans['transaction_status'] == 'capture' || $midtrans['transaction_status'] == 'settlement') {
                 $check = TransactionGroup::where('id_transaction_group', $trx['id_transaction_group'])->first()->triggerPaymentCompleted([
                     'amount' => $midtrans['gross_amount'],
                 ]);
@@ -794,7 +796,8 @@ Detail: ".$link['short'],
     }
 
     /* CHECK PAYMENT BALANCE */
-    function paymentBalance($trx, $midtrans) {
+    public function paymentBalance($trx, $midtrans)
+    {
         $data = $this->processMidtrans($midtrans);
 
         $topup = LogTopup::where('transaction_reference', $trx->id_transaction)->first();
@@ -815,7 +818,8 @@ Detail: ".$link['short'],
         return false;
     }
 
-    public function adminOutletNotification($receipt) {
+    public function adminOutletNotification($receipt)
+    {
         $transaction = Transaction::where('transaction_receipt_number', $receipt)->first();
         // return $transaction;
         if (!$transaction) {
@@ -831,7 +835,6 @@ Detail: ".$link['short'],
         }
 
         foreach ($admin as $key => $value) {
-
         }
     }
 
@@ -866,7 +869,8 @@ Detail: ".$link['short'],
         ]);
     }
 
-    public function adminOutletComfirm(Request $request) {
+    public function adminOutletComfirm(Request $request)
+    {
         $post = $request->json()->all();
         // return $post;
         $transaction = Transaction::where('transaction_receipt_number', $post['receipt'])->first();
@@ -919,7 +923,8 @@ Detail: ".$link['short'],
         ]);
     }
 
-    function balanceNotif($data) {
+    public function balanceNotif($data)
+    {
         $user = User::with('memberships')->where('id', $data['id_user'])->first();
 
         if (!empty($user['memberships'][0]['membership_name'])) {
@@ -935,10 +940,10 @@ Detail: ".$link['short'],
         $trxBalance = TransactionMultiplePayment::where('id_transaction', $data['id_transaction'])->first();
 
         if (empty($trxBalance)) {
-            $insertDataLogCash = app($this->balance)->addLogBalance( $data['id_user'], -$data['transaction_grandtotal'], $data['id_transaction'], 'Online Transaction', $data['transaction_grandtotal']);
+            $insertDataLogCash = app($this->balance)->addLogBalance($data['id_user'], -$data['transaction_grandtotal'], $data['id_transaction'], 'Online Transaction', $data['transaction_grandtotal']);
         } else {
             $paymentBalanceTrx = TransactionPaymentBalance::where('id_transaction', $data['id_transaction'])->first();
-            $insertDataLogCash = app($this->balance)->addLogBalance( $data['id_user'], -$paymentBalanceTrx['balance_nominal'], $data['id_transaction'], 'Online Transaction', $data['transaction_grandtotal']);
+            $insertDataLogCash = app($this->balance)->addLogBalance($data['id_user'], -$paymentBalanceTrx['balance_nominal'], $data['id_transaction'], 'Online Transaction', $data['transaction_grandtotal']);
         }
 
         if ($insertDataLogCash == false) {
@@ -953,7 +958,8 @@ Detail: ".$link['short'],
      * @param  Array $data
      * @return boolean
      */
-    function balanceNotifGroup($data) {
+    public function balanceNotifGroup($data)
+    {
         $user = User::with('memberships')->where('id', $data['id_user'])->first();
 
         if (!empty($user['memberships'][0]['membership_name'])) {
@@ -969,10 +975,10 @@ Detail: ".$link['short'],
         $trxBalance = TransactionMultiplePayment::where('id_transaction_group', $data['id_transaction_group'])->first();
 
         if (empty($trxBalance)) {
-            $insertDataLogCash = app($this->balance)->addLogBalance( $data['id_user'], -$data['transaction_grandtotal'], $data['id_transaction_group'], 'Online Transaction', $data['transaction_grandtotal']);
+            $insertDataLogCash = app($this->balance)->addLogBalance($data['id_user'], -$data['transaction_grandtotal'], $data['id_transaction_group'], 'Online Transaction', $data['transaction_grandtotal']);
         } else {
             $paymentBalanceTrx = TransactionPaymentBalance::where('id_transaction_group', $data['id_transaction_group'])->first();
-            $insertDataLogCash = app($this->balance)->addLogBalance( $data['id_user'], -$paymentBalanceTrx['balance_nominal'], $data['id_transaction_group'], 'Online Transaction', $data['transaction_grandtotal']);
+            $insertDataLogCash = app($this->balance)->addLogBalance($data['id_user'], -$paymentBalanceTrx['balance_nominal'], $data['id_transaction_group'], 'Online Transaction', $data['transaction_grandtotal']);
         }
 
         if ($insertDataLogCash == false) {
@@ -982,7 +988,8 @@ Detail: ".$link['short'],
         return true;
     }
 
-    function checkFraud($trx){
+    public function checkFraud($trx)
+    {
 
         $userData = User::find($trx['id_user']);
 
@@ -999,16 +1006,17 @@ Detail: ".$link['short'],
 
         $config_fraud_use_queue = Configs::where('config_name', 'fraud use queue')->first()->is_active;
 
-        if($config_fraud_use_queue == 1){
+        if ($config_fraud_use_queue == 1) {
             FraudJobV2::dispatch($userData, $trx, 'transaction')->onConnection('fraudqueue');
-        }else {
+        } else {
             $checkFraud = app($this->setting_fraud_v2)->checkFraudTrxOnline($userData, $trx);
         }
 
         return true;
     }
 
-    function bookGoSend($trx){
+    public function bookGoSend($trx)
+    {
         //create booking GO-SEND
         $origin['name']             = $trx['detail']['transaction_pickup_go_send']['origin_name'];
         $origin['phone']            = $trx['detail']['transaction_pickup_go_send']['origin_phone'];
@@ -1025,30 +1033,30 @@ Detail: ".$link['short'],
         $destination['note']        = $trx['detail']['transaction_pickup_go_send']['destination_note'];
 
         $packageDetail = Setting::where('key', 'go_send_package_detail')->first();
-        if($packageDetail){
+        if ($packageDetail) {
             $packageDetail = str_replace('%order_id%', $trx['detail']['order_id'], $packageDetail['value']);
-        }else{
-            $packageDetail = "Order ".$trx['detail']['order_id'];
+        } else {
+            $packageDetail = "Order " . $trx['detail']['order_id'];
         }
 
         $booking = GoSend::booking($origin, $destination, $packageDetail, $trx['transaction_receipt_number']);
-        if(isset($booking['status']) && $booking['status'] == 'fail'){
+        if (isset($booking['status']) && $booking['status'] == 'fail') {
             return $booking;
         }
 
-        if(!isset($booking['id'])){
-            return ['status' => 'fail', 'messages' => $booking['messages']??['failed booking GO-SEND']];
+        if (!isset($booking['id'])) {
+            return ['status' => 'fail', 'messages' => $booking['messages'] ?? ['failed booking GO-SEND']];
         }
         //update id from go-send
         $updateGoSend = TransactionPickupGoSend::find($trx['detail']['transaction_pickup_go_send']['id_transaction_pickup_go_send']);
         $status = GoSend::getStatus($trx['transaction_receipt_number']);
-        if($updateGoSend){
+        if ($updateGoSend) {
             $updateGoSend->go_send_id = $booking['id'];
             $updateGoSend->go_send_order_no = $booking['orderNo'];
-            $updateGoSend->latest_status = $status['status']??null;
+            $updateGoSend->latest_status = $status['status'] ?? null;
             $updateGoSend->save();
 
-            if(!$updateGoSend){
+            if (!$updateGoSend) {
                 return ['status' => 'fail', 'messages' => ['failed update Transaction GO-SEND']];
             }
         }
@@ -1077,7 +1085,7 @@ Detail: ".$link['short'],
         $kode = '';
 
         if ($bank == 'Mandiri') {
-            $kode = "Kode : ".$mid['biller_code'];
+            $kode = "Kode : " . $mid['biller_code'];
         }
 
         $type   = ucwords(str_replace('_', ' ', $mid['payment_type']));
@@ -1090,10 +1098,10 @@ Detail: ".$link['short'],
              <tbody>
               <tr>
                 <td style="background:#ffffff;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:5px 10px;width: 100px" valign="top" bgcolor="#FFFFFF" align="left">
-                   <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">'.$label_place.' </span>
+                   <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">' . $label_place . ' </span>
                 </td>
                 <td colspan="3" style="background:#ffffff;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:5px 10px" valign="top" bgcolor="#FFFFFF" align="left">
-                    <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">:  <b>'.$bank.'</b> </span>
+                    <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">:  <b>' . $bank . '</b> </span>
                 </td>
              </tr>
              <tr>
@@ -1101,7 +1109,7 @@ Detail: ".$link['short'],
                    <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">Virtual Number</span>
                 </td>
                 <td colspan="3" style="background:#ffffff;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:5px 10px" valign="top" bgcolor="#FFFFFF" align="left">
-                    <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">:  <b>'.$number.' '.$kode.' </span>
+                    <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">:  <b>' . $number . ' ' . $kode . ' </span>
                 </td>
              </tr>
              <tr>
@@ -1109,7 +1117,7 @@ Detail: ".$link['short'],
                    <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">Metode</span>
                 </td>
                 <td colspan="3" style="background:#ffffff;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:5px 10px" valign="top" bgcolor="#FFFFFF" align="left">
-                    <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">:  <b>'.$type.' </span>
+                    <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">:  <b>' . $type . ' </span>
                 </td>
              </tr>
              </tbody>
@@ -1120,22 +1128,22 @@ Detail: ".$link['short'],
 </table>';
     }
 
-    function getHtml($trx, $item, $name, $phone, $date, $outlet, $receipt)
+    public function getHtml($trx, $item, $name, $phone, $date, $outlet, $receipt)
     {
         $dataItem = '';
         foreach ($item as $key => $value) {
             $dataItem .= '<tr>
                         <td style="background:#ffffff;border-bottom-color:#cccccc;border-bottom-style:solid;border-bottom-width:1px;border-collapse:collapse;border-spacing:0;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:10px 10px" width="25%" valign="middle" bgcolor="#FFFFFF" align="left">
-                           <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">'.$value['product']['product_name'].'</span>
+                           <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">' . $value['product']['product_name'] . '</span>
                         </td>
                         <td style="background:#ffffff;border-bottom-color:#cccccc;border-bottom-style:solid;border-bottom-width:1px;border-collapse:collapse;border-spacing:0;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:10px 10px" width="25%" valign="middle" bgcolor="#FFFFFF" align="right">
-                           <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">IDR</span> <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">'.number_format($value['transaction_product_price']).'</span>
+                           <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">IDR</span> <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">' . number_format($value['transaction_product_price']) . '</span>
                         </td>
                         <td style="background:#ffffff;border-bottom-color:#cccccc;border-bottom-style:solid;border-bottom-width:1px;border-collapse:collapse;border-spacing:0;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:10px 10px" width="10%" valign="middle" bgcolor="#FFFFFF" align="center">
-                          '.$value['transaction_product_qty'].'
+                          ' . $value['transaction_product_qty'] . '
                         </td>
                         <td style="background:#ffffff;border-bottom-color:#cccccc;border-bottom-style:solid;border-bottom-width:1px;border-collapse:collapse;border-spacing:0;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:10px 10px" width="25%" valign="middle" bgcolor="#FFFFFF" align="right">
-                           <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">IDR</span> <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">'.number_format($value['transaction_product_subtotal']).'</span>
+                           <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">IDR</span> <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">' . number_format($value['transaction_product_subtotal']) . '</span>
                         </td>
                      </tr>';
         }
@@ -1146,7 +1154,7 @@ Detail: ".$link['short'],
         $exp   = explode(',', $order);
         $manna = [];
 
-        for ($i=0; $i < count($exp); $i++) {
+        for ($i = 0; $i < count($exp); $i++) {
             if (substr($exp[$i], 0, 5) == 'empty') {
                 unset($exp[$i]);
                 continue;
@@ -1179,10 +1187,10 @@ Detail: ".$link['short'],
             if ($m != 0) {
                 $dataOrder .= '<tr style="text-align:right">
                         <td colspan="3" style="background:#ffffff;border-collapse:collapse;border-spacing:0;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:15px 10px" valign="top" bgcolor="#FFFFFF" align="right">
-                           <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">'.ucwords($row).'</span>
+                           <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">' . ucwords($row) . '</span>
                         </td>
                         <td style="background:#ffffff;border-collapse:collapse;border-spacing:0;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:15px 10px" valign="top" bgcolor="#FFFFFF" align="right">
-                           <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">IDR</span> <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">'.number_format($m).'</span>
+                           <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">IDR</span> <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">' . number_format($m) . '</span>
                         </td>
                     </tr>';
             }
@@ -1242,7 +1250,7 @@ Detail: ".$link['short'],
                            <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">Nama </span>
                         </td>
                         <td colspan="3" style="background:#ffffff;border-bottom-color:#cccccc;border-bottom-style:solid;border-bottom-width:1px;border-collapse:collapse;border-spacing:0;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:15px 10px" valign="top" bgcolor="#FFFFFF" align="left">
-                            <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">:  '.$name.' </span>
+                            <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">:  ' . $name . ' </span>
                         </td>
                      </tr>
                      <tr>
@@ -1250,18 +1258,18 @@ Detail: ".$link['short'],
                            <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">Kontak</span>
                         </td>
                         <td colspan="3" style="background:#ffffff;border-bottom-color:#cccccc;border-bottom-style:solid;border-bottom-width:1px;border-collapse:collapse;border-spacing:0;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:15px 10px" valign="top" bgcolor="#FFFFFF" align="left">
-                            <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">:  '.$phone.' </span>
+                            <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">:  ' . $phone . ' </span>
                         </td>
                      </tr>
 
                     <tr>
                         <th colspan="4" style="background:#6C5648;border-bottom-style:none;color:#ffffff;padding-left:10px;padding-right:10px" bgcolor="background: rgb(40, 141, 73)">
-                           <h2 style="color:#ffffff;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:5px 0"> #<a style="color:#ffffff!important;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0;text-decoration:none" target="_blank" data-saferedirecturl="https://www.google.com/url?q=http://vourest.com/history/transaction/hakaikykdm/1011&amp;source=gmail&amp;ust=1539830594941000&amp;usg=AFQjCNG9sneH2MymFvLJsuVjeOY2XvH7QA">'.$receipt.'</a></h2>
+                           <h2 style="color:#ffffff;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:5px 0"> #<a style="color:#ffffff!important;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0;text-decoration:none" target="_blank" data-saferedirecturl="https://www.google.com/url?q=http://vourest.com/history/transaction/hakaikykdm/1011&amp;source=gmail&amp;ust=1539830594941000&amp;usg=AFQjCNG9sneH2MymFvLJsuVjeOY2XvH7QA">' . $receipt . '</a></h2>
                         </th>
                     </tr>
                     <tr>
                         <td colspan="4" style="background:#ffffff;border-bottom-color:#cccccc;border-bottom-style:solid;border-bottom-width:1px;border-collapse:collapse;border-spacing:0;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:15px 10px" valign="top" bgcolor="#FFFFFF" align="right">
-                           <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">'.$date.'</span>
+                           <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">' . $date . '</span>
                         </td>
                     </tr>
                     <tr>
@@ -1284,16 +1292,16 @@ Detail: ".$link['short'],
                      </tr>
 
 
-                    '.$dataItem.'
+                    ' . $dataItem . '
 
 
-                    '.$dataOrder.'
+                    ' . $dataOrder . '
                     <tr style="text-align:right">
                         <td colspan="3" style="background:#ffffff;border-collapse:collapse;border-spacing:0;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:15px 10px" valign="top" bgcolor="#FFFFFF" align="right">
                            <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0"><b>Grand Total</b></span>
                         </td>
                         <td style="background:#ffffff;border-collapse:collapse;border-spacing:0;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:15px 10px" valign="top" bgcolor="#FFFFFF" align="right">
-                           <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:15px;line-height:1.5;margin:0;padding:0"><b>IDR</b></span> <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:15px;line-height:1.5;margin:0;padding:0"><b>'.number_format($trx['transaction_grandtotal']).'</b></span>
+                           <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:15px;line-height:1.5;margin:0;padding:0"><b>IDR</b></span> <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:15px;line-height:1.5;margin:0;padding:0"><b>' . number_format($trx['transaction_grandtotal']) . '</b></span>
                         </td>
                     </tr>
                     <tr>
@@ -1362,7 +1370,7 @@ Detail: ".$link['short'],
                                        <b>
                                        nomor kontak, alamat e-mail, atau password
                                        </b>
-                                       Anda kepada siapapun, termasuk pihak yang mengatasnamakan <span class="m_6657055476784441913il"><span class="il">'.$outlet.'</span></span>
+                                       Anda kepada siapapun, termasuk pihak yang mengatasnamakan <span class="m_6657055476784441913il"><span class="il">' . $outlet . '</span></span>
                                     </p>
                                  </td>
                                  <td style="border-collapse:collapse;border-spacing:0;color:#999;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:0" width="15"></td>
@@ -1499,9 +1507,11 @@ Detail: ".$link['short'],
             </table>';
     }
 
-    public function htmlDetailOrder($id, $status){
+    public function htmlDetailOrder($id, $status)
+    {
         $data = TransactionGroup::where('id_transaction_group', $id)->with(
-            'user.city.province')->first();
+            'user.city.province'
+        )->first();
         if ($data['trasaction_type'] == 'Pickup Order') {
             $detail = TransactionPickup::join('transactions', 'transaction_pickups.id_transaction', 'transactions.id_transaction')->where('id_transaction_group', $data['id_transaction_group'])->first();
             $qrTest = $detail['order_id'];
@@ -1511,19 +1521,19 @@ Detail: ".$link['short'],
 
         $data['detail'] = $data;
 
-        if($status == 'Expired'){
+        if ($status == 'Expired') {
             $data['status'] = 'Your order has expired';
-        }elseif ($status == 'Denied'){
+        } elseif ($status == 'Denied') {
             $data['status'] = 'Your order has been rejected';
-        }elseif ($status == 'Pending'){
+        } elseif ($status == 'Pending') {
             $data['status'] = 'Your order is pending';
-        }elseif ($status == 'Order Accepted'){
+        } elseif ($status == 'Order Accepted') {
             $data['status'] = 'Your order is accepted';
-        }elseif ($status == 'Order Ready'){
+        } elseif ($status == 'Order Ready') {
             $data['status'] = 'Your order is ready';
-        }elseif ($status == 'Order Reject'){
+        } elseif ($status == 'Order Reject') {
             $data['status'] = 'Your order is rejected';
-        }elseif ($status == 'Order Taken'){
+        } elseif ($status == 'Order Taken') {
             $data['status'] = 'Your order is taken';
         }
 
@@ -1531,32 +1541,34 @@ Detail: ".$link['short'],
         return $html;
     }
 
-    public function htmlDetailTrxSuccess($id){
+    public function htmlDetailTrxSuccess($id)
+    {
         $list = Transaction::where('transactions.id_transaction', $id);
-        $list = $list->leftJoin('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
+        $list = $list->leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
             ->with(
         // 'user.city.province',
-            'productTransaction.product.product_category',
-            'productTransaction.modifiers',
-            'productTransaction.product.product_photos',
-            'productTransaction.product.product_discounts',
-            'transaction_payment_offlines',
-            'transaction_vouchers.deals_voucher.deal',
-            'promo_campaign_promo_code.promo_campaign',
-            'transaction_pickup_go_send.transaction_pickup_update',
-            'outlet.city')->first();
+                'productTransaction.product.product_category',
+                'productTransaction.modifiers',
+                'productTransaction.product.product_photos',
+                'productTransaction.product.product_discounts',
+                'transaction_payment_offlines',
+                'transaction_vouchers.deals_voucher.deal',
+                'promo_campaign_promo_code.promo_campaign',
+                'transaction_pickup_go_send.transaction_pickup_update',
+                'outlet.city'
+            )->first();
 
-        if(!$list){
-            return MyHelper::checkGet([],'empty');
+        if (!$list) {
+            return MyHelper::checkGet([], 'empty');
         }
         $list = $list->toArray();
         $label = [];
         $label2 = [];
-        $product_count=0;
-        $list['product_transaction'] = MyHelper::groupIt($list['product_transaction'],'id_brand',null,function($key,&$val) use (&$product_count){
-            $product_count += array_sum(array_column($val,'transaction_product_qty'));
+        $product_count = 0;
+        $list['product_transaction'] = MyHelper::groupIt($list['product_transaction'], 'id_brand', null, function ($key, &$val) use (&$product_count) {
+            $product_count += array_sum(array_column($val, 'transaction_product_qty'));
             $brand = Brand::select('name_brand')->find($key);
-            if(!$brand){
+            if (!$brand) {
                 return 'No Brand';
             }
             return $brand->name_brand;
@@ -1648,7 +1660,7 @@ Detail: ".$link['short'],
                                 break;
                             case 'Midtrans':
                                 $payMidtrans = TransactionPaymentMidtran::find($mp['id_payment']);
-                                $payment['name']      = strtoupper(str_replace('_', ' ', $payMidtrans->payment_type)).' '.strtoupper($payMidtrans->bank);
+                                $payment['name']      = strtoupper(str_replace('_', ' ', $payMidtrans->payment_type)) . ' ' . strtoupper($payMidtrans->bank);
                                 $payment['amount']    = $payMidtrans->gross_amount;
                                 $list['payment'][] = $payment;
                                 break;
@@ -1706,12 +1718,12 @@ Detail: ".$link['short'],
             case 'Midtrans':
                 $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
                 $payment = [];
-                foreach($multiPayment as $dataKey => $dataPay){
-                    if($dataPay['type'] == 'Midtrans'){
+                foreach ($multiPayment as $dataKey => $dataPay) {
+                    if ($dataPay['type'] == 'Midtrans') {
                         $payMidtrans = TransactionPaymentMidtran::find($dataPay['id_payment']);
-                        $payment[$dataKey]['name']      = strtoupper(str_replace('_', ' ', $payMidtrans->payment_type)).' '.strtoupper($payMidtrans->bank);
+                        $payment[$dataKey]['name']      = strtoupper(str_replace('_', ' ', $payMidtrans->payment_type)) . ' ' . strtoupper($payMidtrans->bank);
                         $payment[$dataKey]['amount']    = $payMidtrans->gross_amount;
-                    }else{
+                    } else {
                         $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
                         $payment[$dataKey] = $dataPay;
                         $list['balance'] = $dataPay['balance_nominal'];
@@ -1724,11 +1736,11 @@ Detail: ".$link['short'],
             case 'Ovo':
                 $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
                 $payment = [];
-                foreach($multiPayment as $dataKey => $dataPay){
-                    if($dataPay['type'] == 'Ovo'){
+                foreach ($multiPayment as $dataKey => $dataPay) {
+                    if ($dataPay['type'] == 'Ovo') {
                         $payment[$dataKey] = TransactionPaymentOvo::find($dataPay['id_payment']);
                         $payment[$dataKey]['name']    = 'OVO';
-                    }else{
+                    } else {
                         $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
                         $payment[$dataKey] = $dataPay;
                         $list['balance'] = $dataPay['balance_nominal'];
@@ -1741,12 +1753,12 @@ Detail: ".$link['short'],
             case 'Ipay88':
                 $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
                 $payment = [];
-                foreach($multiPayment as $dataKey => $dataPay){
-                    if($dataPay['type'] == 'IPay88'){
+                foreach ($multiPayment as $dataKey => $dataPay) {
+                    if ($dataPay['type'] == 'IPay88') {
                         $PayIpay = TransactionPaymentIpay88::find($dataPay['id_payment']);
                         $payment[$dataKey]['name']    = $PayIpay->payment_method;
                         $payment[$dataKey]['amount']    = $PayIpay->amount / 100;
-                    }else{
+                    } else {
                         $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
                         $payment[$dataKey] = $dataPay;
                         $list['balance'] = $dataPay['balance_nominal'];
@@ -1795,16 +1807,16 @@ Detail: ".$link['short'],
 
         if ($list['trasaction_type'] == 'Pickup Order') {
             $detail = TransactionPickup::where('id_transaction', $list['id_transaction'])->first()->toArray();
-            if($detail){
-                $qr      = $detail['order_id'].strtotime($list['transaction_date']);
+            if ($detail) {
+                $qr      = $detail['order_id'] . strtotime($list['transaction_date']);
 
-                $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
+                $qrCode = 'https://chart.googleapis.com/chart?chl=' . $qr . '&chs=250x250&cht=qr&chld=H%7C0';
                 $qrCode =   html_entity_decode($qrCode);
 
                 $newDetail = [];
-                foreach($detail as $key => $value){
+                foreach ($detail as $key => $value) {
                     $newDetail[$key] = $value;
-                    if($key == 'order_id'){
+                    if ($key == 'order_id') {
                         $newDetail['order_id_qrcode'] = $qrCode;
                     }
                 }
@@ -1830,10 +1842,10 @@ Detail: ".$link['short'],
             'transaction_receipt_number'    => $list['transaction_receipt_number'],
             'transaction_date'              => date('d M Y H:i', strtotime($list['transaction_date'])),
             'trasaction_type'               => $list['trasaction_type'],
-            'transaction_grandtotal'        => MyHelper::requestNumber($list['transaction_grandtotal'],'_CURRENCY'),
-            'transaction_subtotal'          => MyHelper::requestNumber($list['transaction_subtotal'],'_CURRENCY'),
-            'transaction_discount'          => MyHelper::requestNumber($list['transaction_discount'],'_CURRENCY'),
-            'transaction_cashback_earned'   => MyHelper::requestNumber($list['transaction_cashback_earned'],'_POINT'),
+            'transaction_grandtotal'        => MyHelper::requestNumber($list['transaction_grandtotal'], '_CURRENCY'),
+            'transaction_subtotal'          => MyHelper::requestNumber($list['transaction_subtotal'], '_CURRENCY'),
+            'transaction_discount'          => MyHelper::requestNumber($list['transaction_discount'], '_CURRENCY'),
+            'transaction_cashback_earned'   => MyHelper::requestNumber($list['transaction_cashback_earned'], '_POINT'),
             'trasaction_payment_type'       => $list['trasaction_payment_type'],
             'transaction_payment_status'    => $list['transaction_payment_status'],
             'outlet'                        => [
@@ -1863,22 +1875,22 @@ Detail: ".$link['short'],
                 unset($result['detail']['pickup_time']);
                 $result['transaction_status'] = 6;
                 $result['transaction_status_text'] = 'MENUNGGU PEMBAYARAN';
-            } elseif($list['detail']['reject_at'] != null) {
+            } elseif ($list['detail']['reject_at'] != null) {
                 unset($result['detail']['order_id_qrcode']);
                 unset($result['detail']['order_id']);
                 unset($result['detail']['pickup_time']);
                 $result['transaction_status'] = 0;
                 $result['transaction_status_text'] = 'ORDER ANDA DITOLAK';
-            } elseif($list['detail']['taken_by_system_at'] != null) {
+            } elseif ($list['detail']['taken_by_system_at'] != null) {
                 $result['transaction_status'] = 1;
                 $result['transaction_status_text'] = 'ORDER SELESAI';
-            } elseif($list['detail']['taken_at'] != null) {
+            } elseif ($list['detail']['taken_at'] != null) {
                 $result['transaction_status'] = 2;
                 $result['transaction_status_text'] = 'ORDER SUDAH DIAMBIL';
-            } elseif($list['detail']['ready_at'] != null) {
+            } elseif ($list['detail']['ready_at'] != null) {
                 $result['transaction_status'] = 3;
                 $result['transaction_status_text'] = 'ORDER SUDAH SIAP';
-            } elseif($list['detail']['receive_at'] != null) {
+            } elseif ($list['detail']['receive_at'] != null) {
                 $result['transaction_status'] = 4;
                 $result['transaction_status_text'] = 'ORDER SEDANG DIPROSES';
             } else {
@@ -1890,15 +1902,15 @@ Detail: ".$link['short'],
                 $result['delivery_info'] = [
                     'driver' => null,
                     'delivery_status' => '',
-                    'delivery_address' => $list['transaction_pickup_go_send']['destination_address']?:'',
-                    'delivery_address_note' => $list['transaction_pickup_go_send']['destination_note']?:'',
+                    'delivery_address' => $list['transaction_pickup_go_send']['destination_address'] ?: '',
+                    'delivery_address_note' => $list['transaction_pickup_go_send']['destination_note'] ?: '',
                     'booking_status' => 0,
                     'cancelable' => 1,
-                    'go_send_order_no' => $list['transaction_pickup_go_send']['go_send_order_no']?:'',
-                    'live_tracking_url' => $list['transaction_pickup_go_send']['live_tracking_url']?:''
+                    'go_send_order_no' => $list['transaction_pickup_go_send']['go_send_order_no'] ?: '',
+                    'live_tracking_url' => $list['transaction_pickup_go_send']['live_tracking_url'] ?: ''
                 ];
 
-                if($list['transaction_pickup_go_send']['go_send_id']){
+                if ($list['transaction_pickup_go_send']['go_send_id']) {
                     $result['delivery_info']['booking_status'] = 1;
                 }
                 switch (strtolower($list['transaction_pickup_go_send']['latest_status'])) {
@@ -1912,11 +1924,11 @@ Detail: ".$link['short'],
                         $result['delivery_info']['delivery_status'] = 'Driver ditemukan';
                         $result['transaction_status_text']          = 'DRIVER DITEMUKAN';
                         $result['delivery_info']['driver']          = [
-                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
-                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
-                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
-                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
-                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id'] ?: '',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name'] ?: '',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'] ?: '',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'] ?: '',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'] ?: '',
                         ];
                         break;
                     case 'enroute pickup':
@@ -1924,11 +1936,11 @@ Detail: ".$link['short'],
                         $result['delivery_info']['delivery_status'] = 'Driver dalam perjalanan menuju Outlet';
                         $result['transaction_status_text']          = 'DRIVER SEDANG MENUJU OUTLET';
                         $result['delivery_info']['driver']          = [
-                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
-                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
-                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
-                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
-                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id'] ?: '',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name'] ?: '',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'] ?: '',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'] ?: '',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'] ?: '',
                         ];
                         $result['delivery_info']['cancelable'] = 1;
                         break;
@@ -1937,11 +1949,11 @@ Detail: ".$link['short'],
                         $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
                         $result['transaction_status_text']          = 'PROSES PENGANTARAN';
                         $result['delivery_info']['driver']          = [
-                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
-                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
-                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
-                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
-                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id'] ?: '',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name'] ?: '',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'] ?: '',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'] ?: '',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'] ?: '',
                         ];
                         $result['delivery_info']['cancelable'] = 0;
                         break;
@@ -1951,11 +1963,11 @@ Detail: ".$link['short'],
                         $result['transaction_status_text']          = 'ORDER SUDAH DIAMBIL';
                         $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
                         $result['delivery_info']['driver']          = [
-                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
-                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
-                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
-                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
-                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id'] ?: '',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name'] ?: '',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'] ?: '',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'] ?: '',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'] ?: '',
                         ];
                         $result['delivery_info']['cancelable'] = 0;
                         break;
@@ -1984,9 +1996,9 @@ Detail: ".$link['short'],
             foreach ($valueTrx as $keyProduct => $valueProduct) {
                 $quantity = $quantity + $valueProduct['transaction_product_qty'];
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_qty']              = $valueProduct['transaction_product_qty'];
-                $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_subtotal']         = MyHelper::requestNumber($valueProduct['transaction_product_subtotal'],'_CURRENCY');
-                $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_sub_item']         = '@'.MyHelper::requestNumber($valueProduct['transaction_product_subtotal'] / $valueProduct['transaction_product_qty'],'_CURRENCY');
-                $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_modifier_subtotal']        = MyHelper::requestNumber($valueProduct['transaction_modifier_subtotal'],'_CURRENCY');
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_subtotal']         = MyHelper::requestNumber($valueProduct['transaction_product_subtotal'], '_CURRENCY');
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_sub_item']         = '@' . MyHelper::requestNumber($valueProduct['transaction_product_subtotal'] / $valueProduct['transaction_product_qty'], '_CURRENCY');
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_modifier_subtotal']        = MyHelper::requestNumber($valueProduct['transaction_modifier_subtotal'], '_CURRENCY');
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_note']             = $valueProduct['transaction_product_note'];
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_discount']         = $valueProduct['transaction_product_discount'];
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_name']              = $valueProduct['product']['product_name'];
@@ -1994,7 +2006,7 @@ Detail: ".$link['short'],
                 foreach ($valueProduct['modifiers'] as $keyMod => $valueMod) {
                     $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][$keyMod]['product_modifier_name']   = $valueMod['text'];
                     $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][$keyMod]['product_modifier_qty']    = $valueMod['qty'];
-                    $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][$keyMod]['product_modifier_price']  = MyHelper::requestNumber($valueMod['transaction_product_modifier_price'],'_CURRENCY');
+                    $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][$keyMod]['product_modifier_price']  = MyHelper::requestNumber($valueMod['transaction_product_modifier_price'], '_CURRENCY');
                 }
             }
             $keynya++;
@@ -2003,14 +2015,14 @@ Detail: ".$link['short'],
         $result['payment_detail'][] = [
             'name'      => 'Subtotal',
             'desc'      => $quantity . ' items',
-            'amount'    => MyHelper::requestNumber($list['transaction_subtotal'],'_CURRENCY')
+            'amount'    => MyHelper::requestNumber($list['transaction_subtotal'], '_CURRENCY')
         ];
 
         if ($list['trasaction_payment_type'] != 'Offline' && $list['transaction_pickup_go_send']) {
             $result['payment_detail'][] = [
                 'name'      => 'Delivery',
                 'desc'      => $list['detail']['pickup_by'],
-                'amount'    => MyHelper::requestNumber($list['transaction_shipment_go_send'],'_CURRENCY')
+                'amount'    => MyHelper::requestNumber($list['transaction_shipment_go_send'], '_CURRENCY')
             ];
         }
 
@@ -2022,7 +2034,7 @@ Detail: ".$link['short'],
                     'name'          => 'Discount',
                     'desc'          => $valueVoc['deals_voucher']['voucher_code'],
                     "is_discount"   => 1,
-                    'amount'        => MyHelper::requestNumber($discount,'_CURRENCY')
+                    'amount'        => MyHelper::requestNumber($discount, '_CURRENCY')
                 ];
             }
         }
@@ -2033,12 +2045,12 @@ Detail: ".$link['short'],
                 'name'          => 'Discount',
                 'desc'          => $list['promo_campaign_promo_code']['promo_code'],
                 "is_discount"   => 1,
-                'amount'        => MyHelper::requestNumber($discount,'_CURRENCY')
+                'amount'        => MyHelper::requestNumber($discount, '_CURRENCY')
             ];
         }
 
         $result['promo']['discount'] = $discount;
-        $result['promo']['discount'] = MyHelper::requestNumber($discount,'_CURRENCY');
+        $result['promo']['discount'] = MyHelper::requestNumber($discount, '_CURRENCY');
 
         if ($list['trasaction_payment_type'] != 'Offline') {
             if ($list['transaction_payment_status'] == 'Cancelled') {
@@ -2046,8 +2058,7 @@ Detail: ".$link['short'],
                     'text'  => 'Pesanan Anda dibatalkan karena pembayaran gagal',
                     'date'  => $list['void_date']
                 ];
-            }
-            elseif ($list['transaction_payment_status'] == 'Pending') {
+            } elseif ($list['transaction_payment_status'] == 'Pending') {
                 $statusOrder[] = [
                     'text'  => 'Menunggu konfirmasi pembayaran',
                     'date'  => $list['transaction_date']
@@ -2057,7 +2068,7 @@ Detail: ".$link['short'],
                     $statusOrder[] = [
                         'text'  => 'Order rejected',
                         'date'  => $list['detail']['reject_at'],
-                        'reason'=> $list['detail']['reject_reason']
+                        'reason' => $list['detail']['reject_reason']
                     ];
                 }
                 if ($list['detail']['taken_by_system_at'] != null) {
@@ -2144,7 +2155,7 @@ Detail: ".$link['short'],
                 ];
             }
 
-            usort($statusOrder, function($a1, $a2) {
+            usort($statusOrder, function ($a1, $a2) {
                 $v1 = strtotime($a1['date']);
                 $v2 = strtotime($a2['date']);
                 return $v2 - $v1; // $v2 - $v1 to reverse direction
@@ -2165,13 +2176,13 @@ Detail: ".$link['short'],
             if ($value['name'] == 'Balance') {
                 $result['transaction_payment'][$key] = [
                     'name'      => (env('POINT_NAME')) ? env('POINT_NAME') : $value['name'],
-                    'is_balance'=> 1,
-                    'amount'    => MyHelper::requestNumber($value['amount'],'_POINT')
+                    'is_balance' => 1,
+                    'amount'    => MyHelper::requestNumber($value['amount'], '_POINT')
                 ];
             } else {
                 $result['transaction_payment'][$key] = [
                     'name'      => $value['name'],
-                    'amount'    => MyHelper::requestNumber($value['amount'],'_CURRENCY')
+                    'amount'    => MyHelper::requestNumber($value['amount'], '_CURRENCY')
                 ];
             }
         }
@@ -2181,7 +2192,8 @@ Detail: ".$link['short'],
         return $html;
     }
 
-    public function htmlDetailTrxSuccessV2($id){
+    public function htmlDetailTrxSuccessV2($id)
+    {
         $detail = app($this->transaction)->callTransactionDetail(new Request(['id_transaction' => $id, 'admin' => 1]));
         $html = view('transaction::email.detail_transaction_success_v2', ['detail' => $detail])->render();
         return $html;
@@ -2234,7 +2246,7 @@ Detail: ".$link['short'],
 
         $payment = [];
         if ($check['transaction_payment_type'] == 'Midtrans') {
-            $payment = TransactionPaymentMidtran::select('payment_type', 'gross_amount', 'transaction_status','bank')->where('id_transaction', $check['id_transaction'])->first();
+            $payment = TransactionPaymentMidtran::select('payment_type', 'gross_amount', 'transaction_status', 'bank')->where('id_transaction', $check['id_transaction'])->first();
 
             if (empty($payment)) {
                 return ['status' => 'fail', 'messages' => ['Payment not found']];
@@ -2274,7 +2286,7 @@ Detail: ".$link['short'],
         $requestformat['payments'] = array();
 
         $isinya = array();
-        $isinya['type'] = str_replace('_',' ', $check['payment']['payment_type']);
+        $isinya['type'] = str_replace('_', ' ', $check['payment']['payment_type']);
         $isinya['name'] = $check['payment']['bank'];
         $isinya['nominal'] = $check['payment']['gross_amount'];
 
@@ -2287,7 +2299,7 @@ Detail: ".$link['short'],
         $requestformat['grand_total'] = $check['transaction_grandtotal'];
         $requestformat['menu'] = array();
 
-        foreach($check['product'] as $prod){
+        foreach ($check['product'] as $prod) {
             $isinya = array();
             $isinya['plu_id'] = $prod['product_code'];
             $isinya['name'] = $prod['product_name'];
@@ -2303,7 +2315,7 @@ Detail: ".$link['short'],
 
         // return $requestformat;
 
-        $client = new Client;
+        $client = new Client();
         $params = array();
         $params['client_id'] = $this->oauth_id;
         $params['client_secret'] = $this->oauth_secret;
@@ -2319,34 +2331,33 @@ Detail: ".$link['short'],
             $response =  $client->request('POST', $this->url_oauth, $content);
 
             $res = json_decode($response->getBody(), true);
-        }
-        catch (\GuzzleHttp\Exception\RequestException $e) {
-            try{
-
-                if($e->getResponse()){
+        } catch (\GuzzleHttp\Exception\RequestException $e) {
+            try {
+                if ($e->getResponse()) {
                     $response = $e->getResponse()->getBody()->getContents();
 
                     $error = json_decode($response, true);
 
-                    if(!$error) {
+                    if (!$error) {
                         return $e->getResponse()->getBody();
                     } else {
                         return $error;
                     }
-                } else return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
-
-            } catch(Exception $e) {
+                } else {
+                    return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
+                }
+            } catch (Exception $e) {
                 return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
             }
         }
 
-        if($res){
-            $client = new Client;
+        if ($res) {
+            $client = new Client();
 
             $content = array(
                 'headers' => [
                     'Content-Type'  => 'application/json',
-                    'Authorization'  => $res['type'].' '.$res['token'],
+                    'Authorization'  => $res['type'] . ' ' . $res['token'],
                 ],
                 'json' => $requestformat
             );
@@ -2355,23 +2366,22 @@ Detail: ".$link['short'],
                 $response =  $client->request('POST', $this->url_kirim, $content);
 
                 return json_decode($response->getBody(), true);
-            }
-            catch (\GuzzleHttp\Exception\RequestException $e) {
-                try{
-
-                    if($e->getResponse()){
+            } catch (\GuzzleHttp\Exception\RequestException $e) {
+                try {
+                    if ($e->getResponse()) {
                         $response = $e->getResponse()->getBody()->getContents();
 
                         $error = json_decode($response, true);
 
-                        if(!$error) {
+                        if (!$error) {
                             return $e->getResponse()->getBody();
                         } else {
                             return $error;
                         }
-                    } else return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
-
-                } catch(Exception $e) {
+                    } else {
+                        return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
+                    }
+                } catch (Exception $e) {
                     return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
                 }
             }
@@ -2402,7 +2412,7 @@ Detail: ".$link['short'],
             unset($data['transaction_shipment']);
         }
 
-        $client = new Client;
+        $client = new Client();
         $content = array(
             'headers' => [
                 'Accept'        => 'application/json',
@@ -2414,23 +2424,22 @@ Detail: ".$link['short'],
         try {
             $response =  $client->request('POST', $this->url_kirim, $content);
             return json_decode($response->getBody(), true);
-        }
-        catch (\GuzzleHttp\Exception\RequestException $e) {
-            try{
-
-                if($e->getResponse()){
+        } catch (\GuzzleHttp\Exception\RequestException $e) {
+            try {
+                if ($e->getResponse()) {
                     $response = $e->getResponse()->getBody()->getContents();
 
                     $error = json_decode($response, true);
 
-                    if(!$error) {
+                    if (!$error) {
                         return $e->getResponse()->getBody();
                     } else {
                         return $error;
                     }
-                } else return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
-
-            } catch(Exception $e) {
+                } else {
+                    return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
+                }
+            } catch (Exception $e) {
                 return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
             }
         }

@@ -39,10 +39,11 @@ class FranchiseServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('franchise.php'),
+            __DIR__ . '/../Config/config.php' => config_path('franchise.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'franchise'
+            __DIR__ . '/../Config/config.php',
+            'franchise'
         );
     }
 
@@ -55,11 +56,11 @@ class FranchiseServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/franchise');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/franchise';
@@ -78,7 +79,7 @@ class FranchiseServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'franchise');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'franchise');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'franchise');
         }
     }
 

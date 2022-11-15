@@ -6,11 +6,9 @@ use App\Jobs\DisburseJob;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Lib\MyHelper;
 use App\Lib\Midtrans;
 use App\Lib\Membership;
-
 use App\Http\Models\User;
 use App\Http\Models\LogBalance;
 use App\Http\Models\LogTopup;
@@ -20,19 +18,17 @@ use App\Http\Models\Transaction;
 use App\Http\Models\LogTopupMidtrans;
 use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\TransactionMultiplePayment;
-
 use Modules\Balance\Http\Controllers\NewTopupController;
-
 use Modules\Deals\Http\Requests\Deals\Voucher;
 use Modules\Deals\Http\Requests\Claim\Paid;
-
 use Illuminate\Support\Facades\Schema;
 use DB;
 use Hash;
 
 class BalanceController extends Controller
 {
-    function __construct() {
+    public function __construct()
+    {
         date_default_timezone_set('Asia/Jakarta');
 
         $this->notif   = "Modules\Transaction\Http\Controllers\ApiNotification";
@@ -42,7 +38,7 @@ class BalanceController extends Controller
      * this function is created as a helper (for another controller),
      * not for api
     */
-    public function addLogBalance($id_user, $balance_nominal, $id_reference=null, $source=null, $grand_total=0)
+    public function addLogBalance($id_user, $balance_nominal, $id_reference = null, $source = null, $grand_total = 0)
     {
         $user = User::with('memberships')->where('id', $id_user)->first();
 
@@ -69,11 +65,11 @@ class BalanceController extends Controller
 
         DB::beginTransaction();
         $checkLog = LogBalance::where('source', $source)->where('id_reference', $id_reference)->where('id_user', $id_user)->first();
-        if($checkLog){
+        if ($checkLog) {
             $balance_before = $checkLog->balance_before;
-            if($balance_nominal == $checkLog->balance){
+            if ($balance_nominal == $checkLog->balance) {
                 $balance_after = $checkLog->balance_after;
-            }else{
+            } else {
                 $balance_after = $balance_before + $balance_nominal;
             }
         }
@@ -91,7 +87,7 @@ class BalanceController extends Controller
             'membership_cashback_percentage' => $cashback_percentage
         ];
 
-       $create = LogBalance::updateOrCreate(['id_user' => $id_user, 'id_reference' => $id_reference, 'source' => $source], $LogBalance);
+        $create = LogBalance::updateOrCreate(['id_user' => $id_user, 'id_reference' => $id_reference, 'source' => $source], $LogBalance);
 
         // get inserted data to hash
         $log_balance = LogBalance::find($create->id_log_balance);
@@ -132,19 +128,19 @@ class BalanceController extends Controller
     }
 
     /* REQUEST */
-    function requestCashBackBalance(Request $request)
+    public function requestCashBackBalance(Request $request)
     {
         $balance = $this->balance("add", $request->user()->id, null, 800, "Transaction", 50000);
     }
 
     /* REQUEST */
-    function requestTopUpBalance(Request $request)
+    public function requestTopUpBalance(Request $request)
     {
         return $this->topUp($request->user()->id, 1339800, 25);
     }
 
     /* REQUEST */
-    function requestPoint(Request $request)
+    public function requestPoint(Request $request)
     {
         // $point = CalculatePoint::calculate($request->user()->id);
         $point = Membership::calculate(null, '083847090002');
@@ -154,7 +150,8 @@ class BalanceController extends Controller
     }
 
     /* ADD BALANCE */
-    function balance($type, $id_user, $id_reference=null, $balance, $source=null, $grandTotal) {
+    public function balance($type, $id_user, $id_reference = null, $balance = null, $source = null, $grandTotal = 0)
+    {
 
         $data['id_user']                                = $id_user;
         $data['balance']                                = $balance;
@@ -182,26 +179,30 @@ class BalanceController extends Controller
     }
 
     /* BALANCE NOW */
-    function balanceNow($id_user) {
+    public function balanceNow($id_user)
+    {
         return LogBalance::where('id_user', $id_user)->sum('balance');
     }
 
     /* CHECK MEMBERSHIP*/
-    function getMembershipDetail($id_user) {
+    public function getMembershipDetail($id_user)
+    {
         $member = UsersMembership::where('id_user', $id_user)->with(['membership'])->first();
 
         return $member;
     }
 
     /* SETTING */
-    function getSetting($key) {
+    public function getSetting($key)
+    {
         $setting = Setting::where('key', $key)->first();
 
         return $setting;
     }
 
     /* TOPUP */
-    function topUp($id_user, $grandTotal, $idTrx=null, $addNominal=null) {
+    public function topUp($id_user, $grandTotal, $idTrx = null, $addNominal = null)
+    {
         $data = [];
         $data['id_user'] = $id_user;
 
@@ -218,7 +219,6 @@ class BalanceController extends Controller
         }
 
         if ($data['balance_before'] >= $grandTotal) {
-
             if (!is_null($idTrx)) {
                 $dataTrx = Transaction::where('id_transaction', $idTrx)->with('outlet')->first();
                 if (empty($dataTrx)) {
@@ -352,7 +352,8 @@ class BalanceController extends Controller
     }
 
     /* HIT MITRANDS */
-    function midtrans($saveTopUp) {
+    public function midtrans($saveTopUp)
+    {
         $check = Transaction::where('id_transaction', $saveTopUp['transaction_reference'])->first();
         $tembakMitrans = Midtrans::token($check['transaction_receipt_number'], $saveTopUp['topup_value']);
 
@@ -371,7 +372,8 @@ class BalanceController extends Controller
     }
 
     /* SAVE LOG MIDTRANS TOPUP */
-    function saveMidtransTopUp($saveTopUp) {
+    public function saveMidtransTopUp($saveTopUp)
+    {
         $trx = Transaction::where('id_transaction', $saveTopUp->transaction_reference)->first();
 
         if ($trx) {
@@ -388,7 +390,8 @@ class BalanceController extends Controller
     }
 
     /* ADD TOPUP TO BALANCE */
-    function addTopupToBalance($id_log_topup) {
+    public function addTopupToBalance($id_log_topup)
+    {
         $dataTopUp = LogTopup::where('id_log_topup', $id_log_topup)->first();
 
         if ($dataTopUp) {
@@ -423,32 +426,32 @@ class BalanceController extends Controller
 
         $transactions = Transaction::where('id_transaction_group', $dataTrx['id_transaction_group'])->get()->toArray();
         $totalTrx = count($transactions);
-        $splitPoint = 100/$totalTrx;
+        $splitPoint = 100 / $totalTrx;
         $splitPoint = (int) $splitPoint;
         if ($current_balance >= $grandTotal) {
             $lastPoint = $grandTotal;
-        }else{
+        } else {
             $lastPoint = $current_balance;
         }
 
-        foreach ($transactions as $key=>$t){
-            $index = $key+1;
+        foreach ($transactions as $key => $t) {
+            $index = $key + 1;
 
-            if($totalTrx == $index){
+            if ($totalTrx == $index) {
                 $paymentPoint = $lastPoint;
-            }else{
-                $calculate = ($splitPoint/100) * $grandTotal;
+            } else {
+                $calculate = ($splitPoint / 100) * $grandTotal;
                 $calculate = (int) $calculate;
-                if($calculate > $t['transaction_grandtotal']){
+                if ($calculate > $t['transaction_grandtotal']) {
                     $paymentPoint = $t['transaction_grandtotal'];
-                }else{
+                } else {
                     $paymentPoint = $calculate;
                 }
 
                 $lastPoint = $lastPoint - $paymentPoint;
             }
 
-            if($paymentPoint > 0){
+            if ($paymentPoint > 0) {
                 $dataPaymentBalanceTrx = [
                     'id_transaction'  => $t['id_transaction'],
                     'balance_nominal' => $paymentPoint

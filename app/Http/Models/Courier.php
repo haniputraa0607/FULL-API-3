@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class Courier
- * 
+ *
  * @property int $id_courier
  * @property string $short_name
  * @property string $name
@@ -24,13 +24,13 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Courier extends Model
 {
-	protected $table = 'courier';
-	protected $primaryKey = 'id_courier';
+    protected $table = 'courier';
+    protected $primaryKey = 'id_courier';
 
-	protected $fillable = [
-		'short_name',
-		'name',
-		'status',
-		'courier_type'
-	];
+    protected $fillable = [
+        'short_name',
+        'name',
+        'status',
+        'courier_type'
+    ];
 }

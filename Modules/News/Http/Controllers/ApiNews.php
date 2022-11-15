@@ -9,11 +9,9 @@ use App\Http\Models\NewsFormDataDetail;
 use App\Http\Models\NewsOutlet;
 use App\Http\Models\NewsProduct;
 use App\Http\Models\Configs;
-
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Lib\MyHelper;
 use Validator;
 use Hash;
@@ -21,7 +19,6 @@ use DB;
 use Mail;
 use File;
 use Auth;
-
 use Modules\News\Http\Requests\Create;
 use Modules\News\Http\Requests\Update;
 use Modules\News\Http\Requests\CreateRelation;
@@ -29,7 +26,7 @@ use Modules\News\Http\Requests\DeleteRelation;
 
 class ApiNews extends Controller
 {
-    function __construct()
+    public function __construct()
     {
         date_default_timezone_set('Asia/Jakarta');
         $this->autocrm = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
@@ -39,7 +36,7 @@ class ApiNews extends Controller
     public $endPoint  = "http://localhost/crmsys-api/public/";
 
     /* Cek inputan */
-    function cekInputan($post = [])
+    public function cekInputan($post = [])
     {
 
         $data = [];
@@ -60,13 +57,13 @@ class ApiNews extends Controller
 
         if (isset($post['news_content_short'])) {
             $data['news_content_short'] = $post['news_content_short'];
-        }else{
+        } else {
             $data['news_content_short'] = ' ';
         }
 
         if (isset($post['news_content_long'])) {
             $data['news_content_long'] = $post['news_content_long'];
-        }else{
+        } else {
             $data['news_content_long'] = ' ';
         }
 
@@ -226,7 +223,7 @@ class ApiNews extends Controller
 
         if (!empty($post['news_by'])) {
             $data['news_by'] = $post['news_by'];
-        }else{
+        } else {
             $data['news_by'] = " ";
         }
 
@@ -252,7 +249,7 @@ class ApiNews extends Controller
     }
 
     /* Create News */
-    function create(Create $request)
+    public function create(Create $request)
     {
         // data news
         $post = $request->json()->all();
@@ -304,10 +301,11 @@ class ApiNews extends Controller
                     $dataForm = [];
                     $dataForm['id_news'] = $save->id_news;
                     $dataForm['form_input_types'] = $form['form_input_types'];
-                    if ($form['form_input_options'] != "")
+                    if ($form['form_input_options'] != "") {
                         $dataForm['form_input_options'] = $form['form_input_options'];
-                    else
+                    } else {
                         $dataForm['form_input_options'] = null;
+                    }
 
                     $dataForm['form_input_label'] = $form['form_input_label'];
                     $dataForm['form_input_autofill'] = $form['form_input_autofill'];
@@ -347,7 +345,7 @@ class ApiNews extends Controller
     }
 
     /* Upadate News */
-    function update(Update $request)
+    public function update(Update $request)
     {
         // info news
         $post = $request->json()->all();
@@ -417,10 +415,11 @@ class ApiNews extends Controller
                     $dataForm = [];
                     $dataForm['id_news'] = $request->json('id_news');
                     $dataForm['form_input_types'] = $form['form_input_types'];
-                    if ($form['form_input_options'] != "")
+                    if ($form['form_input_options'] != "") {
                         $dataForm['form_input_options'] = $form['form_input_options'];
-                    else
+                    } else {
                         $dataForm['form_input_options'] = null;
+                    }
                     $dataForm['form_input_label'] = $form['form_input_label'];
                     $dataForm['form_input_autofill'] = $form['form_input_autofill'];
                     $dataForm['is_required'] = $form['is_required'];
@@ -451,12 +450,13 @@ class ApiNews extends Controller
     }
 
     /* Cek Slug when update */
-    function cekSlug($id_news = null, $slug)
+    public function cekSlug($id_news = null, $slug = null)
     {
-        if ($id_news == "")
+        if ($id_news == "") {
             $cek = News::where('news_slug', $slug)->first();
-        else
+        } else {
             $cek = News::where('news_slug', $slug)->select('id_news')->first();
+        }
 
         if (empty($cek)) {
             return true;
@@ -470,7 +470,7 @@ class ApiNews extends Controller
     }
 
     /* Delete News */
-    function delete(Request $request)
+    public function delete(Request $request)
     {
         // info news
         $dataNews = News::where('id_news', $request->json('id_news'))->get()->toArray();
@@ -493,7 +493,7 @@ class ApiNews extends Controller
     }
 
     /* Delete news di berbagai table */
-    function deleteRelationTable($id_news)
+    public function deleteRelationTable($id_news)
     {
         $table = ['news_outlets', 'news_products', 'news_form_structures', 'news_form_datas', 'news_form_data_details'];
 
@@ -505,7 +505,7 @@ class ApiNews extends Controller
     }
 
     /* Create Relasi Outlet Product */
-    function createRelation(CreateRelation $request)
+    public function createRelation(CreateRelation $request)
     {
 
         $data['id_news'] = $request->json('id_news');
@@ -539,7 +539,7 @@ class ApiNews extends Controller
     }
 
     /* Delete Relasi Outlet */
-    function deleteRelation(DeleteRelation $request)
+    public function deleteRelation(DeleteRelation $request)
     {
         $post = $request->json()->all();
 
@@ -566,7 +566,7 @@ class ApiNews extends Controller
     }
 
     /* List */
-    function listNews(Request $request)
+    public function listNews(Request $request)
     {
         $post = $request->json()->all();
 
@@ -610,7 +610,6 @@ class ApiNews extends Controller
             $news = $news
                 ->select('*')->orderBy('news_post_date', 'DESC')->get()->toArray();
         } else {
-
             if (!isset($post['id_news'])) {
                 $news = $news->orderBy('news_category_order', 'asc')->orderBy('news_order', 'asc')->orderBy('news_post_date', 'DESC')->orderBy('id_news', 'DESC')->paginate(10)->toArray();
             } else {
@@ -632,7 +631,7 @@ class ApiNews extends Controller
         return response()->json(MyHelper::checkGet($news));
     }
 
-    function webview(Request $request)
+    public function webview(Request $request)
     {
         $post = $request->json()->all();
 
@@ -837,9 +836,14 @@ class ApiNews extends Controller
         return response()->json(MyHelper::checkGet($data));
     }
 
-    public function positionListNews(){
-        $data = News::with('category')->select('news.id_news', 'news.id_news_category', 'news.news_title',
-            'news.news_order')
+    public function positionListNews()
+    {
+        $data = News::with('category')->select(
+            'news.id_news',
+            'news.id_news_category',
+            'news.news_title',
+            'news.news_order'
+        )
             ->orderBy('news_order', 'asc')
             ->orderBy('news_post_date', 'DESC')
             ->orderBy('id_news', 'DESC')
@@ -859,21 +863,22 @@ class ApiNews extends Controller
         }
         // update position
         foreach ($post['news_ids'] as $key => $news_id) {
-            $update = News::find($news_id)->update(['news_order'=>$key+1]);
+            $update = News::find($news_id)->update(['news_order' => $key + 1]);
         }
 
         return ['status' => 'success'];
     }
 
-    public function featured(Request $request){
+    public function featured(Request $request)
+    {
         $post = $request->json()->all();
 
-        if(empty($post)){
+        if (empty($post)) {
             $now = date('Y-m-d');
             $res['video'] = News::whereDate('news_publish_date', '<=', $now)->where(function ($query) use ($now) {
                         $query->whereDate('news_expired_date', '>=', $now)
                             ->orWhere('news_expired_date', null);
-                    })->where('news_type', 'video')->select('id_news', 'news_title', 'news_featured_status')->get()->toArray();
+            })->where('news_type', 'video')->select('id_news', 'news_title', 'news_featured_status')->get()->toArray();
 
             $res['article'] = News::whereDate('news_publish_date', '<=', $now)->where(function ($query) use ($now) {
                 $query->whereDate('news_expired_date', '>=', $now)
@@ -886,9 +891,9 @@ class ApiNews extends Controller
             })->where('news_type', 'online_class')->select('id_news', 'news_title', 'news_featured_status')->get()->toArray();
 
             return response()->json(MyHelper::checkGet($res));
-        }else{
+        } else {
             News::where('news_featured_status', 1)->update(['news_featured_status' => 0]);
-            $merged = array_merge($post['video']??[], $post['article']??[], $post['online_class']??[]);
+            $merged = array_merge($post['video'] ?? [], $post['article'] ?? [], $post['online_class'] ?? []);
             $update = News::whereIn('id_news', $merged)->update(['news_featured_status' => 1]);
 
             return response()->json(MyHelper::checkUpdate($update));

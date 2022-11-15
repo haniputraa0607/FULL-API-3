@@ -5,10 +5,8 @@ namespace Modules\Setting\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Http\Models\Banner;
 use App\Lib\MyHelper;
-
 use DB;
 
 class ApiBanner extends Controller
@@ -26,7 +24,7 @@ class ApiBanner extends Controller
 
         // add full url to collection
         $banners = $banners->map(function ($banner, $key) {
-            $banner->image_url = config('url.storage_url_api').$banner->image;
+            $banner->image_url = config('url.storage_url_api') . $banner->image;
             return $banner;
         });
         $banners->all();
@@ -67,7 +65,7 @@ class ApiBanner extends Controller
         DB::beginTransaction();
         foreach ($post['id_banners'] as $key => $id_banner) {
             // reorder
-            $update = Banner::find($id_banner)->update(['position' => $key+1]);
+            $update = Banner::find($id_banner)->update(['position' => $key + 1]);
 
             if (!$update) {
                 DB:: rollback();
@@ -95,7 +93,7 @@ class ApiBanner extends Controller
         if (isset($post['image'])) {
             // check folder
             $path = "img/banner/";
-            if(!file_exists($path)){
+            if (!file_exists($path)) {
                 mkdir($path, 0777, true);
             }
 
@@ -104,8 +102,7 @@ class ApiBanner extends Controller
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $post['image'] = $upload['path'];
-            }
-            else {
+            } else {
                 $result = [
                     'status'   => 'fail',
                     'messages' => ['Failed to upload image']
@@ -117,7 +114,7 @@ class ApiBanner extends Controller
             $delete = MyHelper::deletePhoto($banner->image);
         }
 
-        $deep_url = config('url.app_url').'outlet/webview/gofood/list';
+        $deep_url = config('url.app_url') . 'outlet/webview/gofood/list';
 
         if ($post['type'] == 'gofood') {
             $post['url'] = $deep_url;

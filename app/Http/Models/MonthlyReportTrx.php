@@ -6,10 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class MonthlyReportTrx extends Model
 {
-	protected $connection = 'mysql';
+    protected $connection = 'mysql';
     /**
      * The table associated with the model.
-     * 
+     *
      * @var string
      */
     protected $table = 'monthly_report_trx';
@@ -50,8 +50,8 @@ class MonthlyReportTrx extends Model
         'cust_old',
         'trx_total_item'
     ];
-	
-	/**
+
+    /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function outlet()

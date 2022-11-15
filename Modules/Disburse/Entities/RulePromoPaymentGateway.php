@@ -7,14 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 class RulePromoPaymentGateway extends Model
 {
     protected $table = 'rule_promo_payment_gateway';
-	protected $primaryKey = 'id_rule_promo_payment_gateway';
+    protected $primaryKey = 'id_rule_promo_payment_gateway';
 
-	protected $fillable = [
-	    'promo_payment_gateway_code',
-	    'name',
-	    'payment_gateway',
+    protected $fillable = [
+        'promo_payment_gateway_code',
+        'name',
+        'payment_gateway',
         'operator_brand',
-		'start_date',
+        'start_date',
         'end_date',
         'maximum_total_cashback',
         'limit_promo_total',
@@ -37,5 +37,5 @@ class RulePromoPaymentGateway extends Model
         'start_status',
         'validation_status',
         'last_updated_by'
-	];
+    ];
 }

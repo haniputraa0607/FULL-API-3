@@ -15,7 +15,10 @@ use  Modules\Franchise\Entities\UserFranchiseOultet;
 
 class SyncOutletSeed implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     protected $data;
     /**
@@ -51,13 +54,13 @@ class SyncOutletSeed implements ShouldQueue
 
 
             $cekOutlet = Outlet::where('id_outlet_seed', $value['id'])->first();
-            if($cekOutlet){
+            if ($cekOutlet) {
                 $updateOutlet = Outlet::where('id_outlet_seed', $value['id'])->update($data);
                 $id_outlet = $cekOutlet;
-            }else{
+            } else {
                 //for new outlet get name & status inactive
                 $data['outlet_status'] = 'Inactive';
-                $data['outlet_name'] = ($value['id'] == 0) ? $value['name'] : 'Jilid '.ltrim(substr($explodeName[0],-4), '0').' '.end($explodeName);
+                $data['outlet_name'] = ($value['id'] == 0) ? $value['name'] : 'Jilid ' . ltrim(substr($explodeName[0], -4), '0') . ' ' . end($explodeName);
                 $id_outlet = Outlet::create($data);
             }
 
@@ -72,7 +75,7 @@ class SyncOutletSeed implements ShouldQueue
             UserFranchiseOultet::updateOrCreate([
                 'id_outlet'                 => $id_outlet->id_outlet,
                 'id_user_franchise'         => $id_user_franchise->id_user_franchise
-            ],[
+            ], [
                 'id_outlet'                 => $id_outlet->id_outlet,
                 'id_user_franchise'         => $id_user_franchise->id_user_franchise,
                 'status_franchise'          => $value['status_franchise']
@@ -80,11 +83,11 @@ class SyncOutletSeed implements ShouldQueue
 
             //create schedule for new outlet
             $schedule = OutletSchedule::where('id_outlet', $id_outlet->id_outlet)->first();
-            if(empty($schedule)){
+            if (empty($schedule)) {
                 $dataSchedule = [];
                 $now = date('Y-m-d H:i:s');
                 $days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-                foreach($days as $day){
+                foreach ($days as $day) {
                     $dataSchedule[] = [
                         'id_outlet'     => $id_outlet->id_outlet,
                         'day'           => $day,

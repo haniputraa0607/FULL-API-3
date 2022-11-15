@@ -11,6 +11,6 @@
 |
 */
 
-Route::prefix('doctor')->group(function() {
+Route::prefix('doctor')->group(function () {
     Route::get('/', 'DoctorController@index');
 });

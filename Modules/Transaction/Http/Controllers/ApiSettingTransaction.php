@@ -5,26 +5,26 @@ namespace Modules\Transaction\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Http\Models\Setting;
 use App\Http\Models\Product;
 use App\Http\Models\ProductPrice;
 use App\Http\Models\Outlet;
 use App\Lib\MyHelper;
-
 use DB;
 use Image;
 use Modules\Disburse\Entities\BankName;
 
 class ApiSettingTransaction extends Controller
 {
-    function __construct() {
+    public function __construct()
+    {
         ini_set('max_execution_time', 0);
         date_default_timezone_set('Asia/Jakarta');
         $this->setting_trx   = "Modules\Transaction\Http\Controllers\ApiSettingTransactionV2";
     }
 
-    public function settingTrx(Request $request) {
+    public function settingTrx(Request $request)
+    {
         $post = $request->json()->all();
         $outlet = Outlet::where('id_outlet', $post['id_outlet'])->first();
         if (empty($outlet)) {
@@ -47,8 +47,8 @@ class ApiSettingTransaction extends Controller
         $count = $this->count($post);
         $order = Setting::where('key', 'transaction_grand_total_order')->value('value');
         $exp   = explode(',', $order);
-        
-        for ($i=0; $i < count($exp); $i++) { 
+
+        for ($i = 0; $i < count($exp); $i++) {
             if (substr($exp[$i], 0, 5) == 'empty') {
                 unset($exp[$i]);
                 continue;
@@ -139,14 +139,15 @@ class ApiSettingTransaction extends Controller
         }
 
         array_values($result);
-        
+
         return response()->json([
             'status' => 'success',
             'result' => $result
         ]);
     }
 
-    function count($post) {
+    public function count($post)
+    {
         $grandTotal = app($this->setting_trx)->grandTotal();
 
         foreach ($grandTotal as $keyTotal => $valueTotal) {
@@ -160,7 +161,7 @@ class ApiSettingTransaction extends Controller
 
                         if ($post['sub']->original['messages'] == ['Price Product Not Found']) {
                             if (isset($post['sub']->original['product'])) {
-                                $mes = ['Price Product Not Found with product '.$post['sub']->original['product'].' at outlet '.$outlet['outlet_name']];
+                                $mes = ['Price Product Not Found with product ' . $post['sub']->original['product'] . ' at outlet ' . $outlet['outlet_name']];
                             }
                         }
                     }
@@ -183,7 +184,7 @@ class ApiSettingTransaction extends Controller
 
                     if ($post['sub']->original['messages'] == ['Price Product Not Found']) {
                         if (isset($post['sub']->original['product'])) {
-                            $mes = ['Price Product Not Found with product '.$post['sub']->original['product'].' at outlet '.$outlet['outlet_name']];
+                            $mes = ['Price Product Not Found with product ' . $post['sub']->original['product'] . ' at outlet ' . $outlet['outlet_name']];
                         }
                     }
 
@@ -209,58 +210,60 @@ class ApiSettingTransaction extends Controller
      */
     public function ccPayment(Request $request)
     {
-        $pg = Setting::select('value')->where('key','credit_card_payment_gateway')->pluck('value')->first()?:'Ipay88';
+        $pg = Setting::select('value')->where('key', 'credit_card_payment_gateway')->pluck('value')->first() ?: 'Ipay88';
         return MyHelper::checkGet($pg);
     }
 
-    public function packageDetailDelivery(Request $request){
+    public function packageDetailDelivery(Request $request)
+    {
         $post = $request->json()->all();
 
-        if(empty($post)){
-            $setting_dimension = (array)json_decode(Setting::where('key', 'package_detail_delivery')->first()->value_text??null);
+        if (empty($post)) {
+            $setting_dimension = (array)json_decode(Setting::where('key', 'package_detail_delivery')->first()->value_text ?? null);
             return response()->json(MyHelper::checkGet($setting_dimension));
-        }else{
+        } else {
             $dimension = [
-                'package_name' => $post['package_name']??"",
-                'package_description' => $post['package_description']??"",
-                'length' => str_replace('.',"",$post['length'])??0,
-                'width' => str_replace('.',"",$post['width'])??0,
-                'height' => str_replace('.',"",$post['height'])??0,
-                'weight' => str_replace('.',"",$post['weight'])??0
+                'package_name' => $post['package_name'] ?? "",
+                'package_description' => $post['package_description'] ?? "",
+                'length' => str_replace('.', "", $post['length']) ?? 0,
+                'width' => str_replace('.', "", $post['width']) ?? 0,
+                'height' => str_replace('.', "", $post['height']) ?? 0,
+                'weight' => str_replace('.', "", $post['weight']) ?? 0
             ];
             $update = Setting::updateOrCreate(['key' => 'package_detail_delivery'], ['value_text' => json_encode($dimension)]);
             return response()->json(MyHelper::checkUpdate($update));
         }
     }
 
-    public function imageDelivery(Request $request){
+    public function imageDelivery(Request $request)
+    {
         $post = $request->json()->all();
 
-        if(empty($post)){
+        if (empty($post)) {
             $setting  = json_decode(MyHelper::setting('available_delivery', 'value_text', '[]'), true) ?? [];
-            $default_image = Setting::where('key', 'default_image_delivery')->first()->value??null;
+            $default_image = Setting::where('key', 'default_image_delivery')->first()->value ?? null;
             $delivery = [];
 
             foreach ($setting as $value) {
-                if($value['show_status'] == 1){
-                    if(!empty($value['logo'])){
-                        $value['logo'] = config('url.storage_url_api').$value['logo'];
+                if ($value['show_status'] == 1) {
+                    if (!empty($value['logo'])) {
+                        $value['logo'] = config('url.storage_url_api') . $value['logo'];
                     }
                     $delivery[] = $value;
                 }
             }
 
-            usort($delivery, function($a, $b) {
+            usort($delivery, function ($a, $b) {
                 return $a['position'] - $b['position'];
             });
 
             $result = [
-                'default_image_delivery' => (!empty($default_image) ? config('url.storage_url_api').$default_image:null),
+                'default_image_delivery' => (!empty($default_image) ? config('url.storage_url_api') . $default_image : null),
                 'delivery' => $delivery
             ];
             return response()->json(MyHelper::checkGet($result));
-        }else{
-            if(!empty($post['image_default'])){
+        } else {
+            if (!empty($post['image_default'])) {
                 $decoded = base64_decode($post['image_default']);
                 $img    = Image::make($decoded);
                 $width  = $img->width();
@@ -274,7 +277,7 @@ class ApiSettingTransaction extends Controller
             }
 
             $setting  = json_decode(MyHelper::setting('available_delivery', 'value_text', '[]'), true) ?? [];
-            foreach ($post['images']??[] as $key=>$image){
+            foreach ($post['images'] ?? [] as $key => $image) {
                 $decoded = base64_decode($image);
                 $img    = Image::make($decoded);
                 $width  = $img->width();
@@ -284,7 +287,7 @@ class ApiSettingTransaction extends Controller
 
                 if ($upload['status'] == "success") {
                     $check = array_search($key, array_column($setting, 'code'));
-                    if($check !== false){
+                    if ($check !== false) {
                         $setting[$check]['logo'] = $upload['path'];
                     }
                 }
@@ -296,7 +299,8 @@ class ApiSettingTransaction extends Controller
         }
     }
 
-    public function settingMdr(Request $request){
+    public function settingMdr(Request $request)
+    {
         $post = $request->all();
 
         Setting::updateOrCreate(['key' => 'mdr_charged'], ['value' => $post['mdr_charged']]);
@@ -305,11 +309,12 @@ class ApiSettingTransaction extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
 
-    public function settingWithdrawal(Request $request){
+    public function settingWithdrawal(Request $request)
+    {
         $post = $request->all();
 
         Setting::updateOrCreate(['key' => 'withdrawal_fee_global'], ['value' => $post['withdrawal_fee_global']]);
-        foreach ($post['data'] as $key=>$value){
+        foreach ($post['data'] as $key => $value) {
             $update = BankName::where('id_bank_name', $key)->update(['withdrawal_fee_formula' => $value['value']]);
         }
 

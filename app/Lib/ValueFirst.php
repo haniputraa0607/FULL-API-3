@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Lib;
 
 use App\Http\Models\Setting;
@@ -76,7 +77,7 @@ class ValueFirst
                     [
                         '@UDH'      => '0',
                         '@CODING'   => '1',
-                        '@TEXT'     => urlencode(str_replace(['\r', '\n'],["\r", "\n"],$data['text'])),
+                        '@TEXT'     => urlencode(str_replace(['\r', '\n'], ["\r", "\n"], $data['text'])),
                         '@PROPERTY' => '0',
                         '@ID'       => '1',
                         'ADDRESS'   => [
@@ -90,7 +91,7 @@ class ValueFirst
                 ],
             ];
             $checkSetting = Setting::where('key', 'valuefirst_token')->first();
-            $token = 'Bearer '.$checkSetting['value_text']??'';
+            $token = 'Bearer ' . $checkSetting['value_text'] ?? '';
             $res = MyHelper::postWithTimeout($this->json_endpoint, $token, $sendData);
             $log = [
                 'request_body' => $sendData,
@@ -99,8 +100,8 @@ class ValueFirst
                 'phone'        => $data['to'],
             ];
             MyHelper::logApiSMS($log);
-            if (!($res['response']['MESSAGEACK']['GUID']??false) || ($res['response']['MESSAGEACK']['ERROR']??false)) {
-            	return false;
+            if (!($res['response']['MESSAGEACK']['GUID'] ?? false) || ($res['response']['MESSAGEACK']['ERROR'] ?? false)) {
+                return false;
             }
             return true;
         } else {
@@ -120,7 +121,7 @@ class ValueFirst
 
     /**
      * Validate given parameter, and add more env based parameter
-     * @param  Array    $data   ['to'=> '08xxxxxxxxxx', 'text'=> 'Hello world'], passed as reference, directly updated 
+     * @param  Array    $data   ['to'=> '08xxxxxxxxxx', 'text'=> 'Hello world'], passed as reference, directly updated
      * @return Boolean          True/False
      */
     public function validate(&$data)
@@ -131,12 +132,12 @@ class ValueFirst
         if (!($data['text'] ?? false)) {
             return false;
         }
-        if(substr($data['to'], 0, 1) == '0'){
-            $phone = '62'.substr($data['to'],1);
-        }else{
+        if (substr($data['to'], 0, 1) == '0') {
+            $phone = '62' . substr($data['to'], 1);
+        } else {
             $phone = $data['to'];
         }
-        $data['to'] 	 = $phone;
+        $data['to']      = $phone;
         $data['from']    = $this->masking_number ?? 'VFIRST';
         $data['dir-url'] = $this->dir_url;
         $data['udh']     = 0;
@@ -145,23 +146,24 @@ class ValueFirst
 
     public function sendBulk($data)
     {
-        $x = array_column(MyHelper::csvToArray($data['file'],true), 0);
+        $x = array_column(MyHelper::csvToArray($data['file'], true), 0);
         foreach ($x as $phone) {
             if (!$phone) {
                 continue;
             }
             print "Sending to $phone...";
             $result = $this->send(['to' => $phone, 'text' => 'Sistem SMS OTP telah kembali normal, mohon maaf atas ketidaknyamanannya. Silakan coba register kembali.']);
-            print " ".$result?"SUCCESS\n":"FAIL\n";
+            print " " . $result ? "SUCCESS\n" : "FAIL\n";
         }
     }
 
-    public function generateToken($old_token){
+    public function generateToken($old_token)
+    {
         $apikey = $this->apikey;
         $url = 'https://api.myvaluefirst.com/psms/api/messages/token?action=generate';
         $jsonBody = json_encode([]);
 
-        if(!empty($old_token)){
+        if (!empty($old_token)) {
             $jsonBody = json_encode([
                 'old_token' => $old_token
             ]);
@@ -178,20 +180,18 @@ class ValueFirst
             $output = $client->request('POST', $url, ['body' => $jsonBody]);
             $output = json_decode($output->getBody(), true);
             return $output;
-        }catch (\GuzzleHttp\Exception\RequestException $e) {
-            try{
-                if($e->getResponse()){
+        } catch (\GuzzleHttp\Exception\RequestException $e) {
+            try {
+                if ($e->getResponse()) {
                     $response = $e->getResponse()->getBody()->getContents();
                     return ['status' => 'fail', 'response' => json_decode($response, true)];
                 }
                 return ['status' => 'fail', 'response' => ['Check your internet connection.']];
-            }
-            catch(Exception $e){
+            } catch (Exception $e) {
                 return ['status' => 'fail', 'response' => ['Check your internet connection.']];
             }
         }
 
         return 'success';
     }
-
 }

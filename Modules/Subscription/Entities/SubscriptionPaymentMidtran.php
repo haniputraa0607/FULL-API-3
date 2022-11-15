@@ -11,7 +11,7 @@ use Reliese\Database\Eloquent\Model as Eloquent;
 
 /**
  * Class SubscriptionPaymentMidtran
- * 
+ *
  * @property int $id_subscription_payment
  * @property int $id_subscription
  * @property string $masked_card
@@ -30,40 +30,40 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  * @property string $status_message
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
- * 
+ *
  * @property \Modules\Subscription\Entities\Subscription $subscription
  *
  * @package Modules\Subscription\Entities
  */
 class SubscriptionPaymentMidtran extends Eloquent
 {
-	protected $primaryKey = 'id_subscription_payment';
+    protected $primaryKey = 'id_subscription_payment';
 
-	protected $casts = [
-		'id_subscription' => 'int'
-	];
+    protected $casts = [
+        'id_subscription' => 'int'
+    ];
 
-	protected $fillable = [
-		'id_subscription',
-		'id_subscription_user',
-		'masked_card',
-		'approval_code',
-		'bank',
-		'eci',
-		'transaction_time',
-		'gross_amount',
-		'order_id',
-		'payment_type',
-		'signature_key',
-		'status_code',
-		'vt_transaction_id',
-		'transaction_status',
-		'fraud_status',
-		'status_message'
-	];
+    protected $fillable = [
+        'id_subscription',
+        'id_subscription_user',
+        'masked_card',
+        'approval_code',
+        'bank',
+        'eci',
+        'transaction_time',
+        'gross_amount',
+        'order_id',
+        'payment_type',
+        'signature_key',
+        'status_code',
+        'vt_transaction_id',
+        'transaction_status',
+        'fraud_status',
+        'status_message'
+    ];
 
-	public function subscription()
-	{
-		return $this->belongsTo(\Modules\Subscription\Entities\Subscription::class, 'id_subscription');
-	}
+    public function subscription()
+    {
+        return $this->belongsTo(\Modules\Subscription\Entities\Subscription::class, 'id_subscription');
+    }
 }

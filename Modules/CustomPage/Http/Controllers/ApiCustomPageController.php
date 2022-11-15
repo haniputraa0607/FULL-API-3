@@ -5,7 +5,6 @@ namespace Modules\CustomPage\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use Modules\CustomPage\Entities\CustomPage;
 use Modules\CustomPage\Entities\CustomPageImage;
 use Modules\CustomPage\Entities\CustomPageOutlet;
@@ -15,7 +14,7 @@ use DB;
 
 class ApiCustomPageController extends Controller
 {
-    function __construct()
+    public function __construct()
     {
         date_default_timezone_set('Asia/Jakarta');
     }

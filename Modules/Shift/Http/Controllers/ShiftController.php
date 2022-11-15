@@ -12,17 +12,18 @@ use Modules\Shift\Entities\UserOutletApp;
 
 class ShiftController extends Controller
 {
-    public function index(Request $request){
+    public function index(Request $request)
+    {
         $post = $request->json()->all();
 
         $data_shift = Shift::with([
-                'outlet' => function($query){
-                    $query->select('id_outlet','outlet_code', 'outlet_name');
+                'outlet' => function ($query) {
+                    $query->select('id_outlet', 'outlet_code', 'outlet_name');
                 },
                 'user_outletapp'
             ]);
-  
-        if(!empty($post)){
+
+        if (!empty($post)) {
             /* Jika user melakukan filter data Shift */
 
             if (isset($post['shift_start_date'])  && isset($post['shift_end_date'])) {
@@ -50,10 +51,10 @@ class ShiftController extends Controller
             }
 
 
-            if(isset($post['difference_status'])){
-                if($post['difference_status'] == 0){
+            if (isset($post['difference_status'])) {
+                if ($post['difference_status'] == 0) {
                     $data_shift = $data_shift->whereRaw('cash_end - cash_start = 0');
-                }else{
+                } else {
                     $data_shift = $data_shift->whereRaw('cash_end - cash_start > 0')->orWhereRaw('cash_end - cash_start < 0');
                 }
             }
@@ -61,7 +62,4 @@ class ShiftController extends Controller
 
         return response()->json(MyHelper::checkGet($data_shift->get()));
     }
-
-
-
 }

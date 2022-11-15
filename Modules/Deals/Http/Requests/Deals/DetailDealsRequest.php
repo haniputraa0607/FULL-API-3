@@ -16,8 +16,8 @@ class DetailDealsRequest extends FormRequest
     public function rules()
     {
         return [
-            'id_deals' 	 => 'nullable|integer',
-            'step' 		 => 'nullable',
+            'id_deals'   => 'nullable|integer',
+            'step'       => 'nullable',
             'deals_type' => 'nullable'
         ];
     }

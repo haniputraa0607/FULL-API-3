@@ -39,10 +39,11 @@ class ProductVariantServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('productvariant.php'),
+            __DIR__ . '/../Config/config.php' => config_path('productvariant.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'productvariant'
+            __DIR__ . '/../Config/config.php',
+            'productvariant'
         );
     }
 
@@ -55,11 +56,11 @@ class ProductVariantServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/productvariant');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/productvariant';
@@ -78,7 +79,7 @@ class ProductVariantServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'productvariant');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'productvariant');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'productvariant');
         }
     }
 

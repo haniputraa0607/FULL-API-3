@@ -12,10 +12,10 @@ use Illuminate\Database\Eloquent\Model;
 class CrmUserData extends Model
 {
     protected $table = 'crm_user_data';
-	protected $primaryKey = 'crm_user_data_id';
+    protected $primaryKey = 'crm_user_data_id';
 
-	protected $fillable = [
-		'id_user',
+    protected $fillable = [
+        'id_user',
         'name',
         'phone',
         'email',
@@ -26,5 +26,5 @@ class CrmUserData extends Model
         'f_quartile',
         'm_quartile',
         'RFMScore'
-	];
+    ];
 }

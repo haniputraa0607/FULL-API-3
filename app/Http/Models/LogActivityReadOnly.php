@@ -16,16 +16,16 @@ use Illuminate\Database\Eloquent\Model;
  */
 class LogActivityReadOnly extends Model
 {
-	/**
-	 * The database name used by the model.
-	 *
-	 * @var string
-	 */
-	protected $connection = 'mysql3';
-	
+    /**
+     * The database name used by the model.
+     *
+     * @var string
+     */
+    protected $connection = 'mysql3';
+
     /**
      * The table associated with the model.
-     * 
+     *
      * @var string
      */
     protected $table = 'log_activities';
@@ -34,5 +34,4 @@ class LogActivityReadOnly extends Model
      * @var array
      */
     protected $fillable = ['id_log_activity', 'module', 'subject', 'url', 'phone', 'id_store', 'user', 'request', 'response_status', 'response', 'ip', 'useragent', 'created_at', 'updated_at'];
-
 }

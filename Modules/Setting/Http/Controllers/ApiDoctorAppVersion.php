@@ -6,10 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Modules\Setting\Http\Requests\Version\VersionList;
-
 use App\Http\Models\Setting;
 use Modules\Setting\Entities\Version;
-
 use App\Lib\MyHelper;
 use DB;
 
@@ -19,18 +17,18 @@ class ApiDoctorAppVersion extends Controller
     {
         /*Start check status maintenance mode for apps*/
         $getMaintenance = Setting::where('key', 'maintenance_mode')->first();
-        if($getMaintenance && $getMaintenance['value'] == 1){
+        if ($getMaintenance && $getMaintenance['value'] == 1) {
             $dt = (array)json_decode($getMaintenance['value_text']);
             $message = $dt['message'];
-            if($dt['image'] != ""){
-                $url_image = config('url.storage_url_api').$dt['image'];
-            }else{
-                $url_image = config('url.storage_url_api').'img/maintenance/default.png';
+            if ($dt['image'] != "") {
+                $url_image = config('url.storage_url_api') . $dt['image'];
+            } else {
+                $url_image = config('url.storage_url_api') . 'img/maintenance/default.png';
             }
             return response()->json([
                 'status' => 'fail',
                 'messages' => [$message],
-                'maintenance' => config('url.api_url') ."api/maintenance-mode",
+                'maintenance' => config('url.api_url') . "api/maintenance-mode",
                 'data_maintenance' => [
                     'url_image' => $url_image,
                     'text' => $message
@@ -42,7 +40,7 @@ class ApiDoctorAppVersion extends Controller
         $dbSetting = Setting::where('key', 'like', 'doctor_app_version_%')->get()->toArray();
         $dbDevice = Version::select('app_type', 'app_version')->orderBy('app_version', 'desc')->where('rules', '1')->get()->toArray();
 
-        if(empty($dbDevice)) {
+        if (empty($dbDevice)) {
             return response()->json(['status' => 'success', 'message' => 'Belum ada pengaturan versi untuk aplikasi']);
         }
 
@@ -66,9 +64,15 @@ class ApiDoctorAppVersion extends Controller
             $device = $post['device'];
         } else {
             $agent = $_SERVER['HTTP_USER_AGENT'];
-            if (stristr($agent, 'okhttp')) $device = 'android';
-            if (stristr($agent, 'android')) $device = 'android';
-            if (stristr($agent, 'ios')) $device = 'ios';
+            if (stristr($agent, 'okhttp')) {
+                $device = 'android';
+            }
+            if (stristr($agent, 'android')) {
+                $device = 'android';
+            }
+            if (stristr($agent, 'ios')) {
+                $device = 'ios';
+            }
         }
         if ($device != null) {
             if ($device == 'android') {

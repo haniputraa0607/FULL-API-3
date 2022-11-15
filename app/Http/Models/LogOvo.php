@@ -16,16 +16,16 @@ use Illuminate\Database\Eloquent\Model;
  */
 class LogOvo extends Model
 {
-	/**
-	 * The database name used by the model.
-	 *
-	 * @var string
-	 */
-	protected $connection = 'mysql2';
-	
+    /**
+     * The database name used by the model.
+     *
+     * @var string
+     */
+    protected $connection = 'mysql2';
+
     /**
      * The table associated with the model.
-     * 
+     *
      * @var string
      */
     protected $table = 'log_ovos';
@@ -34,5 +34,4 @@ class LogOvo extends Model
      * @var array
      */
     protected $fillable = ['id_log_ovo', 'id_transaction_payment_ovo', 'transaction_receipt_number', 'url', 'header', 'request', 'response_status', 'response_code', 'response', 'created_at', 'updated_at'];
-
 }

@@ -25,5 +25,4 @@ class TransactionShipmentTrackingUpdate extends Model
         'tracking_timezone',
         'send_notification'
     ];
-
 }

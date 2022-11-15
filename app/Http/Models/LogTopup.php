@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class UserAddress
- * 
+ *
  * @property int $id_user_address
  * @property string $name
  * @property string $phone
@@ -23,7 +23,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $primary
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
- * 
+ *
  * @property \App\Http\Models\City $city
  * @property \App\Http\Models\User $user
  *
@@ -31,29 +31,29 @@ use Illuminate\Database\Eloquent\Model;
  */
 class LogTopup extends Model
 {
-	protected $primaryKey = 'id_log_topup';
+    protected $primaryKey = 'id_log_topup';
 
-	protected $casts = [
-		'id_user' => 'int'
-	];
+    protected $casts = [
+        'id_user' => 'int'
+    ];
 
-	protected $fillable = [
-		'receipt_number',
-		'id_user',
-		'balance_before',
-		'nominal_bayar',
-		'topup_value',
-		'balance_after',
-		'transaction_reference',
-		'source',
-		'payment_type',
-		'topup_payment_status',
-		'created_at',
-		'updated_at'
-	];
+    protected $fillable = [
+        'receipt_number',
+        'id_user',
+        'balance_before',
+        'nominal_bayar',
+        'topup_value',
+        'balance_after',
+        'transaction_reference',
+        'source',
+        'payment_type',
+        'topup_payment_status',
+        'created_at',
+        'updated_at'
+    ];
 
-	public function user()
-	{
-		return $this->belongsTo(\App\Http\Models\User::class, 'id_user');
-	}
+    public function user()
+    {
+        return $this->belongsTo(\App\Http\Models\User::class, 'id_user');
+    }
 }

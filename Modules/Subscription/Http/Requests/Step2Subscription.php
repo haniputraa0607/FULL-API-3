@@ -16,7 +16,7 @@ class Step2Subscription extends FormRequest
     public function rules()
     {
         $rules = [
-        	'subscription_type'         		=> 'required|in:welcome,subscription,inject',
+            'subscription_type'                 => 'required|in:welcome,subscription,inject',
             'id_subscription'                   => 'required',
             'prices_by'                         => 'sometimes|required',
             'deals_voucher_price_point'         => '',
@@ -25,7 +25,7 @@ class Step2Subscription extends FormRequest
             'subscription_total_type'                => '',
             'subscription_total'                => '',
             'user_limit'                        => 'nullable',
-            'subscription_voucher_start'     	=> 'nullable|date',
+            'subscription_voucher_start'        => 'nullable|date',
             'subscription_voucher_duration'     => '',
             'subscription_voucher_total'        => 'required',
             'voucher_type'                      => 'required',
@@ -37,10 +37,10 @@ class Step2Subscription extends FormRequest
             'new_purchase_after'                => '',
         ];
 
-        if($this->subscription_voucher_start){
-        	$rules['subscription_voucher_expired']	= 'nullable|date|after:subscription_voucher_start';
-        }else{
-        	$rules['subscription_voucher_expired']	= 'nullable|date|after:'.date('Y-m-d H:i:s').'';
+        if ($this->subscription_voucher_start) {
+            $rules['subscription_voucher_expired']  = 'nullable|date|after:subscription_voucher_start';
+        } else {
+            $rules['subscription_voucher_expired']  = 'nullable|date|after:' . date('Y-m-d H:i:s') . '';
         }
 
         return $rules;
@@ -67,12 +67,12 @@ class Step2Subscription extends FormRequest
     }
 
     public function attributes()
-	{
-		$attributes = [
-            'subscription_voucher_expired'	=> 'Voucher Expiry',
-            'subscription_voucher_start'	=> 'Voucher Start Date'
+    {
+        $attributes = [
+            'subscription_voucher_expired'  => 'Voucher Expiry',
+            'subscription_voucher_start'    => 'Voucher Start Date'
         ];
 
-	    return $attributes;
-	}
+        return $attributes;
+    }
 }

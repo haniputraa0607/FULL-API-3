@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use App\Lib\MyHelper;
-
 use Modules\Doctor\Entities\Doctor;
 use Modules\Doctor\Entities\DoctorSpecialist;
 use Modules\Doctor\Entities\DoctorSchedule;
@@ -21,7 +20,7 @@ use Modules\UserRating\Entities\RatingOption;
 use Modules\UserRating\Entities\UserRating;
 use Modules\UserRating\Entities\UserRatingPhoto;
 use Modules\UserRating\Entities\UserRatingSummary;
-use Modules\Doctor\Http\Requests\doctor_pin_new_admin;
+use Modules\Doctor\Http\Requests\DoctorPinNewAdmin;
 use Validator;
 use Image;
 use DB;
@@ -29,7 +28,7 @@ use Carbon\Carbon;
 
 class ApiDoctorController extends Controller
 {
-    function __construct()
+    public function __construct()
     {
         ini_set('max_execution_time', 0);
         date_default_timezone_set('Asia/Jakarta');
@@ -58,7 +57,7 @@ class ApiDoctorController extends Controller
             $column_name = null;
             $dir = $post['order'][0]['dir'];
 
-            switch($post['order'][0]['column']){
+            switch ($post['order'][0]['column']) {
                 case '0':
                     $column_name = "doctor_name";
                     break;
@@ -72,7 +71,7 @@ class ApiDoctorController extends Controller
                     $column_name = "doctor_session_price";
                     break;
             }
-            
+
             $doctor->orderBy($column_name, $dir);
         } else {
             $doctor->orderBy('created_at', 'DESC');
@@ -87,15 +86,15 @@ class ApiDoctorController extends Controller
         //      });
         // }
 
-        if(isset($post['id_outlet'])){
+        if (isset($post['id_outlet'])) {
             $doctor->where('id_outlet', $post['id_outlet']);
         }
 
-        if(isset($post['doctor_recomendation_status'])){
+        if (isset($post['doctor_recomendation_status'])) {
             $doctor->where('doctor_recomendation_status', $post['doctor_recomendation_status']);
         }
 
-        if($request['page']) {
+        if ($request['page']) {
             $doctor = $doctor->paginate($post['length'] ?: 10);
         } else {
             $doctor = $doctor->get()->toArray();
@@ -104,29 +103,30 @@ class ApiDoctorController extends Controller
         return response()->json(['status'  => 'success', 'result' => $doctor]);
     }
 
-    public function filterList($query,$rules,$operator='and'){
-        $newRule=[];
+    public function filterList($query, $rules, $operator = 'and')
+    {
+        $newRule = [];
         foreach ($rules as $var) {
-            $rule=[$var['operator']??'=',$var['parameter']];
-            if($rule[0]=='like'){
-                $rule[1]='%'.$rule[1].'%';
+            $rule = [$var['operator'] ?? '=',$var['parameter']];
+            if ($rule[0] == 'like') {
+                $rule[1] = '%' . $rule[1] . '%';
             }
-            $newRule[$var['subject']][]=$rule;
+            $newRule[$var['subject']][] = $rule;
         }
 
-        $where=$operator=='and'?'where':'orWhere';
-        $subjects=['doctor_name', 'doctor_phone', 'doctor_session_price'];
+        $where = $operator == 'and' ? 'where' : 'orWhere';
+        $subjects = ['doctor_name', 'doctor_phone', 'doctor_session_price'];
         foreach ($subjects as $subject) {
-            if($rules2=$newRule[$subject]??false){
+            if ($rules2 = $newRule[$subject] ?? false) {
                 foreach ($rules2 as $rule) {
-                    $query->$where($subject,$rule[0],$rule[1]);
+                    $query->$where($subject, $rule[0], $rule[1]);
                 }
             }
         }
 
-        if($rules2=$newRule['outlet']??false){
+        if ($rules2 = $newRule['outlet'] ?? false) {
             foreach ($rules2 as $rule) {
-                $query->{$where.'Has'}('outlet', function($query2) use ($rule) {
+                $query->{$where . 'Has'}('outlet', function ($query2) use ($rule) {
                     $query2->where('outlet_name', $rule[0], $rule[1]);
                 });
             }
@@ -152,52 +152,52 @@ class ApiDoctorController extends Controller
         //      });
         // }
 
-        if(isset($post['id_outlet'])){
+        if (isset($post['id_outlet'])) {
             $doctors->where('id_outlet', $post['id_outlet']);
         }
 
-        if(isset($post['search'])){
+        if (isset($post['search'])) {
             $doctors->where(function ($query) use ($post) {
-                $query->WhereHas('specialists', function($query) use ($post) {
-                            $query->where('doctor_specialist_name', 'LIKE' , '%'.$post['search'].'%');
-                        })
-                        ->orWhere('doctor_name', 'LIKE' , '%'.$post['search'].'%');
+                $query->WhereHas('specialists', function ($query) use ($post) {
+                            $query->where('doctor_specialist_name', 'LIKE', '%' . $post['search'] . '%');
+                })
+                        ->orWhere('doctor_name', 'LIKE', '%' . $post['search'] . '%');
             });
         }
 
-        if($request['page']) {
+        if ($request['page']) {
             $doctors = $doctors->paginate($post['length'] ?: 10);
         } else {
             $doctors = $doctors->get()->toArray();
         }
 
         //add ratings to doctor
-        foreach($doctors as $key => $doctor){
+        foreach ($doctors as $key => $doctor) {
             $ratings = [];
             $getRatings = UserRating::join('users', 'users.id', 'user_ratings.id_user')
                         ->select('user_ratings.*', 'users.name', 'users.photo')
                         ->where('id_doctor', $doctor['id_doctor'])->orderBy('user_ratings.created_at', 'desc')->limit(5)->get()->toArray();
-            foreach ($getRatings as $rating){
+            foreach ($getRatings as $rating) {
                 $getPhotos = UserRatingPhoto::where('id_user_rating', $rating['id_user_rating'])->get()->toArray();
                 $photos = [];
-                foreach ($getPhotos as $dt){
+                foreach ($getPhotos as $dt) {
                     $photos[] = $dt['url_user_rating_photo'];
                 }
                 $currentOption = explode(',', $rating['option_value']);
                 $ratings[] = [
                     "date" => MyHelper::dateFormatInd($rating['created_at'], false, false, false),
                     "user_name" => $rating['name'],
-                    "user_photo" => config('url.storage_url_api') . (!empty($rating['photo']) ? $rating['photo']: 'img/user_photo_default.png'),
+                    "user_photo" => config('url.storage_url_api') . (!empty($rating['photo']) ? $rating['photo'] : 'img/user_photo_default.png'),
                     "rating_value" => $rating['rating_value'],
                     "suggestion" => $rating['suggestion'],
                     "option_value" => $currentOption,
                     "photos" => $photos
                 ];
             }
-            $doctors[$key]['practice_experience'] = str_replace(['years', 'tahun', 'year'], 'tahun', $doctor['practice_experience']??'');
+            $doctors[$key]['practice_experience'] = str_replace(['years', 'tahun', 'year'], 'tahun', $doctor['practice_experience'] ?? '');
             $doctors[$key]['ratings'] = $ratings;
             $doctors[$key]['count_rating'] = UserRating::where('id_doctor', $doctor['id_doctor'])->count();
-    
+
             //get ratings product
             $doctors[$key]['total_rating'] = round(UserRating::where('id_doctor', $doctor['id_doctor'])->average('rating_value') ?? 0, 1);
         }
@@ -238,10 +238,10 @@ class ApiDoctorController extends Controller
         $post['doctor_session_price'] = str_replace(".", '', $post['doctor_session_price']);
 
         //set password
-        if(!isset($post['id_doctor'])){
+        if (!isset($post['id_doctor'])) {
             if ($post['pin'] == null) {
                 $pin = MyHelper::createRandomPIN(8, 'kecil');
-                if(env('APP_ENV') != "production"){
+                if (env('APP_ENV') != "production") {
                     $pin = '77777777';
                 }
             } else {
@@ -269,11 +269,11 @@ class ApiDoctorController extends Controller
                 ];
                 return response()->json($result);
             }
-        } 
+        }
 
         //set active
-        if (isset($post['is_active'])) { 
-            if($post['is_active'] == "on") {
+        if (isset($post['is_active'])) {
+            if ($post['is_active'] == "on") {
                 $post['is_active'] = 1;
             } else {
                 $post['is_active'] = 0;
@@ -284,22 +284,22 @@ class ApiDoctorController extends Controller
         $specialist_id = $post['doctor_specialist'];
         unset($post['doctor_specialist']);
 
-        if(!isset($post['id_doctor'])) {
+        if (!isset($post['id_doctor'])) {
             $post['id_doctor'] = null;
         }
 
         $save = Doctor::updateOrCreate(['id_doctor' => $post['id_doctor']], $post);
 
         //save specialists
-        if($post['id_doctor'] != null) {
-            $oldSpecialist = Doctor::find($post['id_doctor'])->specialists()->detach(); 
+        if ($post['id_doctor'] != null) {
+            $oldSpecialist = Doctor::find($post['id_doctor'])->specialists()->detach();
             $specialist = $save->specialists()->attach($specialist_id);
         } else {
             $specialist = $save->specialists()->attach($specialist_id);
         }
 
         //save schedule day
-        if($post['id_doctor'] != null) {
+        if ($post['id_doctor'] != null) {
             $createSchedule = $save->createScheduleDay($post['id_doctor']);
         } else {
             $doctor = Doctor::where('doctor_phone', $post['doctor_phone'])->first();
@@ -308,7 +308,7 @@ class ApiDoctorController extends Controller
 
         $result = MyHelper::checkGet($save);
 
-        // TO DO Pending Task AutoCRM error 
+        // TO DO Pending Task AutoCRM error
         if ($result['status'] == "success") {
             if (isset($sent_pin) && $sent_pin == 'Yes') {
                 if (!empty($request->header('user-agent-view'))) {
@@ -317,9 +317,15 @@ class ApiDoctorController extends Controller
                     $useragent = $_SERVER['HTTP_USER_AGENT'];
                 }
 
-                if (stristr($useragent, 'iOS')) $useragent = 'iOS';
-                if (stristr($useragent, 'okhttp')) $useragent = 'Android';
-                if (stristr($useragent, 'GuzzleHttp')) $useragent = 'Browser';
+                if (stristr($useragent, 'iOS')) {
+                    $useragent = 'iOS';
+                }
+                if (stristr($useragent, 'okhttp')) {
+                    $useragent = 'Android';
+                }
+                if (stristr($useragent, 'GuzzleHttp')) {
+                    $useragent = 'Browser';
+                }
 
                 if (\Module::collections()->has('Autocrm')) {
                     $autocrm = app($this->autocrm)->SendAutoCRM(
@@ -330,7 +336,7 @@ class ApiDoctorController extends Controller
                             'useragent' => $useragent,
                             'now' => date('Y-m-d H:i:s'),
                             'date_sent' => date('d-m-y H:i:s'),
-                            'expired_time' => (string) MyHelper::setting('setting_expired_otp','value', 30),
+                            'expired_time' => (string) MyHelper::setting('setting_expired_otp', 'value', 30),
                         ],
                         $useragent,
                         false,
@@ -342,7 +348,7 @@ class ApiDoctorController extends Controller
         }
 
         DB::commit();
-        return response()->json(['status'  => 'success', 'result' => ['id_doctor' => $post['id_doctor'], 'crm' => $autocrm??true, 'save' => $save]]);
+        return response()->json(['status'  => 'success', 'result' => ['id_doctor' => $post['id_doctor'], 'crm' => $autocrm ?? true, 'save' => $save]]);
     }
 
     /**
@@ -350,7 +356,7 @@ class ApiDoctorController extends Controller
      * @param Request $request
      * @return Response
      */
-    public function changePassword(doctor_pin_new_admin $request)
+    public function changePassword(DoctorPinNewAdmin $request)
     {
         $post = $request->json()->all();
         unset($post['_token']);
@@ -358,8 +364,8 @@ class ApiDoctorController extends Controller
         $password = bcrypt($post['password_new']);
 
         $update_password = Doctor::where('id_doctor', $post['id_doctor'])->update(['password' => $password]);
-        
-        return response()->json(['status'  => 'success', 'result' => ['id_doctor' => $post['id_doctor'], 'crm' => $autocrm??true]]);
+
+        return response()->json(['status'  => 'success', 'result' => ['id_doctor' => $post['id_doctor'], 'crm' => $autocrm ?? true]]);
     }
 
     /**
@@ -413,7 +419,7 @@ class ApiDoctorController extends Controller
 
             //check transaction consultation
             $transanctionConsultation = TransactionConsultation::where('id_doctor', $id_doctor)->count();
-            if($transanctionConsultation > 0){
+            if ($transanctionConsultation > 0) {
                 return response()->json([
                     'status' => 'fail',
                     'messages' => ['Doctors who already have a consultation cannot be deleted.']
@@ -441,11 +447,11 @@ class ApiDoctorController extends Controller
         try {
             //initialize value
             $value = 1; //on
-            if($post['value'] == "off") {
+            if ($post['value'] == "off") {
                 $value = 0;
             }
 
-            Doctor::where('id_doctor', $user['id_doctor'])->update([$post['action'] => $value]); 
+            Doctor::where('id_doctor', $user['id_doctor'])->update([$post['action'] => $value]);
         } catch (\Exception $e) {
             $result = [
                 'status'  => 'fail',
@@ -457,12 +463,12 @@ class ApiDoctorController extends Controller
         DB::commit();
 
         //if off value case
-        if($post['value'] == "off") {
-            return response()->json(['status'  => 'success', 'result' => $post['action']." Successfully Deactivated"]);
+        if ($post['value'] == "off") {
+            return response()->json(['status'  => 'success', 'result' => $post['action'] . " Successfully Deactivated"]);
         }
 
         //default for on value case
-        return response()->json(['status'  => 'success', 'result' => $post['action']." Has Been Activated Successfully"]);
+        return response()->json(['status'  => 'success', 'result' => $post['action'] . " Has Been Activated Successfully"]);
     }
 
     public function getMySettings(Request $request)
@@ -474,8 +480,8 @@ class ApiDoctorController extends Controller
         $result['schedule_toogle'] = $user->schedule_toogle;
         $result['notification_toogle'] = $user->notification_toogle;
 
-        foreach($result as $key => $value){
-            if($value == 1){
+        foreach ($result as $key => $value) {
+            if ($value == 1) {
                 $result[$key] = 'on';
             } else {
                 $result[$key] = 'off';
@@ -492,7 +498,7 @@ class ApiDoctorController extends Controller
 
         $doctor = Doctor::where('id_doctor', $user['id_doctor'])->with('outlet')->with('specialists')->orderBy('created_at', 'DESC');
 
-        if(empty($doctor)){
+        if (empty($doctor)) {
             return response()->json([
                 'status'    => 'fail',
                 'messages'  => ['Doctor not found']
@@ -512,7 +518,7 @@ class ApiDoctorController extends Controller
 
         DB::beginTransaction();
         try {
-            $submission = SubmissionChangeDoctorData::create($post); 
+            $submission = SubmissionChangeDoctorData::create($post);
         } catch (\Exception $e) {
             $result = [
                 'status'  => 'fail',
@@ -527,100 +533,100 @@ class ApiDoctorController extends Controller
     }
 
     public function ratingSummary(Request $request)
-	{
-		$user = $request->user();
-		$ratingDc = Doctor::where('doctors.id_doctor',$user->id_doctor)
-		->leftJoin('user_ratings','user_ratings.id_doctor','doctors.id_doctor')
-		->select(
-			DB::raw('
+    {
+        $user = $request->user();
+        $ratingDc = Doctor::where('doctors.id_doctor', $user->id_doctor)
+        ->leftJoin('user_ratings', 'user_ratings.id_doctor', 'doctors.id_doctor')
+        ->select(
+            DB::raw('
 				doctors.id_doctor,
 				doctors.doctor_phone,
 				doctors.doctor_name,
 				doctors.total_rating,
 				COUNT(DISTINCT user_ratings.id_user) as total_customer
 				')
-		)
-		->first();
+        )
+        ->first();
 
-		$summary = UserRatingSummary::where('id_doctor', $user->id_doctor)->get();
-		$summaryRating = [];
-		$summaryOption = [];
-		foreach ($summary as $val) {
-			if ($val['summary_type'] == 'rating_value') {
-				$summaryRating[$val['key']] = $val['value'];
-			} else {
-				$summaryOption[$val['key']] = $val['value'];
-			}
-		}
+        $summary = UserRatingSummary::where('id_doctor', $user->id_doctor)->get();
+        $summaryRating = [];
+        $summaryOption = [];
+        foreach ($summary as $val) {
+            if ($val['summary_type'] == 'rating_value') {
+                $summaryRating[$val['key']] = $val['value'];
+            } else {
+                $summaryOption[$val['key']] = $val['value'];
+            }
+        }
 
-		$settingOptions = RatingOption::select('star','question','options')->where('rating_target', 'doctor')->get();
-		$options = [];
-		foreach ($settingOptions as $val) {
-			$temp = explode(',', $val['options']);
-			$options = array_merge($options, $temp);
-		}
+        $settingOptions = RatingOption::select('star', 'question', 'options')->where('rating_target', 'doctor')->get();
+        $options = [];
+        foreach ($settingOptions as $val) {
+            $temp = explode(',', $val['options']);
+            $options = array_merge($options, $temp);
+        }
 
-		$options = array_keys(array_flip($options));
-		$resOption = [];
-		foreach ($options as $val) {
-			$resOption[] = [
-				"name" => $val,
-				"value" => $summaryOption[$val] ?? 0
-			];
-		}
+        $options = array_keys(array_flip($options));
+        $resOption = [];
+        foreach ($options as $val) {
+            $resOption[] = [
+                "name" => $val,
+                "value" => $summaryOption[$val] ?? 0
+            ];
+        }
 
-		$res = [
-			'doctor_name' => $ratingDc['doctor_name'] ?? null,
-			'doctor_phone' => $ratingDc['doctor_phone'] ?? null,
-			'total_customer' => (int) ($ratingDc['total_customer'] ?? null),
-			'total_rating' => TransactionConsultation::where('id_doctor', $user->id_doctor)->whereIn('consultation_status', ['done','completed'])->count(),
-			'rating_value' => [
+        $res = [
+            'doctor_name' => $ratingDc['doctor_name'] ?? null,
+            'doctor_phone' => $ratingDc['doctor_phone'] ?? null,
+            'total_customer' => (int) ($ratingDc['total_customer'] ?? null),
+            'total_rating' => TransactionConsultation::where('id_doctor', $user->id_doctor)->whereIn('consultation_status', ['done','completed'])->count(),
+            'rating_value' => [
                 ['rating' => '5', 'progress' => (int) ($summaryRating['5'] ?? 0)],
                 ['rating' => '4', 'progress' => (int) ($summaryRating['4'] ?? 0)],
                 ['rating' => '3', 'progress' => (int) ($summaryRating['3'] ?? 0)],
                 ['rating' => '2', 'progress' => (int) ($summaryRating['2'] ?? 0)],
                 ['rating' => '1', 'progress' => (int) ($summaryRating['1'] ?? 0)],
-			],
-			'rating_option' => $resOption
-		];
+            ],
+            'rating_option' => $resOption
+        ];
 
-		return MyHelper::checkGet($res);
-	}
+        return MyHelper::checkGet($res);
+    }
 
-	public function ratingComment(Request $request)
-	{
-		$user = $request->user();
-		$comment = UserRating::where('user_ratings.id_doctor', $user->id_doctor)
+    public function ratingComment(Request $request)
+    {
+        $user = $request->user();
+        $comment = UserRating::where('user_ratings.id_doctor', $user->id_doctor)
         ->join('users', 'users.id', 'user_ratings.id_user')
-		->leftJoin('transaction_consultations','user_ratings.id_transaction_consultation','transaction_consultations.id_transaction_consultation')
-        ->leftJoin('transactions','transactions.id_transaction','transaction_consultations.id_transaction')
-		->whereNotNull('suggestion')
-		->where('suggestion', '!=', "")
-		->select(
+        ->leftJoin('transaction_consultations', 'user_ratings.id_transaction_consultation', 'transaction_consultations.id_transaction_consultation')
+        ->leftJoin('transactions', 'transactions.id_transaction', 'transaction_consultations.id_transaction')
+        ->whereNotNull('suggestion')
+        ->where('suggestion', '!=', "")
+        ->select(
             'users.name',
-			'transactions.transaction_receipt_number as order_id',
+            'transactions.transaction_receipt_number as order_id',
             'user_ratings.id_user_rating',
-			'user_ratings.suggestion',
-			'user_ratings.created_at',
+            'user_ratings.suggestion',
+            'user_ratings.created_at',
             'user_ratings.is_anonymous',
-		)
-		->paginate($request->per_page ?? 10)
-		->toArray();
+        )
+        ->paginate($request->per_page ?? 10)
+        ->toArray();
 
-		$resData = [];
-		foreach ($comment['data'] ?? [] as $val) {
-			$val['created_at_indo'] = MyHelper::dateFormatInd($val['created_at'], true, false);
+        $resData = [];
+        foreach ($comment['data'] ?? [] as $val) {
+            $val['created_at_indo'] = MyHelper::dateFormatInd($val['created_at'], true, false);
             if ($val['is_anonymous']) {
-                $val['name'] = substr($val['name'],0,1) . '*****';
+                $val['name'] = substr($val['name'], 0, 1) . '*****';
             }
             unset($val['is_anonymous']);
-			$resData[] = $val;
-		}
+            $resData[] = $val;
+        }
 
-		$comment['data'] = $resData;
+        $comment['data'] = $resData;
 
-		return MyHelper::checkGet($comment);
-	}
+        return MyHelper::checkGet($comment);
+    }
 
     public function listAllDoctor(Request $request)
     {
@@ -628,7 +634,7 @@ class ApiDoctorController extends Controller
 
         $doctor = Doctor::with('outlet')->orderBy('created_at', 'DESC');
 
-        if(!empty($post['id_outlet'])){
+        if (!empty($post['id_outlet'])) {
             $doctor = $doctor->where('id_outlet', $post['id_outlet']);
         }
 
@@ -639,7 +645,7 @@ class ApiDoctorController extends Controller
 
     public function updateRecomendationStatus(Request $request)
     {
-        $post = $request->json()->all(); 
+        $post = $request->json()->all();
 
         DB::beginTransaction();
         try {
@@ -676,16 +682,16 @@ class ApiDoctorController extends Controller
 
         //1. Doctor From Consultation History
         $historyConsultation = Transaction::where('id_user', $user->id)->where('trasaction_type', 'consultation')->get();
-        if(!empty($historyConsultation)){
-            foreach($historyConsultation as $hc){
+        if (!empty($historyConsultation)) {
+            foreach ($historyConsultation as $hc) {
                 $doctorId = TransactionConsultation::where('id_transaction', $hc->id_transaction)->pluck('id_doctor');
                 $doctor = Doctor::where('is_active', 1)->whereIn('id_doctor', $doctorId)->with('outlet')->with('specialists')->first();
 
-                if(in_array($doctor, $recomendationDoctor) == false && count($recomendationDoctor) < 3 && $doctor) {
+                if (in_array($doctor, $recomendationDoctor) == false && count($recomendationDoctor) < 3 && $doctor) {
                     $recomendationDoctor[] = $doctor;
                 }
 
-                if(count($recomendationDoctor) >= 3) {
+                if (count($recomendationDoctor) >= 3) {
                     return response()->json(['status'  => 'success', 'result' => $recomendationDoctor]);
                 }
             }
@@ -693,15 +699,15 @@ class ApiDoctorController extends Controller
 
         //2. Doctor From Outlet Related Transaction Product History
         $historyTransaction = Transaction::where('id_user', $user->id)->where('trasaction_type', 'product')->get();
-        if(!empty($historyTransaction)){
-            foreach($historyTransaction as $ht){
+        if (!empty($historyTransaction)) {
+            foreach ($historyTransaction as $ht) {
                 $doctor = Doctor::with('outlet')->with('specialists')->where('id_outlet', $ht->id_outlet)->first();
 
-                if(in_array($doctor, $recomendationDoctor) == false && count($recomendationDoctor) < 3 && $doctor) {
+                if (in_array($doctor, $recomendationDoctor) == false && count($recomendationDoctor) < 3 && $doctor) {
                     $recomendationDoctor[] = $doctor;
                 }
 
-                if(count($recomendationDoctor) >= 3) {
+                if (count($recomendationDoctor) >= 3) {
                     return response()->json(['status'  => 'success', 'result' => $recomendationDoctor]);
                 }
             }
@@ -710,19 +716,19 @@ class ApiDoctorController extends Controller
         //3. From Setting
         $doctorRecomendationDefault = Doctor::where('is_active', 1)->with('outlet')->with('specialists')->where('doctor_recomendation_status', true)->get();
 
-        if(empty($doctorRecomendationDefault)){
+        if (empty($doctorRecomendationDefault)) {
             return response()->json([
                 'status'    => 'fail',
                 'messages'  => ['Doctor Recomendation Settings not found']
             ]);
         }
 
-        foreach($doctorRecomendationDefault as $dr){
-            if(in_array($dr, $recomendationDoctor) == false && count($recomendationDoctor) < 4 && $dr) {
+        foreach ($doctorRecomendationDefault as $dr) {
+            if (in_array($dr, $recomendationDoctor) == false && count($recomendationDoctor) < 4 && $dr) {
                 $recomendationDoctor[] = $dr;
             }
 
-            if(count($recomendationDoctor) >= 4) {
+            if (count($recomendationDoctor) >= 4) {
                 return response()->json(['status'  => 'success', 'result' => $recomendationDoctor]);
             }
         }
@@ -737,20 +743,20 @@ class ApiDoctorController extends Controller
      */
     public function getScheduleDoctor($id_doctor, $type = null)
     {
-        if($type == 'admin' | $type == 'doctor'){
+        if ($type == 'admin' | $type == 'doctor') {
             $doctor_schedule = DoctorSchedule::where('id_doctor', $id_doctor)->with('schedule_time')->orderBy('order', 'ASC');
         } else {
             $doctor_schedule = DoctorSchedule::where('id_doctor', $id_doctor)->with('schedule_time')->onlyActive();
         }
 
         $doctor_schedule = $doctor_schedule->get()->toArray();
-        
+
         //problems hereee
         $schedule = array();
-        if(!empty($doctor_schedule)){
+        if (!empty($doctor_schedule)) {
             $i = 0;
-            while(count($schedule) < 4){
-                if($i > 0) {
+            while (count($schedule) < 4) {
+                if ($i > 0) {
                     $post['date'] = date("Y-m-d", strtotime("+$i day"));
                     $date = date("d-m-Y", strtotime("+$i day"));
                     $day = strtolower(date("l", strtotime($date)));
@@ -771,12 +777,12 @@ class ApiDoctorController extends Controller
                 }
                 $i += 1;
 
-                foreach($doctor_schedule as $row) {
-                    if(strtolower($row['day']) == $day) {
+                foreach ($doctor_schedule as $row) {
+                    if (strtolower($row['day']) == $day) {
                         $row['date'] = $date;
                         $row['day'] = $dayId;
-                                
-                        foreach($row['schedule_time'] as $key2 => $time) {
+
+                        foreach ($row['schedule_time'] as $key2 => $time) {
                             $post['time'] = date("H:i:s", strtotime($time['start_time']));
 
                             //cek validation avaibility time from current time
@@ -789,11 +795,11 @@ class ApiDoctorController extends Controller
                             $getSetting = Setting::where('key', 'max_consultation_quota')->first()->toArray();
                             $quota = $getSetting['value'];
 
-                            if($post['time'] < $nowTime && strtotime($date) <= strtotime($nowDate)){
+                            if ($post['time'] < $nowTime && strtotime($date) <= strtotime($nowDate)) {
                                 $row['schedule_time'][$key2]['status_session'] = "disable";
                                 $row['schedule_time'][$key2]['disable_reason'] = "Waktu Sudah Terlewati";
                             } else {
-                                if($quota <= $doctor_constultation && $quota != null){
+                                if ($quota <= $doctor_constultation && $quota != null) {
                                     $row['schedule_time'][$key2]['status_session'] = "disable";
                                     $row['schedule_time'][$key2]['disable_reason'] = "Kuota Sudah Penuh";
                                     $row['schedule_time'][$key2]['quota'] = $quota;
@@ -824,10 +830,10 @@ class ApiDoctorController extends Controller
 
         //problems hereee
         $schedule = array();
-        if(!empty($doctor_schedule)){
+        if (!empty($doctor_schedule)) {
             $i = 0;
-            while(count($schedule) < 4){
-                if($i > 0) {
+            while (count($schedule) < 4) {
+                if ($i > 0) {
                     $post['date'] = date("Y-m-d", strtotime("+$i day"));
                     $date = date("d-m-Y", strtotime("+$i day"));
                     $day = strtolower(date("l", strtotime($date)));
@@ -848,13 +854,13 @@ class ApiDoctorController extends Controller
                 }
                 $i += 1;
 
-                foreach($doctor_schedule as $key => $row) {
-                    if(strtolower($row['day']) == $day) {
+                foreach ($doctor_schedule as $key => $row) {
+                    if (strtolower($row['day']) == $day) {
                         $row['date'] = $date;
                         $row['day'] = $dayId;
 
-                        $is_avaible = false;        
-                        foreach($row['schedule_time'] as $key2 => $time) {
+                        $is_avaible = false;
+                        foreach ($row['schedule_time'] as $key2 => $time) {
                             $post['time'] = date("H:i:s", strtotime($time['start_time']));
 
                             //cek validation avaibility time from current time
@@ -868,10 +874,10 @@ class ApiDoctorController extends Controller
                             $quota = $getSetting['value'];
 
 
-                            if($post['time'] < $nowTime && strtotime($date) <= strtotime($nowDate)){
+                            if ($post['time'] < $nowTime && strtotime($date) <= strtotime($nowDate)) {
                                 //
                             } else {
-                                if($quota <= $doctor_constultation && $quota != null){
+                                if ($quota <= $doctor_constultation && $quota != null) {
                                     //
                                 } else {
                                     $is_avaible = true;
@@ -881,7 +887,7 @@ class ApiDoctorController extends Controller
 
                         if ($is_avaible == true) {
                             $schedule[] = $row;
-                        }                        
+                        }
                     }
                 }
             }
@@ -905,7 +911,7 @@ class ApiDoctorController extends Controller
     public function getAvailableScheduleTime($id_doctor_schedule, $date)
     {
         $timeSchedule = TimeSchedule::where('id_doctor_schedule', $id_doctor_schedule)->get()->toArray();
-        foreach($timeSchedule as $key => $time) {
+        foreach ($timeSchedule as $key => $time) {
             $post['time'] = date("H:i:s", strtotime($time['start_time']));
 
             //cek validation avaibility time from current time
@@ -918,10 +924,10 @@ class ApiDoctorController extends Controller
             $getSetting = Setting::where('key', 'max_consultation_quota')->first()->toArray();
             $quota = $getSetting['value'];
 
-            if($post['time'] < $nowTime && strtotime($date) <= strtotime($nowDate)){
+            if ($post['time'] < $nowTime && strtotime($date) <= strtotime($nowDate)) {
                 unset($timeSchedule[$key]);
             } else {
-                if($quota <= $doctor_constultation && $quota != null){
+                if ($quota <= $doctor_constultation && $quota != null) {
                     unset($timeSchedule[$key]);
                 }
             }
@@ -936,7 +942,7 @@ class ApiDoctorController extends Controller
 
         $outlets = Outlet::whereIn('id_outlet', $idsOutletDoctor)->get();
 
-        if(empty($outlets)){
+        if (empty($outlets)) {
             return response()->json([
                 'status'    => 'fail',
                 'messages'  => ['Outlet not found']
@@ -947,7 +953,7 @@ class ApiDoctorController extends Controller
 
         $result = [];
 
-        foreach($outlets as $key => $outlet){
+        foreach ($outlets as $key => $outlet) {
             $result[$key]['id_outlet'] = $outlet['id_outlet'];
             $result[$key]['outlet_name'] = $outlet['outlet_name'];
         }
@@ -961,7 +967,7 @@ class ApiDoctorController extends Controller
             $query->where('is_active', 1);
         }])->where('outlet_status', 'active')->get();
 
-        if(empty($outlets)){
+        if (empty($outlets)) {
             return response()->json([
                 'status'    => 'fail',
                 'messages'  => ['Outlet not found']
@@ -970,8 +976,10 @@ class ApiDoctorController extends Controller
 
         $result = [];
 
-        foreach($outlets as $key => $outlet){
-            if (!$outlet->doctors->count()) continue;
+        foreach ($outlets as $key => $outlet) {
+            if (!$outlet->doctors->count()) {
+                continue;
+            }
             $outletData = [
                 'id_outlet' => $outlet->id_outlet,
                 'outlet_name' => $outlet->outlet_name,
@@ -1009,20 +1017,20 @@ class ApiDoctorController extends Controller
     {
         $log = MyHelper::logCron('Update Doctor Status');
         try {
-            $earlyEnter = (Setting::where('key','consultation_starts_early')->value('value') ?? 0) * 60;
-            $lateEnter = (Setting::where('key','consultation_starts_late')->value('value')  ?? 0) * 60;
+            $earlyEnter = (Setting::where('key', 'consultation_starts_early')->value('value') ?? 0) * 60;
+            $lateEnter = (Setting::where('key', 'consultation_starts_late')->value('value')  ?? 0) * 60;
             $maxQuota = (Setting::where('key', 'max_consultation_quota')->value('value') ?? 1);
             $day = date('l');
             $now = date('H:i:s');
 
             //update doctor status to online
-            $doctorOnline = Doctor::whereHas('schedules', function($query) use ($day, $now, $earlyEnter, $lateEnter) {
-                            $query->where('day', '=' , $day);
-                            $query->whereHas('schedule_time', function($query2) use ($now, $earlyEnter, $lateEnter){
-                                $query2->whereTime('start_time', '<=' , date('H:i:s', time() + $earlyEnter));
-                                $query2->whereTime('end_time', '>=' , $now);  
+            $doctorOnline = Doctor::whereHas('schedules', function ($query) use ($day, $now, $earlyEnter, $lateEnter) {
+                            $query->where('day', '=', $day);
+                            $query->whereHas('schedule_time', function ($query2) use ($now, $earlyEnter, $lateEnter) {
+                                $query2->whereTime('start_time', '<=', date('H:i:s', time() + $earlyEnter));
+                                $query2->whereTime('end_time', '>=', $now);
                             });
-                        })->pluck('id_doctor');
+            })->pluck('id_doctor');
 
             Doctor::whereIn('id_doctor', $doctorOnline)->update(['doctor_status' => 'Online']);
             Doctor::whereNotIn('id_doctor', $doctorOnline)->update(['doctor_status' => 'Offline']);
@@ -1042,7 +1050,7 @@ class ApiDoctorController extends Controller
             //     $query->where('day', '=' , $day);
             //     $query->whereDoesntHave('schedule_time', function($query2) use ($now){
             //         $query2->whereTime('start_time', '<=' , date('H:i:s', time() + $earlyEnter));
-            //         $query2->whereTime('end_time', '>=' , $now);  
+            //         $query2->whereTime('end_time', '>=' , $now);
             //     });
             // })->update(['doctor_status' => 'offline']);
 
@@ -1050,7 +1058,7 @@ class ApiDoctorController extends Controller
             // $idsDoctorBusy = TransactionConsultation::whereIn('consultation_status', ['ongoing', 'done'])->pluck('id_doctor')->toArray();
 
             // $doctorBusy = Doctor::whereIn('id_doctor', $idsDoctorBusy)->update(['doctor_status' => 'busy']);
-            
+
             $log->success(['status_update' => 'success']);
             return 'success';
         } catch (\Exception $e) {

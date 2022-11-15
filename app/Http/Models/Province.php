@@ -11,26 +11,26 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class Province
- * 
+ *
  * @property int $id_province
  * @property string $province_name
- * 
+ *
  * @property \Illuminate\Database\Eloquent\Collection $cities
  *
  * @package App\Models
  */
 class Province extends Model
 {
-	protected $primaryKey = 'id_province';
-	public $timestamps = false;
+    protected $primaryKey = 'id_province';
+    public $timestamps = false;
 
-	protected $fillable = [
-		'province_name',
-		'time_zone_utc'
-	];
+    protected $fillable = [
+        'province_name',
+        'time_zone_utc'
+    ];
 
-	public function cities()
-	{
-		return $this->hasMany(\App\Http\Models\City::class, 'id_province');
-	}
+    public function cities()
+    {
+        return $this->hasMany(\App\Http\Models\City::class, 'id_province');
+    }
 }

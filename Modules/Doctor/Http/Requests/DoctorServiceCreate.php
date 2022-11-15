@@ -11,7 +11,7 @@ class DoctorServiceCreate extends FormRequest
     public function rules()
     {
         return [
-            'doctor_service_name'=>'required|string'
+            'doctor_service_name' => 'required|string'
         ];
     }
 

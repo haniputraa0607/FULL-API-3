@@ -46,10 +46,11 @@ class DealsServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('deals.php'),
+            __DIR__ . '/../Config/config.php' => config_path('deals.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'deals'
+            __DIR__ . '/../Config/config.php',
+            'deals'
         );
     }
 
@@ -62,11 +63,11 @@ class DealsServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/deals');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/deals';
@@ -85,7 +86,7 @@ class DealsServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'deals');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'deals');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'deals');
         }
     }
 

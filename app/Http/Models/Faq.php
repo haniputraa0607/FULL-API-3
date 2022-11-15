@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class Faq
- * 
+ *
  * @property int $id_faq
  * @property string $question
  * @property string $answer
@@ -22,11 +22,11 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Faq extends Model
 {
-	protected $primaryKey = 'id_faq';
+    protected $primaryKey = 'id_faq';
 
-	protected $fillable = [
-	    'faq_number_list',
-		'question',
-		'answer'
-	];
+    protected $fillable = [
+        'faq_number_list',
+        'question',
+        'answer'
+    ];
 }

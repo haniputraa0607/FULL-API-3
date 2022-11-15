@@ -8,10 +8,10 @@ use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 
 class DefaultExport implements FromArray, WithHeadings, ShouldAutoSize
 {
-	public function _construct($data)
-	{
-		$this->data = $data;
-	}
+    public function __construct($data)
+    {
+        $this->data = $data;
+    }
     /**
     * @return \Illuminate\Support\Collection
     */
@@ -21,7 +21,7 @@ class DefaultExport implements FromArray, WithHeadings, ShouldAutoSize
     }
     public function headings(): array
     {
-        return array_keys($this->data[0]??[]);
-    	// return array_map(function($x){return ucwords(str_replace('_', ' ', $x));}, array_keys($this->outlets[0]??[]));
+        return array_keys($this->data[0] ?? []);
+        // return array_map(function($x){return ucwords(str_replace('_', ' ', $x));}, array_keys($this->outlets[0]??[]));
     }
 }

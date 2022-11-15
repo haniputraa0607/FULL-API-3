@@ -11,17 +11,16 @@ use Illuminate\Database\Eloquent\Model;
 
 class AutocrmWhatsappLogContent extends Model
 {
-	protected $primaryKey = 'id_autocrm_whatsapp_log_content';
+    protected $primaryKey = 'id_autocrm_whatsapp_log_content';
 
-	protected $fillable = [
-		'id_autocrm_whatsapp_log',
-		'content_type',
-		'content'
-	];
+    protected $fillable = [
+        'id_autocrm_whatsapp_log',
+        'content_type',
+        'content'
+    ];
 
-	public function autocrm_whatsapp_log()
-	{
-		return $this->belongsTo(\App\Http\Models\AutocrmWhatsappContent::class, 'id_autocrm_whatsapp_log', 'id_autocrm_whatsapp_log');
-	}
-
+    public function autocrm_whatsapp_log()
+    {
+        return $this->belongsTo(\App\Http\Models\AutocrmWhatsappContent::class, 'id_autocrm_whatsapp_log', 'id_autocrm_whatsapp_log');
+    }
 }

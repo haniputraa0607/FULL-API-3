@@ -37,9 +37,9 @@ return [
         'stack' => [
             'driver' => 'stack',
             'channels' => [
-				'daily',
-				env('TEAMS_NOTIF')?'teams':''
-			],
+                'daily',
+                env('TEAMS_NOTIF') ? 'teams' : ''
+            ],
             'ignore_exceptions' => false,
         ],
 
@@ -56,12 +56,12 @@ return [
             'days' => 14,
         ],
 
-		'teams' => [
-			'driver' => 'custom',
-			'via' => \CMDISP\MonologMicrosoftTeams\TeamsLogChannel::class,
-			'level' => 'error',
-			'url' => env('TEAMS_WEBHOOK_URL'),
-		],
+        'teams' => [
+            'driver' => 'custom',
+            'via' => \CMDISP\MonologMicrosoftTeams\TeamsLogChannel::class,
+            'level' => 'error',
+            'url' => env('TEAMS_WEBHOOK_URL'),
+        ],
 
         'slack' => [
             'driver' => 'slack',

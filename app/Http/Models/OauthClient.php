@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class OauthClient
- * 
+ *
  * @property int $id
  * @property int $user_id
  * @property string $name
@@ -27,24 +27,24 @@ use Illuminate\Database\Eloquent\Model;
  */
 class OauthClient extends Model
 {
-	protected $casts = [
-		'user_id' => 'int',
-		'personal_access_client' => 'bool',
-		'password_client' => 'bool',
-		'revoked' => 'bool'
-	];
+    protected $casts = [
+        'user_id' => 'int',
+        'personal_access_client' => 'bool',
+        'password_client' => 'bool',
+        'revoked' => 'bool'
+    ];
 
-	protected $hidden = [
-		'secret'
-	];
+    protected $hidden = [
+        'secret'
+    ];
 
-	protected $fillable = [
-		'user_id',
-		'name',
-		'secret',
-		'redirect',
-		'personal_access_client',
-		'password_client',
-		'revoked'
-	];
+    protected $fillable = [
+        'user_id',
+        'name',
+        'secret',
+        'redirect',
+        'personal_access_client',
+        'password_client',
+        'revoked'
+    ];
 }

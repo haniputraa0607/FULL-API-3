@@ -12,13 +12,11 @@ use Illuminate\Http\Request;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
-Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:apps']], 'prefix' => 'product-bundling'], function()
-{
+Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:apps']], 'prefix' => 'product-bundling'], function () {
     Route::any('detail', 'ApiBundlingController@detailForApps');
 });
 
-Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be']], 'prefix' => 'product-bundling'], function()
-{
+Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be']], 'prefix' => 'product-bundling'], function () {
     Route::any('list', 'ApiBundlingController@index');
     Route::post('store', 'ApiBundlingController@store');
     Route::post('be/detail', 'ApiBundlingController@detail');
@@ -33,8 +31,7 @@ Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'sco
     Route::get('sync-date-today', 'ApiBundlingController@bundlingToday');
 });
 
-Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be']], 'prefix' => 'product-bundling-category'], function()
-{
+Route::group([[ 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be']], 'prefix' => 'product-bundling-category'], function () {
     //bundling product
     Route::any('list', 'ApiBundlingCategoryController@listCategory');
     Route::post('store', 'ApiBundlingCategoryController@create');

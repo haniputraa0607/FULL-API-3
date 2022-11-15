@@ -46,10 +46,11 @@ class MembershipServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('membership.php'),
+            __DIR__ . '/../Config/config.php' => config_path('membership.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'membership'
+            __DIR__ . '/../Config/config.php',
+            'membership'
         );
     }
 
@@ -62,11 +63,11 @@ class MembershipServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/membership');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/membership';
@@ -85,7 +86,7 @@ class MembershipServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'membership');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'membership');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'membership');
         }
     }
 

@@ -24,15 +24,18 @@ class BundlingCategory extends Model
         return $this->belongsTo(BundlingCategory::class, 'id_parent_category', 'id_bundling_category');
     }
 
-    public function scopeId($query, $id) {
+    public function scopeId($query, $id)
+    {
         return $query->where('id_bundling_category', $id);
     }
 
-    public function scopeParents($query, $id) {
+    public function scopeParents($query, $id)
+    {
         return $query->where('id_parent_category', $id);
     }
 
-    public function scopeMaster($query) {
+    public function scopeMaster($query)
+    {
         return $query->where('id_parent_category', 0);
     }
 }

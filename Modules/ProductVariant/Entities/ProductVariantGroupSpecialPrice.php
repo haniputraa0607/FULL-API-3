@@ -10,12 +10,12 @@ class ProductVariantGroupSpecialPrice extends Model
     protected $primaryKey = 'id_product_variant_group_special_price';
 
     protected $fillable = [
-    	'id_outlet',
-    	'id_product_variant_group',
-    	'product_variant_group_price'
+        'id_outlet',
+        'id_product_variant_group',
+        'product_variant_group_price'
     ];
 
     protected $casts = [
-    	'product_variant_group_price' => 'double'
+        'product_variant_group_price' => 'double'
     ];
 }

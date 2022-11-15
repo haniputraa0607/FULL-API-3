@@ -8,17 +8,16 @@ use App\Mail\GenericMail;
 
 class SendMail
 {
-
     public static function send($view, $data = [], $callback = null)
     {
-		$mail = (new GenericMail())->view($view, $data);
-		if($callback) {
-			$callback($mail);
-			$to = $mail->to[0]??false;
-			if ($to) {
-				$mail->to = [['address' => trim($to['address']), 'name' => trim($to['name'])]];
-			}
-		}
+        $mail = (new GenericMail())->view($view, $data);
+        if ($callback) {
+            $callback($mail);
+            $to = $mail->to[0] ?? false;
+            if ($to) {
+                $mail->to = [['address' => trim($to['address']), 'name' => trim($to['name'])]];
+            }
+        }
 
         $setting_raw = Setting::where('key', 'like', 'mailer_%')->get();
         $settings    = [];
@@ -29,9 +28,8 @@ class SendMail
         //for yahoo, hotmail, rocketmail use env 2
         if (strpos($to['address'], 'hotmail') !== false || strpos($to['address'], 'yahoo') !== false || strpos($to['address'], 'rocketmail') !== false) {
             $envMail = 2;
-        }
+        } else {
         //for other using env default
-        else{
             $envMail = '';
         }
 
@@ -41,11 +39,11 @@ class SendMail
         // $config['encryption'] = $settings['mailer_smtp_encryption'] ?? $config['encryption'];
         // $config['username']   = $settings['mailer_smtp_username'] ?? $config['username'];
         // $config['password']   = $settings['mailer_smtp_password'] ?? $config['password'];
-        $config['host']       = env('MAIL_HOST'.$envMail, 'smtp.mailgun.org');
-        $config['port']       = env('MAIL_PORT'.$envMail, 587);
-        $config['encryption'] = env('MAIL_ENCRYPTION'.$envMail, 'tls');
-        $config['username']   = env('MAIL_USERNAME'.$envMail);
-        $config['password']   = env('MAIL_PASSWORD'.$envMail);
+        $config['host']       = env('MAIL_HOST' . $envMail, 'smtp.mailgun.org');
+        $config['port']       = env('MAIL_PORT' . $envMail, 587);
+        $config['encryption'] = env('MAIL_ENCRYPTION' . $envMail, 'tls');
+        $config['username']   = env('MAIL_USERNAME' . $envMail);
+        $config['password']   = env('MAIL_PASSWORD' . $envMail);
 
         $transport = app('swift.transport');
         $smtp      = $transport->driver('smtp');

@@ -16,18 +16,15 @@ use App\Http\Models\LogPoint;
 use App\Http\Models\Reservation;
 use App\Http\Models\LogActivitiesApps;
 use App\Http\Models\Product;
-
 use App\Jobs\ExportJob;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use Modules\IPay88\Entities\DealsPaymentIpay88;
 use Modules\IPay88\Entities\SubscriptionPaymentIpay88;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use Modules\Report\Entities\ExportQueue;
 use Modules\Report\Http\Requests\DetailReport;
-
 use App\Lib\MyHelper;
 use Modules\Subscription\Entities\SubscriptionPaymentMidtran;
 use Modules\Subscription\Entities\SubscriptionPaymentOvo;
@@ -37,14 +34,15 @@ use DB;
 use Mail;
 use File;
 
-
 class ApiReportExport extends Controller
 {
-    function __construct() {
+    public function __construct()
+    {
         date_default_timezone_set('Asia/Jakarta');
     }
 
-    public function exportCreate(Request $request){
+    public function exportCreate(Request $request)
+    {
         $post = $request->json()->all();
 
         $insertToQueue = [
@@ -55,22 +53,23 @@ class ApiReportExport extends Controller
         ];
 
         $create = ExportQueue::create($insertToQueue);
-        if($create){
+        if ($create) {
             ExportJob::dispatch($create)->allOnConnection('database');
         }
         return response()->json(MyHelper::checkCreate($create));
     }
 
-    public function listExport(Request $request){
+    public function listExport(Request $request)
+    {
         $post = $request->json()->all();
 
         $list = ExportQueue::orderBy('created_at', 'desc');
 
-        if(isset($post['report_type']) && !empty($post['report_type'])){
+        if (isset($post['report_type']) && !empty($post['report_type'])) {
             $list = $list->where('report_type', $post['report_type']);
         }
 
-        if(isset($post['id_user']) && !empty($post['id_user'])){
+        if (isset($post['id_user']) && !empty($post['id_user'])) {
             $id_user = $post['id_user'];
             $list = $list->where('id_user', $id_user);
         }
@@ -79,33 +78,33 @@ class ApiReportExport extends Controller
         return response()->json(MyHelper::checkGet($list));
     }
 
-    function actionExport(Request $request){
+    public function actionExport(Request $request)
+    {
         $post = $request->json()->all();
         $action = $post['action'];
         $id_export_queue = $post['id_export_queue'];
 
-        if($action == 'download'){
+        if ($action == 'download') {
             $data = ExportQueue::where('id_export_queue', $id_export_queue)->first();
-            if(!empty($data)){
-                $data['url_export'] = config('url.storage_url_api').$data['url_export'];
+            if (!empty($data)) {
+                $data['url_export'] = config('url.storage_url_api') . $data['url_export'];
             }
             return response()->json(MyHelper::checkGet($data));
-        }elseif($action == 'deleted'){
+        } elseif ($action == 'deleted') {
             $data = ExportQueue::where('id_export_queue', $id_export_queue)->first();
-            $file = public_path().'/'.$data['url_export'];
-            if(config('configs.STORAGE') == 'local'){
+            $file = public_path() . '/' . $data['url_export'];
+            if (config('configs.STORAGE') == 'local') {
                 $delete = File::delete($file);
-            }else{
+            } else {
                 $delete = MyHelper::deleteFile($file);
             }
 
-            if($delete){
+            if ($delete) {
                 $update = ExportQueue::where('id_export_queue', $id_export_queue)->update(['status_export' => 'Deleted']);
                 return response()->json(MyHelper::checkUpdate($update));
-            }else{
+            } else {
                 return response()->json(['status' => 'fail', 'messages' => ['failed to delete file']]);
             }
-
         }
     }
 }

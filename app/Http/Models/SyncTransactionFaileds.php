@@ -7,15 +7,15 @@ use Illuminate\Database\Eloquent\Model;
 class SyncTransactionFaileds extends Model
 {
     /**
-	 * The database name used by the model.
-	 *
-	 * @var string
-	 */
-	protected $connection = 'mysql2';
-	
+     * The database name used by the model.
+     *
+     * @var string
+     */
+    protected $connection = 'mysql2';
+
     /**
      * The table associated with the model.
-     * 
+     *
      * @var string
      */
     protected $table = 'sync_transaction_faileds';
@@ -24,10 +24,10 @@ class SyncTransactionFaileds extends Model
      * @var array
      */
     protected $fillable = [
-        'id_sync_transaction_faileds', 
-        'outlet_code', 
-        'request', 
-        'message_failed', 
-        'created_at',  
+        'id_sync_transaction_faileds',
+        'outlet_code',
+        'request',
+        'message_failed',
+        'created_at',
         'updated_at'];
 }

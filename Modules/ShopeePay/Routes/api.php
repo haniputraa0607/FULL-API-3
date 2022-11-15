@@ -13,6 +13,6 @@ use Illuminate\Http\Request;
 |
 */
 
-Route::group(['prefix'=>'shopeepay'],function(){
-	Route::post('notif', 'ShopeePayController@notifShopeePay')->name('notif_shopeepay');
+Route::group(['prefix' => 'shopeepay'], function () {
+    Route::post('notif', 'ShopeePayController@notifShopeePay')->name('notif_shopeepay');
 });

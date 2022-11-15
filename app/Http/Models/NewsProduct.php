@@ -6,11 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class NewsProduct extends Model
 {
-	protected $connection = 'mysql';
-	public $incrementing = false;
+    protected $connection = 'mysql';
+    public $incrementing = false;
     /**
      * The table associated with the model.
-     * 
+     *
      * @var string
      */
     protected $table = 'news_products';
@@ -19,8 +19,8 @@ class NewsProduct extends Model
      * @var array
      */
     protected $fillable = ['id_product', 'id_news'];
-	
-	/**
+
+    /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function product()

@@ -9,16 +9,19 @@ use SMartins\PassportMultiauth\HasMultiAuthApiTokens;
 
 class UserOutletApp extends Authenticatable
 {
-	use Notifiable, HasMultiAuthApiTokens;
+    use Notifiable;
+    use HasMultiAuthApiTokens;
 
-    public function findForPassport($username) {
+    public function findForPassport($username)
+    {
         return $this->where('username', $username)->first();
-	}
+    }
 
-	public function getAuthPassword() {
-		return $this->password;
-     }
-     
+    public function getAuthPassword()
+    {
+        return $this->password;
+    }
+
     protected $table = "user_outletapps";
 
     protected $primaryKey = "id_user_outletapp";
@@ -33,11 +36,13 @@ class UserOutletApp extends Authenticatable
         'level'
     ];
 
-    public function outlet(){
+    public function outlet()
+    {
         return $this->belongsTo('App\Http\Models\Outlet', 'id_outlet');
     }
 
-    public function brand(){
+    public function brand()
+    {
         return $this->belongsTo(Modules\Brand\Entities\Brand::class, 'id_brand');
     }
 }

@@ -15,7 +15,6 @@ use App\Http\Models\Autocrm;
 
 class GoSend
 {
-
     public function __construct()
     {
         date_default_timezone_set('Asia/Jakarta');
@@ -87,7 +86,7 @@ class GoSend
         return $token;
     }
 
-    public static function getStatus($storeOrderId,$useOrderId=false)
+    public static function getStatus($storeOrderId, $useOrderId = false)
     {
         if (env('GO_SEND_URL') == '' || env('GO_SEND_CLIENT_ID') == '' || env('GO_SEND_PASS_KEY') == '') {
             return [
@@ -100,12 +99,12 @@ class GoSend
             'Client-ID' => env('GO_SEND_CLIENT_ID'),
             'Pass-Key'  => env('GO_SEND_PASS_KEY'),
         ];
-        if(!$useOrderId){
+        if (!$useOrderId) {
             // pakai orderno dulu soalnya kalau pakai storeOrderId sering internal server error
-            $orderno = TransactionPickupGoSend::select('go_send_order_no')->join('transaction_pickups','transaction_pickups.id_transaction_pickup','=','transaction_pickup_go_sends.id_transaction_pickup')->join('transactions','transactions.id_transaction','=','transaction_pickups.id_transaction')->where('transaction_receipt_number',$storeOrderId)->pluck('go_send_order_no')->first();
+            $orderno = TransactionPickupGoSend::select('go_send_order_no')->join('transaction_pickups', 'transaction_pickups.id_transaction_pickup', '=', 'transaction_pickup_go_sends.id_transaction_pickup')->join('transactions', 'transactions.id_transaction', '=', 'transaction_pickups.id_transaction')->where('transaction_receipt_number', $storeOrderId)->pluck('go_send_order_no')->first();
             $url   = env('GO_SEND_URL') . 'gokilat/v10/booking/orderno/' . $orderno;
-            // $url   = env('GO_SEND_URL') . 'gokilat/v10/booking/storeOrderId/' . $storeOrderId;            
-        }else{
+            // $url   = env('GO_SEND_URL') . 'gokilat/v10/booking/storeOrderId/' . $storeOrderId;
+        } else {
             // storeOrderId is n=gosend order no
             $url   = env('GO_SEND_URL') . 'gokilat/v10/booking/orderno/' . $storeOrderId;
         }
@@ -230,7 +229,7 @@ class GoSend
      */
     public static function saveUpdate($dataUpdate)
     {
-        if(!$dataUpdate['status']??false){
+        if (!$dataUpdate['status'] ?? false) {
             return false;
         }
         $found = TransactionPickupGoSendUpdate::where(['id_transaction_pickup_go_send' => $dataUpdate['id_transaction_pickup_go_send'], 'go_send_order_no' => $dataUpdate['go_send_order_no'], 'status' => $dataUpdate['status']])->first();
@@ -253,31 +252,31 @@ class GoSend
             $trx_pickup = TransactionPickup::where('id_transaction', $dataUpdate['id_transaction'])->first();
             $trx = Transaction::where('id_transaction', $dataUpdate['id_transaction'])->first();
 
-	        $outlet_title = [
-	            'confirmed' => 'Info Pesanan Delivery',
-	            'allocated' => 'Driver ditemukan',
-	            'out_for_pickup' => 'Driver sedang menuju ke outlet',
-	            'picked' => 'Info Pesanan Delivery',
-	            'out_for_delivery' => 'Driver sedang menuju ke lokasi tujuan',
-	            'cancelled' => 'Pengantaran dibatalkan driver',
-	            'delivered' => 'Pengantaran ' . $trx_pickup->order_id . ' berhasil',
-	            'rejected' => 'Pengantaran ' . $trx_pickup->order_id . ' gagal',
-	            'no_driver' => 'Driver tidak ditemukan',
-	            'on_hold' => 'Info Pesanan Delivery'
-	        ];
+            $outlet_title = [
+                'confirmed' => 'Info Pesanan Delivery',
+                'allocated' => 'Driver ditemukan',
+                'out_for_pickup' => 'Driver sedang menuju ke outlet',
+                'picked' => 'Info Pesanan Delivery',
+                'out_for_delivery' => 'Driver sedang menuju ke lokasi tujuan',
+                'cancelled' => 'Pengantaran dibatalkan driver',
+                'delivered' => 'Pengantaran ' . $trx_pickup->order_id . ' berhasil',
+                'rejected' => 'Pengantaran ' . $trx_pickup->order_id . ' gagal',
+                'no_driver' => 'Driver tidak ditemukan',
+                'on_hold' => 'Info Pesanan Delivery'
+            ];
 
-	        $outlet_message = [
-	            'confirmed' => 'Mencari Driver',
-	            'allocated' => 'Segera persiapkan pesanan',
-	            'out_for_pickup' => 'Apa pesanan sudah siap?',
-	            'picked' => 'Driver mengambil Pesanan',
-	            'out_for_delivery' => 'Pesanan ' . $trx_pickup->order_id . ' sudah siap?',
-	            'cancelled' => 'Segera ambil tindakan',
-	            'delivered' => 'Pessanan sudah diterima customer',
-	            'rejected' => 'Tunggu, pesanan akan segera kembalikan ke outlet',
-	            'no_driver' => 'Pilih tindakan selanjutnya',
-	            'on_hold' => 'Driver terkendala saat pengantaran'
-	        ];
+            $outlet_message = [
+                'confirmed' => 'Mencari Driver',
+                'allocated' => 'Segera persiapkan pesanan',
+                'out_for_pickup' => 'Apa pesanan sudah siap?',
+                'picked' => 'Driver mengambil Pesanan',
+                'out_for_delivery' => 'Pesanan ' . $trx_pickup->order_id . ' sudah siap?',
+                'cancelled' => 'Segera ambil tindakan',
+                'delivered' => 'Pessanan sudah diterima customer',
+                'rejected' => 'Tunggu, pesanan akan segera kembalikan ke outlet',
+                'no_driver' => 'Pilih tindakan selanjutnya',
+                'on_hold' => 'Driver terkendala saat pengantaran'
+            ];
 
             if ($dataUpdate['status'] == 'delivered') {
                 $trx_pickup->update(['show_confirm' => '1']);
@@ -296,7 +295,7 @@ class GoSend
                 'id_reference' => $trx->id_transaction,
                 'order_id' => $trx_pickup->order_id
             ];
-            app("Modules\OutletApp\Http\Controllers\ApiOutletApp")->outletNotif($dataPush,$outlet->id_outlet);
+            app("Modules\OutletApp\Http\Controllers\ApiOutletApp")->outletNotif($dataPush, $outlet->id_outlet);
 
             $delivery_status = ($ref_status2[$dataUpdate['status']] ?? $dataUpdate['status']);
 
@@ -316,23 +315,23 @@ class GoSend
                 'delivered'             => 'Selamat menikmati Kak %name%',
                 'no_driver'             => 'Mohon tunggu konfirmasi dari outlet',
             ];
-            if($replacer[$delivery_status] ?? false) {
-
-                if($delivery_status == 'delivered'){
+            if ($replacer[$delivery_status] ?? false) {
+                if ($delivery_status == 'delivered') {
                     $getAvailableCodeCrm = Autocrm::where('autocrm_title', 'Order Taken With Code')->first();
-                    $code = NULL;
-                    $idCode = NULL;
+                    $code = null;
+                    $idCode = null;
 
-                    if(!empty($getAvailableCodeCrm) &&
+                    if (
+                        !empty($getAvailableCodeCrm) &&
                         ($getAvailableCodeCrm['autocrm_email_toogle'] == 1 || $getAvailableCodeCrm['autocrm_sms_toogle'] == 1 ||
-                            $getAvailableCodeCrm['autocrm_push_toogle'] == 1 || $getAvailableCodeCrm['autocrm_inbox_toogle'] == 1)){
-
+                            $getAvailableCodeCrm['autocrm_push_toogle'] == 1 || $getAvailableCodeCrm['autocrm_inbox_toogle'] == 1)
+                    ) {
                         $getAvailableCode = app('Modules\Autocrm\Http\Controllers\ApiAutoresponseWithCode')->getAvailableCode($trx->id_transaction);
-                        $code = $getAvailableCode['autoresponse_code']??null;
-                        $idCode = $getAvailableCode['id_autoresponse_code_list']??null;
+                        $code = $getAvailableCode['autoresponse_code'] ?? null;
+                        $idCode = $getAvailableCode['id_autoresponse_code_list'] ?? null;
                     }
 
-                    if(!empty($code)) {
+                    if (!empty($code)) {
                         $send = app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM('Order Taken Delivery With Code', $phone, [
                             'id_reference'    => $trx->id_transaction,
                             'id_transaction'    => $trx->id_transaction,
@@ -345,11 +344,13 @@ class GoSend
                         ]);
 
                         $updateCode = AutoresponseCodeList::where('id_autoresponse_code_list', $idCode)->update(['id_user' => $trx->id_user, 'id_transaction' => $trx->id_transaction]);
-                        if($updateCode){
+                        if ($updateCode) {
                             app('Modules\Autocrm\Http\Controllers\ApiAutoresponseWithCode')->stopAutoresponse($idCode);
                         }
-                    }else{
-                        $autocrm = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Delivery Status Update', $phone,
+                    } else {
+                        $autocrm = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM(
+                            'Delivery Status Update',
+                            $phone,
                             [
                                 'id_reference'              => $trx->id_transaction,
                                 'id_transaction'            => $trx->id_transaction,
@@ -363,8 +364,10 @@ class GoSend
                             ]
                         );
                     }
-                }else{
-                    $autocrm = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Delivery Status Update', $phone,
+                } else {
+                    $autocrm = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM(
+                        'Delivery Status Update',
+                        $phone,
                         [
                             'id_reference'              => $trx->id_transaction,
                             'id_transaction'            => $trx->id_transaction,
@@ -380,7 +383,9 @@ class GoSend
                 }
             }
             if ($delivery_status == 'rejected') {
-                $autocrm = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Delivery Rejected', $phone,
+                $autocrm = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM(
+                    'Delivery Rejected',
+                    $phone,
                     [
                         'id_reference'              => $trx->id_transaction,
                         'id_transaction'            => $trx->id_transaction,

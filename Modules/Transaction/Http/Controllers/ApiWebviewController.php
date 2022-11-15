@@ -5,7 +5,6 @@ namespace Modules\Transaction\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Http\Models\Transaction;
 use App\Http\Models\Setting;
 use App\Http\Models\DealsUser;
@@ -22,9 +21,7 @@ use App\Http\Models\DealsPaymentMidtran;
 use App\Http\Models\DealsPaymentManual;
 use App\Http\Models\TransactionAdvanceOrder;
 use Modules\Brand\Entities\Brand;
-
 use App\Lib\MyHelper;
-
 use Modules\Transaction\Http\Requests\TransactionDetail;
 
 class ApiWebviewController extends Controller
@@ -91,7 +88,7 @@ class ApiWebviewController extends Controller
                         'transaction_receipt_number' => $list['transaction_receipt_number'],
                         'transaction_grandtotal'     => $list['transaction_grandtotal'],
                         'type'                       => $type,
-                        'url'                        => config('url.api_url').'api/transaction/web/view/detail?data='.$base
+                        'url'                        => config('url.api_url') . 'api/transaction/web/view/detail?data=' . $base
                     ],
                 ];
 
@@ -118,7 +115,7 @@ class ApiWebviewController extends Controller
                         'transaction_receipt_number' => $list['id_deals_user'],
                         'transaction_grandtotal'     => $list['voucher_price_cash'],
                         'type'                       => $type,
-                        'url'                        => config('url.api_url').'api/transaction/web/view/detail?data='.$base
+                        'url'                        => config('url.api_url') . 'api/transaction/web/view/detail?data=' . $base
                     ],
 
                 ];
@@ -128,64 +125,64 @@ class ApiWebviewController extends Controller
         }
 
         if ($type == 'trx') {
-            if($request->json('id_transaction')){
-                if($mode == 'simple'){
+            if ($request->json('id_transaction')) {
+                if ($mode == 'simple') {
                     $list = Transaction::with('pickup_gosend_update')->where('id_transaction', $request->json('id_transaction'))->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first();
-                }else{
+                } else {
                     $list = Transaction::with('pickup_gosend_update')->where('id_transaction', $request->json('id_transaction'))->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first()->toArray();
-                    if(!$list){
-                        return MyHelper::checkGet([],'empty');
+                    if (!$list) {
+                        return MyHelper::checkGet([], 'empty');
                     }
                     $label = [];
                     $label2 = [];
-                    $product_count=0;
-                    $list['product_transaction'] = MyHelper::groupIt($list['product_transaction'],'id_brand',null,function($key,&$val) use (&$product_count){
-                        $product_count += array_sum(array_column($val,'transaction_product_qty'));
+                    $product_count = 0;
+                    $list['product_transaction'] = MyHelper::groupIt($list['product_transaction'], 'id_brand', null, function ($key, &$val) use (&$product_count) {
+                        $product_count += array_sum(array_column($val, 'transaction_product_qty'));
                         $brand = Brand::select('name_brand')->find($key);
-                        if(!$brand){
+                        if (!$brand) {
                             return 'No Brand';
                         }
                         return $brand->name_brand;
                     });
                 }
-            }else{
-                $arrId = explode(',',$id);
+            } else {
+                $arrId = explode(',', $id);
 
-                if(count($arrId) != 2){
-                    if($mode == 'simple'){
+                if (count($arrId) != 2) {
+                    if ($mode == 'simple') {
                         $list = Transaction::where('transaction_receipt_number', $id)->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first();
-                    }else{
+                    } else {
                         $list = Transaction::where('transaction_receipt_number', $id)->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first()->toArray();
-                        if(!$list){
-                            return MyHelper::checkGet([],'empty');
+                        if (!$list) {
+                            return MyHelper::checkGet([], 'empty');
                         }
                         $label = [];
                         $label2 = [];
-                        $product_count=0;
-                        $list['product_transaction'] = MyHelper::groupIt($list['product_transaction'],'id_brand',null,function($key,&$val) use (&$product_count){
-                            $product_count += array_sum(array_column($val,'transaction_product_qty'));
+                        $product_count = 0;
+                        $list['product_transaction'] = MyHelper::groupIt($list['product_transaction'], 'id_brand', null, function ($key, &$val) use (&$product_count) {
+                            $product_count += array_sum(array_column($val, 'transaction_product_qty'));
                             $brand = Brand::select('name_brand')->find($key);
-                            if(!$brand){
+                            if (!$brand) {
                                 return 'No Brand';
                             }
                             return $brand->name_brand;
                         });
                     }
-                }else{
-                    if($mode == 'simple'){
+                } else {
+                    if ($mode == 'simple') {
                         $list = Transaction::where('transaction_receipt_number', $arrId[0])->where('id_transaction', $arrId[1])->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first();
-                    }else{
+                    } else {
                         $list = Transaction::where('transaction_receipt_number', $arrId[0])->where('id_transaction', $arrId[1])->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.modifiers', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first()->toArray();
-                        if(!$list){
-                            return MyHelper::checkGet([],'empty');
+                        if (!$list) {
+                            return MyHelper::checkGet([], 'empty');
                         }
                         $label = [];
                         $label2 = [];
-                        $product_count=0;
-                        $list['product_transaction'] = MyHelper::groupIt($list['product_transaction'],'id_brand',null,function($key,&$val) use (&$product_count){
-                            $product_count += array_sum(array_column($val,'transaction_product_qty'));
+                        $product_count = 0;
+                        $list['product_transaction'] = MyHelper::groupIt($list['product_transaction'], 'id_brand', null, function ($key, &$val) use (&$product_count) {
+                            $product_count += array_sum(array_column($val, 'transaction_product_qty'));
                             $brand = Brand::select('name_brand')->find($key);
-                            if(!$brand){
+                            if (!$brand) {
                                 return 'No Brand';
                             }
                             return $brand->name_brand;
@@ -200,7 +197,7 @@ class ApiWebviewController extends Controller
             $cart = $list['transaction_subtotal'] + $list['transaction_shipment'] + $list['transaction_service'] + $list['transaction_tax'] - $list['transaction_discount'];
 
             $list['transaction_carttotal'] = $cart;
-            if($mode != 'simple'){
+            if ($mode != 'simple') {
                 $list['transaction_item_total'] = $product_count;
             }
 
@@ -260,11 +257,11 @@ class ApiWebviewController extends Controller
 
             if ($list['trasaction_payment_type'] == 'Offline') {
                 $getPayment = TransactionPaymentOffline::where('id_transaction', $list['id_transaction'])->get();
-                foreach($getPayment as $pay){
+                foreach ($getPayment as $pay) {
                     $pay['type'] = 'Offline';
                     array_push($dataPayment, $pay);
                 }
-            }else{
+            } else {
                 $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
                 // return $multiPayment;
                 if (isset($multiPayment)) {
@@ -290,8 +287,8 @@ class ApiWebviewController extends Controller
                             }
                         }
                     }
-                }else{
-                    if($list['trasaction_payment_type'] == 'Midtrans') {
+                } else {
+                    if ($list['trasaction_payment_type'] == 'Midtrans') {
                         $getPayment = TransactionPaymentMidtran::where('id_transaction', $list['id_transaction'])->first();
                         if (!empty($getPayment)) {
                             $getPayment['type'] = 'Midtrans';
@@ -301,14 +298,13 @@ class ApiWebviewController extends Controller
 
                     if ($list['trasaction_payment_type'] == 'Balance') {
                         $getPayment = TransactionPaymentBalance::where('id_transaction', $list['id_transaction'])->first();
-                        if($getPayment){
+                        if ($getPayment) {
                             $getPayment['type'] = 'Balance';
                             array_push($dataPayment, $getPayment);
                             $list['balance'] = $getPayment['balance_nominal'];
                         }
                     }
                 }
-
             }
 
             // if ($list['trasaction_payment_type'] == 'Balance') {
@@ -354,7 +350,7 @@ class ApiWebviewController extends Controller
 
             $detail = [];
 
-            $qrTest= '';
+            $qrTest = '';
 
             if ($list['trasaction_type'] == 'Pickup Order') {
                 $detail = TransactionPickup::where('id_transaction', $list['id_transaction'])->with('transaction_pickup_go_send')->first();
@@ -380,19 +376,15 @@ class ApiWebviewController extends Controller
             $list['kind'] = $list['trasaction_type'];
 
             $statusPickup = "";
-            if(isset($detail['reject_at']) && $detail['reject_at'] != null){
+            if (isset($detail['reject_at']) && $detail['reject_at'] != null) {
                 $statusPickup  = 'Reject';
-            }
-            elseif(isset($detail['taken_at']) && $detail['taken_at'] != null){
+            } elseif (isset($detail['taken_at']) && $detail['taken_at'] != null) {
                 $statusPickup  = 'Taken';
-            }
-            elseif(isset($detail['ready_at']) && $detail['ready_at'] != null){
+            } elseif (isset($detail['ready_at']) && $detail['ready_at'] != null) {
                 $statusPickup  = 'Ready';
-            }
-            elseif(isset($detail['receive_at']) && $detail['receive_at'] != null){
+            } elseif (isset($detail['receive_at']) && $detail['receive_at'] != null) {
                 $statusPickup  = 'On Going';
-            }
-            else{
+            } else {
                 $statusPickup  = 'Pending';
             }
 
@@ -400,11 +392,10 @@ class ApiWebviewController extends Controller
 
             if (isset($success)) {
                 $list['success'] = 1;
-
             }
 
             // $qrCode = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='.$qrTest;
-            $qrCode = 'https://chart.googleapis.com/chart?chl='.$qrTest.'&chs=250x250&cht=qr&chld=H%7C0';
+            $qrCode = 'https://chart.googleapis.com/chart?chl=' . $qrTest . '&chs=250x250&cht=qr&chld=H%7C0';
             $qrCode = html_entity_decode($qrCode);
             $list['qr'] = $qrCode;
 
@@ -429,7 +420,7 @@ class ApiWebviewController extends Controller
             }
 
             $balance = LogBalance::where('id_reference', $id)->where('source', 'Deals Balance')->first();
-            if($balance){
+            if ($balance) {
                 $list['balance'] = $balance['balance'];
             }
 
@@ -441,7 +432,6 @@ class ApiWebviewController extends Controller
 
             return response()->json(MyHelper::checkGet($list));
         }
-
     }
 
     public function webviewPoint(Request $request)
@@ -478,7 +468,7 @@ class ApiWebviewController extends Controller
                 'result' => [
                     'type'                       => $type,
                     'transaction_receipt_number' => $receipt,
-                    'url'                        => config('url.api_url').'api/transaction/web/view/detail/point?data='.$base
+                    'url'                        => config('url.api_url') . 'api/transaction/web/view/detail/point?data=' . $base
                 ],
             ];
 
@@ -497,7 +487,6 @@ class ApiWebviewController extends Controller
             } else {
                 $data['online'] = 1;
             }
-
         } else {
             $select = DealsUser::with('dealVoucher.deal')->where('id_deals_user', $data['id_reference'])->first();
             $data['type']   = 'voucher';
@@ -526,11 +515,11 @@ class ApiWebviewController extends Controller
         if ($data['source'] == 'Online Transaction' || $data['source'] == 'Offline Transaction' || $data['source'] == 'Transaction' || $data['source'] == 'Rejected Order' || $data['source'] == 'Rejected Order Point' || $data['source'] == 'Rejected Order Midtrans' || $data['source'] == 'Reversal') {
             $select = Transaction::with(['outlet', 'productTransaction'])->where('id_transaction', $data['id_reference'])->first()->toArray();
 
-            $product_count=0;
-            $select['product_transaction'] = MyHelper::groupIt($select['product_transaction'],'id_brand',null,function($key,&$val) use (&$product_count){
-                $product_count += array_sum(array_column($val,'transaction_product_qty'));
+            $product_count = 0;
+            $select['product_transaction'] = MyHelper::groupIt($select['product_transaction'], 'id_brand', null, function ($key, &$val) use (&$product_count) {
+                $product_count += array_sum(array_column($val, 'transaction_product_qty'));
                 $brand = Brand::select('name_brand')->find($key);
-                if(!$brand){
+                if (!$brand) {
                     return 'No Brand';
                 }
                 return $brand->name_brand;
@@ -557,12 +546,10 @@ class ApiWebviewController extends Controller
         }
 
         if (empty($check)) {
-
-            if($type == 'voucher'){
+            if ($type == 'voucher') {
                 $list = DealsUser::with('outlet', 'dealVoucher.deal')->where('id_deals_user', $data['id_reference'])->first();
 
                 if ($list) {
-
                     $dataEncode = [
                         'id_transaction'   => $data['id_reference'],
                         'type' => $type
@@ -571,7 +558,7 @@ class ApiWebviewController extends Controller
                     $encode = json_encode($dataEncode);
                     $base = base64_encode($encode);
 
-                    if($list['balance_nominal'] != null){
+                    if ($list['balance_nominal'] != null) {
                         $list['voucher_price_cash'] = $list['voucher_price_cash'] - $list['balance_nominal'];
                     }
 
@@ -582,7 +569,7 @@ class ApiWebviewController extends Controller
                             'id_transaction' => $list['id_deals_user'],
                             'transaction_grandtotal'     => $list['voucher_price_cash'],
                             'type'                       => $type,
-                            'url'                        => config('url.api_url').'api/transaction/web/view/detail?data='.$base
+                            'url'                        => config('url.api_url') . 'api/transaction/web/view/detail?data=' . $base
                         ],
 
                     ];
@@ -613,8 +600,8 @@ class ApiWebviewController extends Controller
                     'type'                       => $type,
                     'id_transaction' => $select['id_transaction'],
                     'button'                     => 'LIHAT DETAIL',
-                    'url'                        => config('url.api_url').'api/transaction/web/view/detail/balance?data='.$base,
-                    'trx_url'                    => config('url.api_url').'api/transaction/web/view/detail?data='.$base2
+                    'url'                        => config('url.api_url') . 'api/transaction/web/view/detail/balance?data=' . $base,
+                    'trx_url'                    => config('url.api_url') . 'api/transaction/web/view/detail?data=' . $base2
                 ],
             ];
 
@@ -667,9 +654,9 @@ class ApiWebviewController extends Controller
             $view = 'detail_transaction_pickup';
         }
 
-        // 	if ($data['kind'] == 'Offline') {
-        // 		$view = 'detail_transaction_off';
-        // 	}
+        //  if ($data['kind'] == 'Offline') {
+        //      $view = 'detail_transaction_off';
+        //  }
 
         if ($data['kind'] == 'Voucher') {
             $view = 'detail_transaction_voucher';
@@ -702,7 +689,7 @@ class ApiWebviewController extends Controller
             $data['order_label_v2'] = explode(',', $data['order_label_v2']);
             $data['order_v2'] = explode(',', $data['order_v2']);
         }
-        
+
         return view('transaction::webview.' . $view . '')->with(compact('data'));
     }
 
@@ -752,11 +739,11 @@ class ApiWebviewController extends Controller
 
         if (isset($check['status']) && $check['status'] == 'success') {
             $data = $check['result'];
-            $product_count=0;
-            $data['detail']['product_transaction'] = MyHelper::groupIt($data['detail']['product_transaction'],'id_brand',null,function($key,&$val) use (&$product_count){
-                $product_count += array_sum(array_column($val,'transaction_product_qty'));
+            $product_count = 0;
+            $data['detail']['product_transaction'] = MyHelper::groupIt($data['detail']['product_transaction'], 'id_brand', null, function ($key, &$val) use (&$product_count) {
+                $product_count += array_sum(array_column($val, 'transaction_product_qty'));
                 $brand = Brand::select('name_brand')->find($key);
-                if(!$brand){
+                if (!$brand) {
                     return 'No Brand';
                 }
                 return $brand->name_brand;
@@ -793,7 +780,7 @@ class ApiWebviewController extends Controller
         $data = json_decode(base64_decode($request->get('data')), true);
         $data['check'] = 1;
         $check = MyHelper::postCURLWithBearer('api/transaction/detail/webview/balance?log_save=0', $data, $bearer);
-        
+
         if (isset($check['status']) && $check['status'] == 'success') {
             $data = $check['result'];
         } elseif (isset($check['status']) && $check['status'] == 'fail') {

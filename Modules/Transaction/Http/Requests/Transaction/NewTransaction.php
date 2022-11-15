@@ -20,12 +20,12 @@ class NewTransaction extends FormRequest
             'pickup_type'              => 'required_if:type,Pickup Order|in:set time,right now,at arrival',
             'pickup_at'                => 'required_if:pickup_type,set time|date_format:Y-m-d H:i:s',
             'payment_type'             => 'nullable|in:Midtrans,Manual,Balance,Ovo,Ipay88,Shopeepay',
-            
+
             'shipping'                 => 'required_if:type,Delivery|integer',
             'cour_service'             => 'nullable|string',
             'cour_etd'                 => 'nullable|string',
             'id_user_address'          => 'required_if:type,Delivery|integer',
-            
+
             // 'destination.name'         => 'required_if:type,GO-SEND',
             // 'destination.phone'        => 'required_if:type,GO-SEND',
             'destination.address'      => 'required_if:type,GO-SEND',
@@ -34,7 +34,7 @@ class NewTransaction extends FormRequest
             'destination.description'  => 'nullable',
             'destination.id_user_address' => 'nullable',
             'destination.type'  => 'nullable',
-            
+
             // 'id_manual_payment_method' => 'required_if:payment_type,Manual|integer',
             // 'payment_date'             => 'required_if:payment_type,Manual|date_format:Y-m-d',
             // 'payment_time'             => 'required_if:payment_type,Manual|date_format:H:i:s',

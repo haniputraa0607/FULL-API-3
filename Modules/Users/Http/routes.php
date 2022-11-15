@@ -1,25 +1,21 @@
 <?php
 
-Route::group(['namespace' => 'Modules\Users\Http\Controllers'], function()
-{
+Route::group(['namespace' => 'Modules\Users\Http\Controllers'], function () {
     Route::any('email/verify/{slug}', 'ApiUser@verifyEmail');
 });
 
-Route::group(['middleware' => ['auth_client','log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'api/v2/users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
-{
+Route::group(['middleware' => ['auth_client','log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'api/v2/users', 'namespace' => 'Modules\Users\Http\Controllers'], function () {
     Route::post('phone/check', 'ApiUserV2@phoneCheck');
 
     Route::post('pin/forgot', 'ApiUserV2@forgotPin');
 });
 
-Route::group(['prefix' => 'api', 'middleware' => ['log_activities', 'user_agent']], function(){
-    Route::group(['middleware' => ['auth_client','log_activities', 'user_agent', 'scopes:apps'], 'namespace' => 'Modules\Users\Http\Controllers'], function()
-    {
+Route::group(['prefix' => 'api', 'middleware' => ['log_activities', 'user_agent']], function () {
+    Route::group(['middleware' => ['auth_client','log_activities', 'user_agent', 'scopes:apps'], 'namespace' => 'Modules\Users\Http\Controllers'], function () {
         Route::post('validation-phone', 'ApiUser@validationPhone');
     });
 
-	Route::group(['middleware' => ['auth_client','log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
-	{
+    Route::group(['middleware' => ['auth_client','log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function () {
         Route::post('social/check', 'ApiLoginRegisterV2@socialCheck');
         Route::post('social/create', 'ApiLoginRegisterV2@socialCreate')->middleware(['decrypt_pin:user_password']);
         Route::post('social/bearer', 'ApiLoginRegisterV2@socialGetBearer');
@@ -31,10 +27,9 @@ Route::group(['prefix' => 'api', 'middleware' => ['log_activities', 'user_agent'
         Route::post('pin/change', 'ApiLoginRegisterV2@changePin')->middleware(['decrypt_pin:pin_new','decrypt_pin:pin_old']);
         Route::post('pin/request', 'ApiLoginRegisterV2@pinRequest');
         Route::post('profile/update/register', 'ApiLoginRegisterV2@profileUpdateRegister')->middleware(['decrypt_pin:pin_new','decrypt_pin:pin_old']);
-	});
+    });
 
-    Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
-    {
+    Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function () {
         Route::post('logout', 'ApiLoginRegisterV2@logout');
         Route::get('profile/detail', 'ApiUser@profileDetail');
         Route::post('profile/update-info', 'ApiUser@profileUpdateInfo');
@@ -46,52 +41,45 @@ Route::group(['prefix' => 'api', 'middleware' => ['log_activities', 'user_agent'
         Route::get('status/count', 'ApiUser@statusAllCount');
     });
 
-    Route::group(['middleware' => ['auth_client','log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
-    {
+    Route::group(['middleware' => ['auth_client','log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function () {
         Route::post('pin/check-backend', 'ApiUser@checkPinBackend');
         Route::post('remove-user-device', 'ApiUser@removeUserDevice');
     });
-    Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix' => 'home', 'namespace' => 'Modules\Users\Http\Controllers'], function()
-    {
-        Route::post('search','ApiHome@searchHome');
-        Route::post('/membership','ApiHome@membership');
-        Route::any('/banner','ApiHome@banner');
-        Route::any('/featured-deals','ApiHome@featuredDeals');
-        Route::any('/featured-subscription','ApiHome@featuredSubscription');
-        Route::any('/featured-promo-campaign','ApiHome@featuredPromoCampaign');
+    Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix' => 'home', 'namespace' => 'Modules\Users\Http\Controllers'], function () {
+        Route::post('search', 'ApiHome@searchHome');
+        Route::post('/membership', 'ApiHome@membership');
+        Route::any('/banner', 'ApiHome@banner');
+        Route::any('/featured-deals', 'ApiHome@featuredDeals');
+        Route::any('/featured-subscription', 'ApiHome@featuredSubscription');
+        Route::any('/featured-promo-campaign', 'ApiHome@featuredPromoCampaign');
         Route::post('refresh-point-balance', 'ApiHome@refreshPointBalance');
         Route::get('get-infobip-token', ['uses' => 'ApiHome@getInfobipToken']);
     });
 
-    Route::group(['middleware' => ['auth:api', 'scopes:apps'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
-    {
+    Route::group(['middleware' => ['auth:api', 'scopes:apps'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function () {
         Route::any('send/email/verify', 'ApiUser@sendVerifyEmail');
     });
 
-    Route::group(['prefix' => 'home', 'namespace' => 'Modules\Users\Http\Controllers'], function()
-    {
-        Route::any('splash','ApiHome@splash');
+    Route::group(['prefix' => 'home', 'namespace' => 'Modules\Users\Http\Controllers'], function () {
+        Route::any('splash', 'ApiHome@splash');
         Route::any('notloggedin', 'ApiHome@homeNotLoggedIn');
     });
 
-    Route::group(['prefix' => 'home-doctor', 'namespace' => 'Modules\Users\Http\Controllers'], function()
-    {
-        Route::any('splash','ApiHome@doctorSplash');
+    Route::group(['prefix' => 'home-doctor', 'namespace' => 'Modules\Users\Http\Controllers'], function () {
+        Route::any('splash', 'ApiHome@doctorSplash');
     });
 });
 
-Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be'], 'namespace' => 'Modules\Users\Http\Controllers'], function()
-{
-	Route::get('user-delete/{phone}', ['middleware' => 'feature_control:6', 'uses' => 'ApiUser@deleteUser']);
-	Route::post('user-delete/{phone}', ['middleware' => 'feature_control:6', 'uses' => 'ApiUser@deleteUserAction']);
+Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be'], 'namespace' => 'Modules\Users\Http\Controllers'], function () {
+    Route::get('user-delete/{phone}', ['middleware' => 'feature_control:6', 'uses' => 'ApiUser@deleteUser']);
+    Route::post('user-delete/{phone}', ['middleware' => 'feature_control:6', 'uses' => 'ApiUser@deleteUserAction']);
 });
 
-Route::group(['prefix' => 'api/cron', 'namespace' => 'Modules\Users\Http\Controllers'], function()
-{
-	Route::any('/reset-trx-day', 'ApiUser@resetCountTransaction');
+Route::group(['prefix' => 'api/cron', 'namespace' => 'Modules\Users\Http\Controllers'], function () {
+    Route::any('/reset-trx-day', 'ApiUser@resetCountTransaction');
 });
 
-Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'api/users', 'namespace' => 'Modules\Users\Http\Controllers'], function(){
+Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'api/users', 'namespace' => 'Modules\Users\Http\Controllers'], function () {
     Route::post('pin/check/be', 'ApiUser@checkPinBackend');
     Route::post('list/address', 'ApiUser@listAddress');
     Route::get('list/{var}', 'ApiUser@listVar');
@@ -150,5 +138,4 @@ Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scope
     Route::post('complete-profile', ['middleware' => 'feature_control:3', 'uses' => 'ApiWebviewUser@completeProfile']);
     // get complete user profile success message
     Route::get('complete-profile/success-message', ['middleware' => 'feature_control:3', 'uses' => 'ApiWebviewUser@getSuccessMessage']);
-
 });

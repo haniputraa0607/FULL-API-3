@@ -11,44 +11,44 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class OutletPhoto
- * 
+ *
  * @property int $id_outlet_photo
  * @property int $id_outlet
  * @property string $outlet_photo
  * @property int $outlet_photo_order
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
- * 
+ *
  * @property \App\Http\Models\Outlet $outlet
  *
  * @package App\Models
  */
 class OutletPhoto extends Model
 {
-	protected $primaryKey = 'id_outlet_photo';
-	protected $appends    = ['url_outlet_photo'];
-	protected $casts = [
-		'id_outlet' => 'int',
-		'outlet_photo_order' => 'int'
-	];
+    protected $primaryKey = 'id_outlet_photo';
+    protected $appends    = ['url_outlet_photo'];
+    protected $casts = [
+        'id_outlet' => 'int',
+        'outlet_photo_order' => 'int'
+    ];
 
-	protected $fillable = [
-		'id_outlet',
-		'outlet_photo',
-		'outlet_photo_order'
-	];
+    protected $fillable = [
+        'id_outlet',
+        'outlet_photo',
+        'outlet_photo_order'
+    ];
 
-	public function outlet()
+    public function outlet()
     {
         return $this->belongsTo(Outlet::class, 'id_outlet', 'id_outlet');
     }
 
-    public function getUrlOutletPhotoAttribute() {
+    public function getUrlOutletPhotoAttribute()
+    {
         if (empty($this->outlet_photo)) {
-            return config('url.storage_url_api').'img/default.jpg';
-        }
-        else {
-            return config('url.storage_url_api').$this->outlet_photo;
+            return config('url.storage_url_api') . 'img/default.jpg';
+        } else {
+            return config('url.storage_url_api') . $this->outlet_photo;
         }
     }
 }

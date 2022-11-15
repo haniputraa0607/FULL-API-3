@@ -5,16 +5,16 @@ namespace Modules\Setting\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Lib\MyHelper;
 use App\Http\Models\Setting;
 use App\Http\Models\User;
 
 class ApiTutorial extends Controller
 {
-    function __construct() {
+    public function __construct()
+    {
         date_default_timezone_set('Asia/Jakarta');
-		$this->user     = "Modules\Users\Http\Controllers\ApiUser";
+        $this->user     = "Modules\Users\Http\Controllers\ApiUser";
     }
 
     /**
@@ -25,8 +25,9 @@ class ApiTutorial extends Controller
     {
         $data = $request->json()->all();
 
-        if (isset($data['key']))
+        if (isset($data['key'])) {
             $intro = Setting::where('key', $data['key'])->first();
+        }
 
         if (!$intro) {
             $intro = Setting::create([
@@ -79,11 +80,11 @@ class ApiTutorial extends Controller
     {
         $post = $request->json()->all();
 
-        if(!isset($post['key'])){
+        if (!isset($post['key'])) {
             $post['key'] = 'intro_home';
         }
         $data = Setting::where('key', $post['key'])->first();
-        
+
         if (!$data) {
             return response()->json([
                 'status'    => 'fail',
@@ -92,7 +93,7 @@ class ApiTutorial extends Controller
         }
 
         $list = json_decode($data->value, true);
-        
+
         if ($data->value_text != 'null') {
             foreach (json_decode($data->value_text, true) as $key => $value) {
                 $list['image'][$key] = config('url.storage_url_api') . $value;
@@ -110,9 +111,8 @@ class ApiTutorial extends Controller
         $user = $request->user();
 
         if ($user['status_new_user'] == 1) {
-
             $data = Setting::where('key', $post['key'])->first();
-    
+
             if ($data) {
                 User::where('id', $user['id'])->update(['status_new_user' => 0]);
             } else {
@@ -121,9 +121,9 @@ class ApiTutorial extends Controller
                     'messages'  => 'Tutorial belum di setup'
                 ]);
             }
-            
+
             $list = json_decode($data->value, true);
-        
+
             if ($data->value_text != 'null') {
                 foreach (json_decode($data->value_text, true) as $key => $value) {
                     $list['image'][$key] = config('url.storage_url_api') . $value;
@@ -134,7 +134,7 @@ class ApiTutorial extends Controller
         } else {
             $list['active'] = 0;
         }
-        
+
         return response()->json(MyHelper::checkGet($list));
     }
 }

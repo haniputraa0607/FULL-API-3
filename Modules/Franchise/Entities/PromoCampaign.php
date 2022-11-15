@@ -11,7 +11,7 @@ use Reliese\Database\Eloquent\Model as Eloquent;
 
 /**
  * Class PromoCampaign
- * 
+ *
  * @property int $id_promo_campaign
  * @property int $created_by
  * @property int $last_updated_by
@@ -29,7 +29,7 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  * @property \Carbon\Carbon $updated_at
  * @property int $used_code
  * @property int $limitation_usage
- * 
+ *
  * @property \Illuminate\Database\Eloquent\Collection $products
  * @property \Illuminate\Database\Eloquent\Collection $promo_campaign_buyxgety_rules
  * @property \Illuminate\Database\Eloquent\Collection $promo_campaign_have_tags
@@ -45,41 +45,41 @@ use Reliese\Database\Eloquent\Model as Eloquent;
 class PromoCampaign extends Eloquent
 {
     protected $connection = 'mysql3';
-	protected $primaryKey = 'id_promo_campaign';
+    protected $primaryKey = 'id_promo_campaign';
 
-	protected $casts = [
-		'created_by' => 'int',
-		'last_updated_by' => 'int',
-		'number_last_code' => 'int',
-		'total_code' => 'int',
-		'used_code' => 'int',
-		'limitation_usage' => 'int'
-	];
+    protected $casts = [
+        'created_by' => 'int',
+        'last_updated_by' => 'int',
+        'number_last_code' => 'int',
+        'total_code' => 'int',
+        'used_code' => 'int',
+        'limitation_usage' => 'int'
+    ];
 
-	protected $dates = [
-		'date_start',
-		'date_end'
-	];
+    protected $dates = [
+        'date_start',
+        'date_end'
+    ];
 
-	protected $fillable = [
-		'id_brand',
-		'created_by',
-		'last_updated_by',
-		'campaign_name',
-		'promo_title',
-		'code_type',
-		'prefix_code',
-		'number_last_code',
-		'total_coupon',
-		'date_start',
-		'date_end',
-		'is_all_outlet',
-		'promo_type',
-		'user_type',
-		'specific_user',
-		'used_code',
-		'limitation_usage',
-		'step_complete',
+    protected $fillable = [
+        'id_brand',
+        'created_by',
+        'last_updated_by',
+        'campaign_name',
+        'promo_title',
+        'code_type',
+        'prefix_code',
+        'number_last_code',
+        'total_coupon',
+        'date_start',
+        'date_end',
+        'is_all_outlet',
+        'promo_type',
+        'user_type',
+        'specific_user',
+        'used_code',
+        'limitation_usage',
+        'step_complete',
         'charged_central',
         'charged_outlet',
         'min_basket_size',
@@ -95,68 +95,68 @@ class PromoCampaign extends Eloquent
         'user_limit',
         'code_limit',
         'device_limit'
-	];
+    ];
 
-	public function user()
+    public function user()
     {
         return $this->belongsTo(\App\Http\Models\User::class, 'created_by');
     }
 
-	public function products()
-	{
-		return $this->belongsToMany(\App\Http\Models\Product::class, 'promo_campaign_tier_discount_products', 'id_promo_campaign', 'id_product')
-					->withPivot('id_promo_campaign_product_discount_rule', 'id_product_category')
-					->withTimestamps();
-	}
+    public function products()
+    {
+        return $this->belongsToMany(\App\Http\Models\Product::class, 'promo_campaign_tier_discount_products', 'id_promo_campaign', 'id_product')
+                    ->withPivot('id_promo_campaign_product_discount_rule', 'id_product_category')
+                    ->withTimestamps();
+    }
 
-	public function promo_campaign_buyxgety_rules()
-	{
-		return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignBuyxgetyRule::class, 'id_promo_campaign');
-	}
+    public function promo_campaign_buyxgety_rules()
+    {
+        return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignBuyxgetyRule::class, 'id_promo_campaign');
+    }
 
-	public function promo_campaign_have_tags()
-	{
-		return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignHaveTag::class, 'id_promo_campaign');
-	}
+    public function promo_campaign_have_tags()
+    {
+        return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignHaveTag::class, 'id_promo_campaign');
+    }
 
-	public function outlets()
-	{
-		return $this->belongsToMany(\App\Http\Models\Outlet::class, 'promo_campaign_outlets', 'id_promo_campaign', 'id_outlet')
-					->withPivot('id_promo_campaign_outlet')
-					->withTimestamps();
-	}
+    public function outlets()
+    {
+        return $this->belongsToMany(\App\Http\Models\Outlet::class, 'promo_campaign_outlets', 'id_promo_campaign', 'id_outlet')
+                    ->withPivot('id_promo_campaign_outlet')
+                    ->withTimestamps();
+    }
 
-	public function promo_campaign_outlets()
+    public function promo_campaign_outlets()
     {
         return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignOutlet::class, 'id_promo_campaign', 'id_promo_campaign');
     }
 
-	public function promo_campaign_product_discount_rules()
-	{
-		return $this->hasOne(\Modules\PromoCampaign\Entities\PromoCampaignProductDiscountRule::class, 'id_promo_campaign');
-	}
+    public function promo_campaign_product_discount_rules()
+    {
+        return $this->hasOne(\Modules\PromoCampaign\Entities\PromoCampaignProductDiscountRule::class, 'id_promo_campaign');
+    }
 
-	public function promo_campaign_promo_codes()
-	{
-		return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignPromoCode::class, 'id_promo_campaign');
-	}
+    public function promo_campaign_promo_codes()
+    {
+        return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignPromoCode::class, 'id_promo_campaign');
+    }
 
-	public function promo_campaign_reports()
-	{
-		return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignReport::class, 'id_promo_campaign');
-	}
+    public function promo_campaign_reports()
+    {
+        return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignReport::class, 'id_promo_campaign');
+    }
 
-	public function promo_campaign_tier_discount_rules()
-	{
-		return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignTierDiscountRule::class, 'id_promo_campaign');
-	}
+    public function promo_campaign_tier_discount_rules()
+    {
+        return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignTierDiscountRule::class, 'id_promo_campaign');
+    }
 
-	public function promo_campaign_user_filters()
-	{
-		return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignUserFilter::class, 'id_promo_campaign');
-	}
+    public function promo_campaign_user_filters()
+    {
+        return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignUserFilter::class, 'id_promo_campaign');
+    }
 
-	public function promo_campaign_buyxgety_product_requirement()
+    public function promo_campaign_buyxgety_product_requirement()
     {
         return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignBuyxgetyProductRequirement::class, 'id_promo_campaign', 'id_promo_campaign');
     }
@@ -188,40 +188,41 @@ class PromoCampaign extends Eloquent
 
     public function brand()
     {
-		return $this->belongsTo(\Modules\Brand\Entities\Brand::class,'id_brand');
-	}
+        return $this->belongsTo(\Modules\Brand\Entities\Brand::class, 'id_brand');
+    }
 
-	public function getGetAllRulesAttribute() {
-		$this->load([
-			'promo_campaign_outlets',
-			'promo_campaign_product_discount_rules',
-			'promo_campaign_tier_discount_rules',
-			'promo_campaign_buyxgety_rules',
-			'promo_campaign_product_discount.product' => function($q) {
-				$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
-			},
-			'promo_campaign_buyxgety_product_requirement.product' => function($q) {
-				$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
-			},
-			'promo_campaign_tier_discount_product.product' => function($q) {
-				$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
-			},
-			'promo_campaign_tier_discount_rules.product' => function($q) {
-				$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
-			},
-			'brand'
-		]);
-	}
+    public function getGetAllRulesAttribute()
+    {
+        $this->load([
+            'promo_campaign_outlets',
+            'promo_campaign_product_discount_rules',
+            'promo_campaign_tier_discount_rules',
+            'promo_campaign_buyxgety_rules',
+            'promo_campaign_product_discount.product' => function ($q) {
+                $q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+            },
+            'promo_campaign_buyxgety_product_requirement.product' => function ($q) {
+                $q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+            },
+            'promo_campaign_tier_discount_product.product' => function ($q) {
+                $q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+            },
+            'promo_campaign_tier_discount_rules.product' => function ($q) {
+                $q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+            },
+            'brand'
+        ]);
+    }
 
-	public function promo_campaign_discount_bill_rules()
-	{
-		return $this->hasOne(\Modules\PromoCampaign\Entities\PromoCampaignDiscountBillRule::class, 'id_promo_campaign');
-	}
+    public function promo_campaign_discount_bill_rules()
+    {
+        return $this->hasOne(\Modules\PromoCampaign\Entities\PromoCampaignDiscountBillRule::class, 'id_promo_campaign');
+    }
 
-	public function promo_campaign_discount_delivery_rules()
-	{
-		return $this->hasOne(\Modules\PromoCampaign\Entities\PromoCampaignDiscountDeliveryRule::class, 'id_promo_campaign');
-	}
+    public function promo_campaign_discount_delivery_rules()
+    {
+        return $this->hasOne(\Modules\PromoCampaign\Entities\PromoCampaignDiscountDeliveryRule::class, 'id_promo_campaign');
+    }
 
     public function promo_campaign_payment_method()
     {
@@ -235,21 +236,21 @@ class PromoCampaign extends Eloquent
 
     public function brands()
     {
-		return $this->belongsToMany(\Modules\Brand\Entities\Brand::class,'promo_campaign_brands','id_promo_campaign','id_brand');
-	}
+        return $this->belongsToMany(\Modules\Brand\Entities\Brand::class, 'promo_campaign_brands', 'id_promo_campaign', 'id_brand');
+    }
 
-	public function promo_campaign_brands()
-	{
+    public function promo_campaign_brands()
+    {
         return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignBrand::class, 'id_promo_campaign', 'id_promo_campaign');
-	}
+    }
 
-	public function promo_campaign_discount_bill_products()
+    public function promo_campaign_discount_bill_products()
     {
         return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignDiscountBillProduct::class, 'id_promo_campaign', 'id_promo_campaign');
     }
 
     public function outlet_groups()
-	{
-		return $this->belongsToMany(\Modules\Outlet\Entities\OutletGroup::class, 'promo_campaign_outlet_groups', 'id_promo_campaign', 'id_outlet_group');
-	}
+    {
+        return $this->belongsToMany(\Modules\Outlet\Entities\OutletGroup::class, 'promo_campaign_outlet_groups', 'id_promo_campaign', 'id_outlet_group');
+    }
 }

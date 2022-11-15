@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class UserAddress
- * 
+ *
  * @property int $id_user_address
  * @property string $name
  * @property string $phone
@@ -23,7 +23,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $primary
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
- * 
+ *
  * @property \App\Http\Models\City $city
  * @property \App\Http\Models\User $user
  *
@@ -31,49 +31,49 @@ use Illuminate\Database\Eloquent\Model;
  */
 class UserAddress extends Model
 {
-	protected $primaryKey = 'id_user_address';
+    protected $primaryKey = 'id_user_address';
 
-	protected $casts = [
-		'latitude'  => 'float',
-		'longitude' => 'float'
-	];
+    protected $casts = [
+        'latitude'  => 'float',
+        'longitude' => 'float'
+    ];
 
-	protected $fillable = [
-		'name',
-		'id_user',
-		'short_address',
-		'address',
+    protected $fillable = [
+        'name',
+        'id_user',
+        'short_address',
+        'address',
         'postal_code',
-		'description',
-		'latitude',
-		'longitude',
-		'favorite',
-		'type',
+        'description',
+        'latitude',
+        'longitude',
+        'favorite',
+        'type',
         'main_address',
         'id_city',
         'id_subdistrict',
         'receiver_name',
         'receiver_phone',
         'receiver_email'
-	];
+    ];
 
-	public function city()
-	{
-		return $this->belongsTo(\App\Http\Models\City::class, 'id_city');
-	}
+    public function city()
+    {
+        return $this->belongsTo(\App\Http\Models\City::class, 'id_city');
+    }
 
-	public function user()
-	{
-		return $this->belongsTo(\App\Http\Models\User::class, 'id_user');
-	}
+    public function user()
+    {
+        return $this->belongsTo(\App\Http\Models\User::class, 'id_user');
+    }
 
-	public function getTypeAttribute($value)
-	{
-		return $value?:'';
-	}
+    public function getTypeAttribute($value)
+    {
+        return $value ?: '';
+    }
 
-	public function getDescriptionAttribute($value)
-	{
-		return $value?:'';
-	}
+    public function getDescriptionAttribute($value)
+    {
+        return $value ?: '';
+    }
 }

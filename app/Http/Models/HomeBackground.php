@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class HomeBackground
- * 
+ *
  * @property int $id_home_background
  * @property string $when
  * @property string $picture
@@ -22,10 +22,10 @@ use Illuminate\Database\Eloquent\Model;
  */
 class HomeBackground extends Model
 {
-	protected $primaryKey = 'id_home_background';
+    protected $primaryKey = 'id_home_background';
 
-	protected $fillable = [
-		'when',
-		'picture'
-	];
+    protected $fillable = [
+        'when',
+        'picture'
+    ];
 }

@@ -16,7 +16,7 @@ class DeleteDealsPromotionTemplate extends FormRequest
     public function rules()
     {
         return [
-            'id_deals_promotion_template'	=> 'required'
+            'id_deals_promotion_template'   => 'required'
         ];
     }
 

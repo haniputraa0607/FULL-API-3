@@ -13,7 +13,7 @@ use Illuminate\Http\Request;
 |
 */
 
-Route::group(['prefix' => 'transaction-note-format'], function() {
+Route::group(['prefix' => 'transaction-note-format'], function () {
     Route::get('/{format_type}', 'ApiTransactionNoteFormatController@getPlain');
     Route::get('/{format_type}/{id_outlet}', 'ApiTransactionNoteFormatController@get');
     Route::post('/{format_type}', 'ApiTransactionNoteFormatController@set')

@@ -26,10 +26,9 @@ class BundlingProduct extends Model
     {
         return $this->hasOne(Product::class, 'id_product', 'id_product');
     }
-    
+
     public function bundlings()
     {
         return $this->hasOne(Bundling::class, 'id_bundling', 'id_bundling');
     }
-
 }

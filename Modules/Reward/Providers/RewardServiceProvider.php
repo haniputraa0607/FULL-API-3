@@ -46,10 +46,11 @@ class RewardServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('reward.php'),
+            __DIR__ . '/../Config/config.php' => config_path('reward.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'reward'
+            __DIR__ . '/../Config/config.php',
+            'reward'
         );
     }
 
@@ -62,11 +63,11 @@ class RewardServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/reward');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/reward';
@@ -85,7 +86,7 @@ class RewardServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'reward');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'reward');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'reward');
         }
     }
 

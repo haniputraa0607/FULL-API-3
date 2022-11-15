@@ -10,8 +10,13 @@ use Illuminate\Foundation\Bus\Dispatchable;
 
 class DisburseJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-    protected $data,$disburse;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
+
+    protected $data;
+    protected $disburse;
     /**
      * Create a new job instance.
      *

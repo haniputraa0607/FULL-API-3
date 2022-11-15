@@ -2,97 +2,90 @@
 
 namespace Modules\SettingFraud\Http\Controllers;
 
-use App\Http\Models\Configs;
 use App\Http\Models\DailyTransactions;
-use App\Http\Models\LogPoint;
-use App\Http\Models\Outlet;
-use Modules\PromoCampaign\Entities\PromoCampaign;
+use App\Http\Models\OauthAccessToken;
+use App\Http\Models\Setting;
+use App\Http\Models\Transaction;
+use App\Http\Models\User;
+use App\Http\Models\UsersDeviceLogin;
+use App\Lib\Apiwha;
+use App\Lib\ClassJatisSMS;
+use App\Lib\classMaskingJson;
+use App\Lib\MyHelper;
+use App\Lib\SendMail as Mail;
+use App\Lib\ValueFirst;
+use DateTime;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
 use Modules\PromoCampaign\Entities\PromoCampaignReferralTransaction;
 use Modules\SettingFraud\Entities\DailyCheckPromoCode;
 use Modules\SettingFraud\Entities\FraudBetweenTransaction;
 use Modules\SettingFraud\Entities\FraudDetectionLogCheckPromoCode;
+use Modules\SettingFraud\Entities\FraudDetectionLogDevice;
 use Modules\SettingFraud\Entities\FraudDetectionLogReferral;
 use Modules\SettingFraud\Entities\FraudDetectionLogReferralUsers;
+use Modules\SettingFraud\Entities\FraudDetectionLogTransactionDay;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionInBetween;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionPoint;
-use App\Http\Models\OauthAccessToken;
-use App\Http\Models\Transaction;
-use App\Http\Models\User;
-use App\Http\Models\UserDevice;
-use App\Http\Models\UsersDeviceLogin;
-use Illuminate\Http\Request;
-use Illuminate\Http\Response;
-use Illuminate\Routing\Controller;
-
-use Modules\SettingFraud\Entities\FraudSetting;
-use Modules\SettingFraud\Entities\FraudDetectionLog;
-use Modules\SettingFraud\Entities\FraudDetectionLogDevice;
-use Modules\SettingFraud\Entities\FraudDetectionLogTransactionDay;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionWeek;
-use App\Http\Models\Setting;
-use Illuminate\Support\Facades\DB;
-
-use App\Lib\MyHelper;
-use App\Lib\classMaskingJson;
-use App\Lib\classJatisSMS;
-use App\Lib\ValueFirst;
-use App\Lib\apiwha;
-use DateTime;
-use App\Lib\SendMail as Mail;
+use Modules\SettingFraud\Entities\FraudSetting;
 use Modules\SettingFraud\Entities\LogCheckPromoCode;
 use Modules\Transaction\Entities\TransactionGroup;
-use function GuzzleHttp\Psr7\str;
-use File;
 use Storage;
 
 class ApiFraud extends Controller
 {
-    function __construct() {
+    public function __construct()
+    {
         date_default_timezone_set('Asia/Jakarta');
-		$this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
-		$this->rajasms = new classMaskingJson();
-        $this->jatissms = new classJatisSMS();
-		$this->apiwha = new apiwha();
+        $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
+        $this->rajasms  = new classMaskingJson();
+        $this->jatissms = new ClassJatisSMS();
+        $this->Apiwha   = new Apiwha();
     }
 
-    function createUpdateDeviceLogin($user, $deviceID = null){
-        $getDeviceLogin = UsersDeviceLogin::where('id_user',$user['id'])->where('device_id', '=' ,$deviceID)->first();
+    public function createUpdateDeviceLogin($user, $deviceID = null)
+    {
+        $getDeviceLogin = UsersDeviceLogin::where('id_user', $user['id'])->where('device_id', '=', $deviceID)->first();
 
-        if($getDeviceLogin){
-            if($getDeviceLogin['status'] == 'Inactive'){
+        if ($getDeviceLogin) {
+            if ($getDeviceLogin['status'] == 'Inactive') {
                 $dt = [
-                    'status' => 'Active',
+                    'status'     => 'Active',
                     'created_at' => date('Y-m-d H:i:s'),
                     'last_login' => date('Y-m-d H:i:s'),
-                    'updated_at' => date('Y-m-d H:i:s')
+                    'updated_at' => date('Y-m-d H:i:s'),
                 ];
-            }else{
+            } else {
                 $dt = [
                     'last_login' => date('Y-m-d H:i:s'),
-                    'updated_at' => date('Y-m-d H:i:s')
+                    'updated_at' => date('Y-m-d H:i:s'),
                 ];
             }
-            $update = UsersDeviceLogin::where('id_user',$user['id'])->where('device_id', '=' ,$deviceID)
+            $update = UsersDeviceLogin::where('id_user', $user['id'])->where('device_id', '=', $deviceID)
                 ->update($dt);
-        }else{
+        } else {
             $update = UsersDeviceLogin::create([
-                'id_user' => $user['id'],
-                'device_id' => $deviceID,
+                'id_user'    => $user['id'],
+                'device_id'  => $deviceID,
                 'last_login' => date('Y-m-d H:i:s'),
                 'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s')
+                'updated_at' => date('Y-m-d H:i:s'),
             ]);
         }
 
-        if(!$update){
+        if (!$update) {
             return false;
         }
         return true;
     }
 
-    function checkFraudTrxOnline($user, $trx){
-        $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->where('fraud_settings_status', 'Active')->first();
+    public function checkFraudTrxOnline($user, $trx)
+    {
+        $fraudTrxDay  = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->where('fraud_settings_status', 'Active')->first();
         $fraudTrxWeek = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->where('fraud_settings_status', 'Active')->first();
 
         $geCountTrxDay = TransactionGroup::where('id_user', $user['id'])
@@ -102,8 +95,8 @@ class ApiFraud extends Controller
             ->count();
 
         $currentWeekNumber = date('W', strtotime($trx['transaction_group_date']));
-        $currentYear = date('Y', strtotime($trx['transaction_group_date']));
-        $dto = new DateTime();
+        $currentYear       = date('Y', strtotime($trx['transaction_group_date']));
+        $dto               = new DateTime();
         $dto->setISODate($currentYear, $currentWeekNumber);
         $start = $dto->format('Y-m-d');
         $dto->modify('+6 days');
@@ -115,24 +108,24 @@ class ApiFraud extends Controller
             ->where('id_transaction_group', '<', $trx['id_transaction_group'])
             ->count();
 
-        $countTrxDay = $geCountTrxDay + 1;
+        $countTrxDay  = $geCountTrxDay + 1;
         $countTrxWeek = $geCountTrxWeek + 1;
 
         if ($countTrxDay > $fraudTrxDay['parameter_detail'] && $fraudTrxDay) {
             $dataUpdate = [
-                'fraud_flag' => 'transaction day',
-                'transaction_point_earned' => NULL,
-                'transaction_cashback_earned' => NULL,
+                'fraud_flag'                  => 'transaction day',
+                'transaction_point_earned'    => null,
+                'transaction_cashback_earned' => null,
             ];
         } elseif ($countTrxWeek > $fraudTrxWeek['parameter_detail'] && $fraudTrxWeek) {
             $dataUpdate = [
-                'fraud_flag' => 'transaction week',
-                'transaction_point_earned' => NULL,
-                'transaction_cashback_earned' => NULL,
+                'fraud_flag'                  => 'transaction week',
+                'transaction_point_earned'    => null,
+                'transaction_cashback_earned' => null,
             ];
         } else {
             $dataUpdate = [
-                'fraud_flag' => NULL
+                'fraud_flag' => null,
             ];
 
             app('Modules\Membership\Http\Controllers\ApiMembership')->calculateMembership($user['phone']);
@@ -144,79 +137,89 @@ class ApiFraud extends Controller
             $this->checkFraud($fraudTrxDay, $user, null, $countTrxDay, $countTrxWeek, $trx['transaction_group_date'], 0, $trx['transaction_receipt_number']);
         }
 
-        if ($dataUpdate['fraud_flag'] == 'transaction week'  && $fraudTrxWeek) {
+        if ($dataUpdate['fraud_flag'] == 'transaction week' && $fraudTrxWeek) {
             $this->checkFraud($fraudTrxWeek, $user, null, $countTrxDay, $countTrxWeek, $trx['transaction_group_date'], 0, $trx['transaction_receipt_number']);
         }
 
         return true;
     }
 
-    function checkFraud($fraudSetting, $user, $device = null, $countTrxDay, $countTrxWeek, $dateTime, $deleteToken, $trxId = null,
-                        $currentBalance = null, $mostOutlet = null, $atOutlet = null){
-        $autoSuspend = 0;
-        $forwardAdmin = 0;
-        $countUser = 0;
-        $stringUserList = '';
-        $stringTransactionDay = '';
+    public function checkFraud(
+        $fraudSetting,
+        $user,
+        $device,
+        $countTrxDay,
+        $countTrxWeek,
+        $dateTime,
+        $deleteToken,
+        $trxId = null,
+        $currentBalance = null,
+        $mostOutlet = null,
+        $atOutlet = null
+    ) {
+        $autoSuspend           = 0;
+        $forwardAdmin          = 0;
+        $countUser             = 0;
+        $stringUserList        = '';
+        $stringTransactionDay  = '';
         $stringTransactionWeek = '';
-        $areaOutlet = '';
+        $areaOutlet            = '';
 
-        if(strpos($fraudSetting['parameter'], 'device') !== false){
-
-            $deviceCus = UsersDeviceLogin::where('device_id', '=' ,$device['device_id'])
-                ->where('status','Active')
-                ->orderBy('created_at','desc')
+        if (strpos($fraudSetting['parameter'], 'device') !== false) {
+            $deviceCus = UsersDeviceLogin::where('device_id', '=', $device['device_id'])
+                ->where('status', 'Active')
+                ->orderBy('created_at', 'desc')
                 ->groupBy('id_user')
                 ->get()->toArray();
 
-            if($deviceCus && $deviceCus[0]['id_user'] ==  $user['id'] && count($deviceCus) > (int)$fraudSetting['parameter_detail']){
-                $checkLog = FraudDetectionLogDevice::where('id_user',$user['id'])->where('device_id',$device['device_id'])->first();
+            if ($deviceCus && $deviceCus[0]['id_user'] == $user['id'] && count($deviceCus) > (int) $fraudSetting['parameter_detail']) {
+                $checkLog = FraudDetectionLogDevice::where('id_user', $user['id'])->where('device_id', $device['device_id'])->first();
 
-                if(!empty($checkLog)){
+                if (!empty($checkLog)) {
                     $dt = [
-                        'updated_at' => date('Y-m-d H:i:s')
+                        'updated_at' => date('Y-m-d H:i:s'),
                     ];
-                    $updateLog = FraudDetectionLogDevice::where('id_user',$user['id'])->where('device_id',$device['device_id'])->update($dt);
-                    if(!$updateLog){
+                    $updateLog = FraudDetectionLogDevice::where('id_user', $user['id'])->where('device_id', $device['device_id'])->update($dt);
+                    if (!$updateLog) {
                         return false;
                     }
-                }else{
+                } else {
                     $dt = [
-                        'id_user' => $user['id'],
-                        'device_id' => $device['device_id'],
-                        'device_type' => $device['device_type'],
-                        'fraud_setting_parameter_detail' => $fraudSetting['parameter_detail'],
-                        'fraud_setting_forward_admin_status' => $fraudSetting['forward_admin_status'],
-                        'fraud_setting_auto_suspend_status' => $fraudSetting['auto_suspend_status'],
-                        'fraud_setting_auto_suspend_value' => $fraudSetting['auto_suspend_value'],
-                        'fraud_setting_auto_suspend_time_period' => $fraudSetting['suspend_time_period']
+                        'id_user'                                => $user['id'],
+                        'device_id'                              => $device['device_id'],
+                        'device_type'                            => $device['device_type'],
+                        'fraud_setting_parameter_detail'         => $fraudSetting['parameter_detail'],
+                        'fraud_setting_forward_admin_status'     => $fraudSetting['forward_admin_status'],
+                        'fraud_setting_auto_suspend_status'      => $fraudSetting['auto_suspend_status'],
+                        'fraud_setting_auto_suspend_value'       => $fraudSetting['auto_suspend_value'],
+                        'fraud_setting_auto_suspend_time_period' => $fraudSetting['suspend_time_period'],
                     ];
                     $insertLog = FraudDetectionLogDevice::create($dt);
-                    if(!$insertLog){
+                    if (!$insertLog) {
                         return false;
                     }
                 }
 
-                $getLogUserDevice = FraudDetectionLogDevice::where('device_id',$device['device_id'])->where('status','Active')->get()->toArray();
+                $getLogUserDevice = FraudDetectionLogDevice::where('device_id', $device['device_id'])->where('status', 'Active')->get()->toArray();
 
-                if($getLogUserDevice){
-                    if($fraudSetting['auto_suspend_status'] == '1'){
+                if ($getLogUserDevice) {
+                    if ($fraudSetting['auto_suspend_status'] == '1') {
                         $autoSuspend = 1;
                     }
 
-                    if($fraudSetting['forward_admin_status'] == '1'){
+                    if ($fraudSetting['forward_admin_status'] == '1') {
                         $forwardAdmin = 1;
-                        $list_user = UsersDeviceLogin::join('users','users.id','users_device_login.id_user')
-                            ->where('users_device_login.device_id',$device['device_id'])
-                            ->whereRaw('users_device_login.id_user != '.$user['id'])
-                            ->where('users_device_login.status','Active')
-                            ->orderBy('users_device_login.created_at','asc')
+                        $list_user    = UsersDeviceLogin::join('users', 'users.id', 'users_device_login.id_user')
+                            ->where('users_device_login.device_id', $device['device_id'])
+                            ->whereRaw('users_device_login.id_user != ' . $user['id'])
+                            ->where('users_device_login.status', 'Active')
+                            ->orderBy('users_device_login.created_at', 'asc')
                             ->get()->toArray();
                         $countUser = count($list_user);
 
                         $stringUserList = '';
 
-                        if(count($list_user) > 0){
+                        if (count($list_user) > 0) {
                             $no = 0;
                             $stringUserList .= '<table id="table-fraud-list">';
                             $stringUserList .= '<tr>';
@@ -227,15 +230,15 @@ class ApiFraud extends Controller
                             $stringUserList .= '<td>Last Login Date</td>';
                             $stringUserList .= '<td>Last Login Time</td>';
                             $stringUserList .= '<tr>';
-                            foreach ($list_user as $val){
+                            foreach ($list_user as $val) {
                                 $no = $no + 1;
                                 $stringUserList .= '<tr>';
-                                $stringUserList .= '<td>'.$no.'</td>';
-                                $stringUserList .= '<td>'.$val['name'].'</td>';
-                                $stringUserList .= '<td>'.$val['phone'].'</td>';
-                                $stringUserList .= '<td>'.$val['email'].'</td>';
-                                $stringUserList .= '<td>'.date('d F Y',strtotime($val['last_login'])).'</td>';
-                                $stringUserList .= '<td>'.date('H:i',strtotime($val['last_login'])).'</td>';
+                                $stringUserList .= '<td>' . $no . '</td>';
+                                $stringUserList .= '<td>' . $val['name'] . '</td>';
+                                $stringUserList .= '<td>' . $val['phone'] . '</td>';
+                                $stringUserList .= '<td>' . $val['email'] . '</td>';
+                                $stringUserList .= '<td>' . date('d F Y', strtotime($val['last_login'])) . '</td>';
+                                $stringUserList .= '<td>' . date('H:i', strtotime($val['last_login'])) . '</td>';
                                 $stringUserList .= '<tr>';
                             }
                             $stringUserList .= '</table>';
@@ -243,45 +246,44 @@ class ApiFraud extends Controller
                     }
                 }
             }
-        }elseif(strpos($fraudSetting['parameter'], 'transactions in 1 day') !== false){
-
-            if($countTrxDay > (int)$fraudSetting['parameter_detail']){
-                $getFraudLogDay = FraudDetectionLogTransactionDay::whereRaw("DATE(fraud_detection_date) = '".date('Y-m-d', strtotime($dateTime))."'")->where('id_user', $user['id'])
+        } elseif (strpos($fraudSetting['parameter'], 'transactions in 1 day') !== false) {
+            if ($countTrxDay > (int) $fraudSetting['parameter_detail']) {
+                $getFraudLogDay = FraudDetectionLogTransactionDay::whereRaw("DATE(fraud_detection_date) = '" . date('Y-m-d', strtotime($dateTime)) . "'")->where('id_user', $user['id'])
                     ->where('status', 'Active')->first();
 
-                if($getFraudLogDay){
-                    FraudDetectionLogTransactionDay::where('id_user',$user['id'])->where('id_fraud_detection_log_transaction_day',$getFraudLogDay['id_fraud_detection_log_transaction_day'])->update([
+                if ($getFraudLogDay) {
+                    FraudDetectionLogTransactionDay::where('id_user', $user['id'])->where('id_fraud_detection_log_transaction_day', $getFraudLogDay['id_fraud_detection_log_transaction_day'])->update([
                         'count_transaction_day' => $countTrxDay,
-                        'updated_at' => date('Y-m-d H:i:s')
+                        'updated_at'            => date('Y-m-d H:i:s'),
                     ]);
-                }else{
+                } else {
                     $createLog = FraudDetectionLogTransactionDay::create([
-                        'id_user' => $user['id'],
-                        'count_transaction_day' => $countTrxDay,
-                        'fraud_detection_date'=> date('Y-m-d H:i:s', strtotime($dateTime)),
-                        'fraud_setting_parameter_detail' => $fraudSetting['parameter_detail'],
-                        'fraud_setting_forward_admin_status' => $fraudSetting['forward_admin_status'],
-                        'fraud_setting_auto_suspend_status' => $fraudSetting['auto_suspend_status'],
-                        'fraud_setting_auto_suspend_value' => $fraudSetting['auto_suspend_value'],
-                        'fraud_setting_auto_suspend_time_period' => $fraudSetting['suspend_time_period']
+                        'id_user'                                => $user['id'],
+                        'count_transaction_day'                  => $countTrxDay,
+                        'fraud_detection_date'                   => date('Y-m-d H:i:s', strtotime($dateTime)),
+                        'fraud_setting_parameter_detail'         => $fraudSetting['parameter_detail'],
+                        'fraud_setting_forward_admin_status'     => $fraudSetting['forward_admin_status'],
+                        'fraud_setting_auto_suspend_status'      => $fraudSetting['auto_suspend_status'],
+                        'fraud_setting_auto_suspend_value'       => $fraudSetting['auto_suspend_value'],
+                        'fraud_setting_auto_suspend_time_period' => $fraudSetting['suspend_time_period'],
                     ]);
                 }
 
-                if($fraudSetting['forward_admin_status'] == '1'){
+                if ($fraudSetting['forward_admin_status'] == '1') {
                     $forwardAdmin = 1;
 
-                    $idGroups = TransactionGroup::where('transaction_payment_status','Completed')
-                        ->whereRaw('Date(transaction_group_date) = "'.date('Y-m-d', strtotime($dateTime)).'"')
-                        ->where('id_user',$user['id'])->pluck('id_transaction_group')->toArray();
+                    $idGroups = TransactionGroup::where('transaction_payment_status', 'Completed')
+                        ->whereRaw('Date(transaction_group_date) = "' . date('Y-m-d', strtotime($dateTime)) . '"')
+                        ->where('id_user', $user['id'])->pluck('id_transaction_group')->toArray();
 
                     $detailTransaction = Transaction::join('transaction_groups', 'transaction_groups.id_transaction_group', 'transactions.id_transaction_group')
-                        ->orderBy('transactions.created_at','desc')
+                        ->orderBy('transactions.created_at', 'desc')
                         ->select('transactions.*', 'transaction_groups.transaction_receipt_number as receipt_number_group')
-                        ->with(['outlet_city','user'])->whereIn('transactions.id_transaction_group', $idGroups)->get()->toArray();
+                        ->with(['outlet_city', 'user'])->whereIn('transactions.id_transaction_group', $idGroups)->get()->toArray();
 
                     $stringTransactionDay = '';
 
-                    if(!empty($detailTransaction)){
+                    if (!empty($detailTransaction)) {
                         $areaOutlet = $detailTransaction[0]['outlet_city']['city_name'];
                         $stringTransactionDay .= '<table id="table-fraud-list">';
                         $stringTransactionDay .= '<tr>';
@@ -293,95 +295,93 @@ class ApiFraud extends Controller
                         $stringTransactionDay .= '<td>Transaction Time</td>';
                         $stringTransactionDay .= '<td>Nominal</td>';
                         $stringTransactionDay .= '<tr>';
-                        foreach ($detailTransaction as $val){
-                            if($val['fraud_flag'] != null){
-                                if($val['fraud_flag'] == 'transaction day'){
+                        foreach ($detailTransaction as $val) {
+                            if ($val['fraud_flag'] != null) {
+                                if ($val['fraud_flag'] == 'transaction day') {
                                     $status = '<span style="color: red">Fraud <strong>Day</strong></span>';
-                                }else{
+                                } else {
                                     $status = '<span style="color: red">Fraud <strong>Week</strong></span>';
                                 }
-                            }else{
+                            } else {
                                 $status = '<span style="color: green">No Fraud</span>';
                             }
                             $stringTransactionDay .= '<tr>';
-                            $stringTransactionDay .= '<td>'.$status.'</td>';
-                            $stringTransactionDay .= '<td>'.$val['receipt_number_group'].'</td>';
-                            $stringTransactionDay .= '<td>'.$val['transaction_receipt_number'].'</td>';
-                            $stringTransactionDay .= '<td>'.$val['outlet_city']['outlet_name'].'</td>';
-                            $stringTransactionDay .= '<td>'.date('d F Y',strtotime($val['transaction_date'])).'</td>';
-                            $stringTransactionDay .= '<td>'.date('H:i',strtotime($val['transaction_date'])).'</td>';
-                            $stringTransactionDay .= '<td>'.number_format($val['transaction_grandtotal']).'</td>';
+                            $stringTransactionDay .= '<td>' . $status . '</td>';
+                            $stringTransactionDay .= '<td>' . $val['receipt_number_group'] . '</td>';
+                            $stringTransactionDay .= '<td>' . $val['transaction_receipt_number'] . '</td>';
+                            $stringTransactionDay .= '<td>' . $val['outlet_city']['outlet_name'] . '</td>';
+                            $stringTransactionDay .= '<td>' . date('d F Y', strtotime($val['transaction_date'])) . '</td>';
+                            $stringTransactionDay .= '<td>' . date('H:i', strtotime($val['transaction_date'])) . '</td>';
+                            $stringTransactionDay .= '<td>' . number_format($val['transaction_grandtotal']) . '</td>';
                             $stringTransactionDay .= '<tr>';
                         }
                         $stringTransactionDay .= '</table>';
                     }
                 }
 
-                $timeperiod = $fraudSetting['auto_suspend_time_period'] - 1;
-                $getLogWithTimePeriod = FraudDetectionLogTransactionDay::whereRaw("DATE(fraud_detection_date) BETWEEN '".date('Y-m-d',strtotime('-'.$timeperiod.' days',strtotime($dateTime)))."' AND '".date('Y-m-d', strtotime($dateTime))."'")
+                $timeperiod           = $fraudSetting['auto_suspend_time_period'] - 1;
+                $getLogWithTimePeriod = FraudDetectionLogTransactionDay::whereRaw("DATE(fraud_detection_date) BETWEEN '" . date('Y-m-d', strtotime('-' . $timeperiod . ' days', strtotime($dateTime))) . "' AND '" . date('Y-m-d', strtotime($dateTime)) . "'")
                     ->where('id_user', $user['id'])
                     ->where('status', 'Active')->get();
                 $countLog = count($getLogWithTimePeriod);
 
-                if($countLog > (int)$fraudSetting['auto_suspend_value']){
-
-                    if($fraudSetting['auto_suspend_status'] == '1'){
+                if ($countLog > (int) $fraudSetting['auto_suspend_value']) {
+                    if ($fraudSetting['auto_suspend_status'] == '1') {
                         $autoSuspend = 1;
                     }
                 }
             }
-        }elseif(strpos($fraudSetting['parameter'], 'transactions in 1 week') !== false){
-            if($countTrxWeek > (int)$fraudSetting['parameter_detail']){
-                $WeekNumber = date('W', strtotime($dateTime));
-                $year = date('Y', strtotime($dateTime));
-                $getFraudLogWeek = FraudDetectionLogTransactionWeek::where('fraud_detection_week',$WeekNumber)
-                    ->where('fraud_detection_year',$year)
+        } elseif (strpos($fraudSetting['parameter'], 'transactions in 1 week') !== false) {
+            if ($countTrxWeek > (int) $fraudSetting['parameter_detail']) {
+                $WeekNumber      = date('W', strtotime($dateTime));
+                $year            = date('Y', strtotime($dateTime));
+                $getFraudLogWeek = FraudDetectionLogTransactionWeek::where('fraud_detection_week', $WeekNumber)
+                    ->where('fraud_detection_year', $year)
                     ->where('id_user', $user['id'])
                     ->where('status', 'Active')->first();
 
-                if($getFraudLogWeek){
-                    FraudDetectionLogTransactionWeek::where('id_user',$user['id'])->where('id_fraud_detection_log_transaction_week',$getFraudLogWeek['id_fraud_detection_log_transaction_week'])->update([
+                if ($getFraudLogWeek) {
+                    FraudDetectionLogTransactionWeek::where('id_user', $user['id'])->where('id_fraud_detection_log_transaction_week', $getFraudLogWeek['id_fraud_detection_log_transaction_week'])->update([
                         'count_transaction_week' => $countTrxWeek,
-                        'updated_at' => date('Y-m-d H:i:s')
+                        'updated_at'             => date('Y-m-d H:i:s'),
                     ]);
-
-                }else{
+                } else {
                     FraudDetectionLogTransactionWeek::create([
-                        'id_user' => $user['id'],
-                        'fraud_detection_year' => $year,
-                        'fraud_detection_week' => $WeekNumber,
-                        'count_transaction_week' => $countTrxWeek,
-                        'fraud_setting_parameter_detail' => $fraudSetting['parameter_detail'],
-                        'fraud_setting_forward_admin_status' => $fraudSetting['forward_admin_status'],
-                        'fraud_setting_auto_suspend_status' => $fraudSetting['auto_suspend_status'],
-                        'fraud_setting_auto_suspend_value' => $fraudSetting['auto_suspend_value'],
-                        'fraud_setting_auto_suspend_time_period' => $fraudSetting['suspend_time_period']
+                        'id_user'                                => $user['id'],
+                        'fraud_detection_year'                   => $year,
+                        'fraud_detection_week'                   => $WeekNumber,
+                        'count_transaction_week'                 => $countTrxWeek,
+                        'fraud_setting_parameter_detail'         => $fraudSetting['parameter_detail'],
+                        'fraud_setting_forward_admin_status'     => $fraudSetting['forward_admin_status'],
+                        'fraud_setting_auto_suspend_status'      => $fraudSetting['auto_suspend_status'],
+                        'fraud_setting_auto_suspend_value'       => $fraudSetting['auto_suspend_value'],
+                        'fraud_setting_auto_suspend_time_period' => $fraudSetting['suspend_time_period'],
                     ]);
                 }
 
-                if($fraudSetting['forward_admin_status'] == '1'){
+                if ($fraudSetting['forward_admin_status'] == '1') {
                     $forwardAdmin = 1;
 
                     $year = $year;
                     $week = $WeekNumber;
-                    $dto = new DateTime();
+                    $dto  = new DateTime();
                     $dto->setISODate($year, $week);
                     $start = $dto->format('Y-m-d');
                     $dto->modify('+6 days');
                     $end = $dto->format('Y-m-d');
 
-                    $idGroups = TransactionGroup::where('transaction_payment_status','Completed')
-                        ->whereRaw('Date(transaction_group_date) BETWEEN "'.$start.'" AND "'.$end.'"')
-                        ->where('id_user',$user['id'])->pluck('id_transaction_group')->toArray();
+                    $idGroups = TransactionGroup::where('transaction_payment_status', 'Completed')
+                        ->whereRaw('Date(transaction_group_date) BETWEEN "' . $start . '" AND "' . $end . '"')
+                        ->where('id_user', $user['id'])->pluck('id_transaction_group')->toArray();
 
                     $detailTransaction = Transaction::join('transaction_groups', 'transaction_groups.id_transaction_group', 'transactions.id_transaction_group')
-                        ->orderBy('transactions.created_at','desc')
+                        ->orderBy('transactions.created_at', 'desc')
                         ->select('transactions.*', 'transaction_groups.transaction_receipt_number as receipt_number_group')
-                        ->with(['outlet_city','user'])->whereIn('transactions.id_transaction_group', $idGroups)->get()->toArray();
+                        ->with(['outlet_city', 'user'])->whereIn('transactions.id_transaction_group', $idGroups)->get()->toArray();
 
                     $stringTransactionWeek = '';
 
-                    if(!empty($detailTransaction)){
+                    if (!empty($detailTransaction)) {
                         $areaOutlet = $detailTransaction[0]['outlet_city']['city_name'];
                         $stringTransactionWeek .= '<table id="table-fraud-list">';
                         $stringTransactionWeek .= '<tr>';
@@ -393,251 +393,249 @@ class ApiFraud extends Controller
                         $stringTransactionWeek .= '<td>Transaction Time</td>';
                         $stringTransactionWeek .= '<td>Nominal</td>';
                         $stringTransactionWeek .= '<tr>';
-                        foreach ($detailTransaction as $val){
-                            if($val['fraud_flag'] != null){
-                                if($val['fraud_flag'] == 'transaction day'){
+                        foreach ($detailTransaction as $val) {
+                            if ($val['fraud_flag'] != null) {
+                                if ($val['fraud_flag'] == 'transaction day') {
                                     $status = '<span style="color: red">Fraud <strong>Day</strong></span>';
-                                }else{
+                                } else {
                                     $status = '<span style="color: red">Fraud <strong>Week</strong></span>';
                                 }
-                            }else{
+                            } else {
                                 $status = '<span style="color: green">No Fraud</span>';
                             }
                             $stringTransactionWeek .= '<tr>';
-                            $stringTransactionWeek .= '<td>'.$status.'</td>';
-                            $stringTransactionWeek .= '<td>'.$val['receipt_number_group'].'</td>';
-                            $stringTransactionWeek .= '<td>'.$val['transaction_receipt_number'].'</td>';
-                            $stringTransactionWeek .= '<td>'.$val['outlet_city']['outlet_name'].'</td>';
-                            $stringTransactionWeek .= '<td>'.date('d F Y',strtotime($val['transaction_date'])).'</td>';
-                            $stringTransactionWeek .= '<td>'.date('H:i',strtotime($val['transaction_date'])).'</td>';
-                            $stringTransactionWeek .= '<td>'.number_format($val['transaction_grandtotal']).'</td>';
+                            $stringTransactionWeek .= '<td>' . $status . '</td>';
+                            $stringTransactionWeek .= '<td>' . $val['receipt_number_group'] . '</td>';
+                            $stringTransactionWeek .= '<td>' . $val['transaction_receipt_number'] . '</td>';
+                            $stringTransactionWeek .= '<td>' . $val['outlet_city']['outlet_name'] . '</td>';
+                            $stringTransactionWeek .= '<td>' . date('d F Y', strtotime($val['transaction_date'])) . '</td>';
+                            $stringTransactionWeek .= '<td>' . date('H:i', strtotime($val['transaction_date'])) . '</td>';
+                            $stringTransactionWeek .= '<td>' . number_format($val['transaction_grandtotal']) . '</td>';
                             $stringTransactionWeek .= '<tr>';
                         }
                         $stringTransactionWeek .= '</table>';
                     }
                 }
 
-                $totalWeekPeriod = $fraudSetting['auto_suspend_time_period']/7;
-                if((int)$totalWeekPeriod == 0){
+                $totalWeekPeriod = $fraudSetting['auto_suspend_time_period'] / 7;
+                if ((int) $totalWeekPeriod == 0) {
                     $weekStart = $WeekNumber - 1;
-                }else{
+                } else {
                     $weekStart = $WeekNumber - $totalWeekPeriod;
                 }
 
-                $getLogWithTimePeriod = FraudDetectionLogTransactionWeek::whereRaw("fraud_detection_week BETWEEN ".(int)$weekStart.' AND '.$WeekNumber)
-                    ->where('fraud_detection_year',$year)
+                $getLogWithTimePeriod = FraudDetectionLogTransactionWeek::whereRaw("fraud_detection_week BETWEEN " . (int) $weekStart . ' AND ' . $WeekNumber)
+                    ->where('fraud_detection_year', $year)
                     ->where('id_user', $user['id'])
                     ->where('status', 'Active')->get();
                 $countLog = count($getLogWithTimePeriod);
-                if($countLog > (int)$fraudSetting['auto_suspend_value']){
-                    if($fraudSetting['auto_suspend_status'] == '1'){
+                if ($countLog > (int) $fraudSetting['auto_suspend_value']) {
+                    if ($fraudSetting['auto_suspend_status'] == '1') {
                         $autoSuspend = 1;
                     }
                 }
             }
-        }elseif(strpos($fraudSetting['parameter'], 'Point user') !== false){
+        } elseif (strpos($fraudSetting['parameter'], 'Point user') !== false) {
             $createLog = FraudDetectionLogTransactionPoint::create([
-                'id_user' => $user['id'],
-                'current_balance' => $currentBalance,
-                'at_outlet' => $atOutlet,
-                'most_outlet' => $mostOutlet,
-                'count_transaction_day' => $countTrxDay,
-                'fraud_detection_date'=> date('Y-m-d H:i:s', strtotime($dateTime)),
-                'fraud_setting_parameter_detail' => $fraudSetting['parameter_detail'],
-                'fraud_setting_forward_admin_status' => $fraudSetting['forward_admin_status'],
-                'fraud_setting_auto_suspend_status' => $fraudSetting['auto_suspend_status'],
-                'fraud_setting_auto_suspend_value' => $fraudSetting['auto_suspend_value'],
-                'fraud_setting_auto_suspend_time_period' => $fraudSetting['suspend_time_period']
+                'id_user'                                => $user['id'],
+                'current_balance'                        => $currentBalance,
+                'at_outlet'                              => $atOutlet,
+                'most_outlet'                            => $mostOutlet,
+                'count_transaction_day'                  => $countTrxDay,
+                'fraud_detection_date'                   => date('Y-m-d H:i:s', strtotime($dateTime)),
+                'fraud_setting_parameter_detail'         => $fraudSetting['parameter_detail'],
+                'fraud_setting_forward_admin_status'     => $fraudSetting['forward_admin_status'],
+                'fraud_setting_auto_suspend_status'      => $fraudSetting['auto_suspend_status'],
+                'fraud_setting_auto_suspend_value'       => $fraudSetting['auto_suspend_value'],
+                'fraud_setting_auto_suspend_time_period' => $fraudSetting['suspend_time_period'],
             ]);
 
-            if($fraudSetting['auto_suspend_status'] == '1'){
-                $startDate = date('Y-m-d');
-                $endDate = date('Y-m-d', strtotime($startDate. ' - '.$fraudSetting['fraud_setting_auto_suspend_time_period'].' days'));
-                $getLogWithTimePeriod = FraudDetectionLogTransactionPoint::whereRaw("created_at BETWEEN ".$startDate.' AND '.$endDate)
+            if ($fraudSetting['auto_suspend_status'] == '1') {
+                $startDate            = date('Y-m-d');
+                $endDate              = date('Y-m-d', strtotime($startDate . ' - ' . $fraudSetting['fraud_setting_auto_suspend_time_period'] . ' days'));
+                $getLogWithTimePeriod = FraudDetectionLogTransactionPoint::whereRaw("created_at BETWEEN " . $startDate . ' AND ' . $endDate)
                     ->where('id_user', $user['id'])
                     ->where('status', 'Active')->get();
                 $countLog = count($getLogWithTimePeriod);
-                if($countLog > (int)$fraudSetting['auto_suspend_value']){
+                if ($countLog > (int) $fraudSetting['auto_suspend_value']) {
                     $autoSuspend = 1;
                 }
             }
 
-            if($fraudSetting['forward_admin_status'] == '1'){
+            if ($fraudSetting['forward_admin_status'] == '1') {
                 $forwardAdmin = 1;
             }
-        }elseif(strpos($fraudSetting['parameter'], 'Transaction between') !== false){
-            $id_user = $user->id;
+        } elseif (strpos($fraudSetting['parameter'], 'Transaction between') !== false) {
+            $id_user             = $user->id;
             $parameterDetailTime = $fraudSetting->parameter_detail_time;
-            $parameterDetail = $fraudSetting->parameter_detail;
-            $forwardAdmin = 0;
-            $autoSuspend = 0;
+            $parameterDetail     = $fraudSetting->parameter_detail;
+            $forwardAdmin        = 0;
+            $autoSuspend         = 0;
 
             $insertLog = FraudDetectionLogTransactionInBetween::create([
-                'id_user' => $id_user,
-                'fraud_setting_parameter_detail' => $fraudSetting['parameter_detail'],
-                'fraud_setting_forward_admin_status' => $fraudSetting['forward_admin_status'],
-                'fraud_setting_auto_suspend_status' => $fraudSetting['auto_suspend_status'],
-                'fraud_setting_auto_suspend_value' => $fraudSetting['auto_suspend_value'],
-                'fraud_setting_auto_suspend_time_period' => $fraudSetting['auto_suspend_time_period']
+                'id_user'                                => $id_user,
+                'fraud_setting_parameter_detail'         => $fraudSetting['parameter_detail'],
+                'fraud_setting_forward_admin_status'     => $fraudSetting['forward_admin_status'],
+                'fraud_setting_auto_suspend_status'      => $fraudSetting['auto_suspend_status'],
+                'fraud_setting_auto_suspend_value'       => $fraudSetting['auto_suspend_value'],
+                'fraud_setting_auto_suspend_time_period' => $fraudSetting['auto_suspend_time_period'],
             ]);
 
-            if($insertLog){
+            if ($insertLog) {
                 $data = [];
-                foreach ($trxId as $value){
+                foreach ($trxId as $value) {
                     $dtInsert = [
                         'id_fraud_detection_log_transaction_in_between' => $insertLog['id_fraud_detection_log_transaction_in_between'],
-                        'id_transaction_group' => $value
+                        'id_transaction_group'                          => $value,
                     ];
                     $data[] = $dtInsert;
                 }
                 FraudBetweenTransaction::insert($data);
             }
 
-            if($fraudSetting['forward_admin_status'] == '1'){
+            if ($fraudSetting['forward_admin_status'] == '1') {
                 $forwardAdmin = 1;
             }
 
             $autoSuspendTimePeriod = $fraudSetting->auto_suspend_time_period - 1;
-            $endDateLog = date('Y-m-d');
-            $startDateLog = date('Y-m-d', strtotime($endDateLog. ' - '.$autoSuspendTimePeriod.' days'));
-            $getLog = FraudDetectionLogTransactionInBetween::whereRaw("DATE(created_at) BETWEEN '".$startDateLog."' AND '".$endDateLog."'")
+            $endDateLog            = date('Y-m-d');
+            $startDateLog          = date('Y-m-d', strtotime($endDateLog . ' - ' . $autoSuspendTimePeriod . ' days'));
+            $getLog                = FraudDetectionLogTransactionInBetween::whereRaw("DATE(created_at) BETWEEN '" . $startDateLog . "' AND '" . $endDateLog . "'")
                 ->where('id_user', $id_user)
                 ->where('status', 'Active')->get();
             $countLog = count($getLog);
 
-            if($countLog > (int)$fraudSetting['auto_suspend_value']){
+            if ($countLog > (int) $fraudSetting['auto_suspend_value']) {
                 $autoSuspend = 1;
             }
-        }elseif(strpos($fraudSetting['parameter'], 'promo code') !== false){
-            $id_user = $user->id;
+        } elseif (strpos($fraudSetting['parameter'], 'promo code') !== false) {
+            $id_user      = $user->id;
             $forwardAdmin = 0;
-            $autoSuspend = 0;
+            $autoSuspend  = 0;
 
-            if($fraudSetting['forward_admin_status'] == '1'){
+            if ($fraudSetting['forward_admin_status'] == '1') {
                 $forwardAdmin = 1;
             }
 
-            if($fraudSetting['auto_suspend_status'] == '1'){
+            if ($fraudSetting['auto_suspend_status'] == '1') {
                 $autoSuspend = 1;
             }
         }
 
-        $contentEmail = ['transaction_count_day' => (string)$countTrxDay, 'transaction_count_week' => (string)$countTrxWeek, 'device_id' => $device['device_id']??null, 'device_type' => $device['device_type']??null , 'count_account' => (string)$countUser, 'user_list' => $stringUserList, 'fraud_date' => date('d F Y'), 'fraud_time' => date('H:i'), 'list_transaction_day' => $stringTransactionDay, 'list_transaction_week' => $stringTransactionWeek, 'receipt_number' => $trxId, 'area_outlet' => $areaOutlet, 'point' => $currentBalance];
-        $sendFraud = $this->SendFraudDetection($fraudSetting['id_fraud_setting'], $user, null, $device, $deleteToken, $autoSuspend, $forwardAdmin, $contentEmail);
+        $contentEmail = ['transaction_count_day' => (string) $countTrxDay, 'transaction_count_week' => (string) $countTrxWeek, 'device_id' => $device['device_id'] ?? null, 'device_type' => $device['device_type'] ?? null, 'count_account' => (string) $countUser, 'user_list' => $stringUserList, 'fraud_date' => date('d F Y'), 'fraud_time' => date('H:i'), 'list_transaction_day' => $stringTransactionDay, 'list_transaction_week' => $stringTransactionWeek, 'receipt_number' => $trxId, 'area_outlet' => $areaOutlet, 'point' => $currentBalance];
+        $sendFraud    = $this->SendFraudDetection($fraudSetting['id_fraud_setting'], $user, null, $device, $deleteToken, $autoSuspend, $forwardAdmin, $contentEmail);
 
-        if(isset($sendFraud))
+        if (isset($sendFraud)) {
             return $sendFraud;
-        else
-        return false;
+        } else {
+            return false;
+        }
     }
 
-    function SendFraudDetection($id_fraud_setting, $user, $idTransaction = null, $deviceUser = null, $deleteToken, $autoSuspend, $forwardAdmin, $additionalData){
+    public function SendFraudDetection($id_fraud_setting, $user, $idTransaction, $deviceUser, $deleteToken, $autoSuspend, $forwardAdmin, $additionalData)
+    {
         $fraudSetting = FraudSetting::find($id_fraud_setting);
-        if(!$fraudSetting){
+        if (!$fraudSetting) {
             return false;
         }
 
-
-        if($autoSuspend == 1){
+        if ($autoSuspend == 1) {
             $delToken = 0;
-            if($fraudSetting['auto_suspend_status'] == '1'){
-
-                if($fraudSetting['auto_suspend_value'] == 'all_account'){
-                    $getAllUser = UsersDeviceLogin::where('device_id',$deviceUser['device_id'])
-                        ->orderBy('last_login','desc')->get()->pluck('id_user');
+            if ($fraudSetting['auto_suspend_status'] == '1') {
+                if ($fraudSetting['auto_suspend_value'] == 'all_account') {
+                    $getAllUser = UsersDeviceLogin::where('device_id', $deviceUser['device_id'])
+                        ->orderBy('last_login', 'desc')->get()->pluck('id_user');
                     $delToken = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
                         ->whereIn('oauth_access_tokens.user_id', $getAllUser)->where('oauth_access_token_providers.provider', 'users')->delete();
-                    $updateUser = User::whereIn('id',$getAllUser)->whereRaw('level != "Super Admin"')->update(['is_suspended' => 1]);
-                }elseif($fraudSetting['auto_suspend_value'] == 'last_account'){
-                    $getAllUser = UsersDeviceLogin::where('device_id',$deviceUser['device_id'])
-                        ->orderBy('last_login','desc')->get()->pluck('id_user');
+                    $updateUser = User::whereIn('id', $getAllUser)->whereRaw('level != "Super Admin"')->update(['is_suspended' => 1]);
+                } elseif ($fraudSetting['auto_suspend_value'] == 'last_account') {
+                    $getAllUser = UsersDeviceLogin::where('device_id', $deviceUser['device_id'])
+                        ->orderBy('last_login', 'desc')->get()->pluck('id_user');
                     $delToken = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
                         ->where('oauth_access_tokens.user_id', $getAllUser[0]['id_user'])->where('oauth_access_token_providers.provider', 'users')->delete();
-                    $updateUser = User::where('id',$getAllUser[0]['id_user'])->whereRaw('level != "Super Admin"')->update(['is_suspended' => 1]);
-                }else{
+                    $updateUser = User::where('id', $getAllUser[0]['id_user'])->whereRaw('level != "Super Admin"')->update(['is_suspended' => 1]);
+                } else {
                     $delToken = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
                         ->where('oauth_access_tokens.user_id', $user['id'])->where('oauth_access_token_providers.provider', 'users')->delete();
-                    $updateUser = User::where('id',$user['id'])->whereRaw('level != "Super Admin"')->update(['is_suspended' => 1]);
+                    $updateUser = User::where('id', $user['id'])->whereRaw('level != "Super Admin"')->update(['is_suspended' => 1]);
                 }
             }
         }
 
-        if($forwardAdmin == 1){
-            if($fraudSetting['email_toogle'] == '1'){
+        if ($forwardAdmin == 1) {
+            if ($fraudSetting['email_toogle'] == '1') {
                 $recipient_email = explode(',', str_replace(' ', ',', str_replace(';', ',', $fraudSetting['email_recipient'])));
-                foreach($recipient_email as $key => $recipient){
-                    if($recipient != ' ' && $recipient != ""){
-                        $to		 = $recipient;
+                foreach ($recipient_email as $key => $recipient) {
+                    if ($recipient != ' ' && $recipient != "") {
+                        $to      = $recipient;
                         $subject = app($this->autocrm)->TextReplace($fraudSetting['email_subject'], $user['phone'], $additionalData);
                         $content = app($this->autocrm)->TextReplace($fraudSetting['email_content'], $user['phone'], $additionalData);
 
                         //get setting email
                         $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
-                        $setting = array();
+                        $setting    = array();
                         foreach ($getSetting as $key => $value) {
                             $setting[$value['key']] = $value['value'];
                         }
 
-                        $em_arr = explode('@',$recipient);
-                        $name = ucwords(str_replace("_"," ", str_replace("-"," ", str_replace("."," ", $em_arr[0]))));
+                        $em_arr = explode('@', $recipient);
+                        $name   = ucwords(str_replace("_", " ", str_replace("-", " ", str_replace(".", " ", $em_arr[0]))));
 
                         $data = array(
-                            'customer' => $name,
+                            'customer'     => $name,
                             'html_message' => $content,
-                            'setting' => $setting
+                            'setting'      => $setting,
                         );
 
-                        try{
-                            Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
-                            {
+                        try {
+                            Mail::send('emails.test', $data, function ($message) use ($to, $subject, $name, $setting) {
                                 $message->to($to, $name)->subject($subject);
-                                if(env('MAIL_DRIVER') == 'mailgun'){
+                                if (env('MAIL_DRIVER') == 'mailgun') {
                                     $message->trackClicks(true)
-                                            ->trackOpens(true);
+                                        ->trackOpens(true);
                                 }
-                                if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+                                if (!empty($setting['email_from']) && !empty($setting['email_sender'])) {
                                     $message->from($setting['email_sender'], $setting['email_from']);
-                                }else if(!empty($setting['email_sender'])){
+                                } elseif (!empty($setting['email_sender'])) {
                                     $message->from($setting['email_sender']);
                                 }
 
-                                if(!empty($setting['email_reply_to']) && !empty($setting['email_reply_to_name'])){
+                                if (!empty($setting['email_reply_to']) && !empty($setting['email_reply_to_name'])) {
                                     $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
-                                }else if(!empty($setting['email_reply_to'])){
+                                } elseif (!empty($setting['email_reply_to'])) {
                                     $message->replyTo($setting['email_reply_to']);
                                 }
 
-                                if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
+                                if (!empty($setting['email_cc']) && !empty($setting['email_cc_name'])) {
                                     $message->cc($setting['email_cc'], $setting['email_cc_name']);
                                 }
 
-                                if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
+                                if (!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])) {
                                     $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
                                 }
                             });
-                        }catch(\Exception $e){
-
-						}
+                        } catch (\Exception $e) {
+                        }
                     }
                 }
             }
 
-            if($fraudSetting['sms_toogle'] == '1'){
+            if ($fraudSetting['sms_toogle'] == '1') {
                 $recipient_sms = explode(',', str_replace(' ', ',', str_replace(';', ',', $fraudSetting['sms_recipient'])));
-                foreach($recipient_sms as $key => $recipient){
-                    if($recipient != ' ' && $recipient != ""){
+                foreach ($recipient_sms as $key => $recipient) {
+                    if ($recipient != ' ' && $recipient != "") {
                         $content = app($this->autocrm)->TextReplace($fraudSetting['sms_content'], $user['phone'], $additionalData);
                         switch (env('SMS_GATEWAY')) {
                             case 'Jatis':
                                 $senddata = [
                                     'userid'    => env('SMS_USER'),
                                     'password'  => env('SMS_PASSWORD'),
-                                    'msisdn'    => '62'.substr($user['phone'],1),
+                                    'msisdn'    => '62' . substr($user['phone'], 1),
                                     'sender'    => env('SMS_SENDER'),
                                     'division'  => env('SMS_DIVISION'),
                                     'batchname' => env('SMS_BATCHNAME'),
                                     'uploadby'  => env('SMS_UPLOADBY'),
-                                    'channel'   => env('SMS_CHANNEL')
+                                    'channel'   => env('SMS_CHANNEL'),
                                 ];
 
                                 $senddata['message'] = $content;
@@ -649,8 +647,8 @@ class ApiFraud extends Controller
 
                             case 'ValueFirst':
                                 $sendData = [
-                                    'to' => trim($user['phone']),
-                                    'text' => $content
+                                    'to'   => trim($user['phone']),
+                                    'text' => $content,
                                 ];
 
                                 ValueFirst::create()->send($sendData);
@@ -658,14 +656,14 @@ class ApiFraud extends Controller
 
                             default:
                                 $senddata = array(
-                                    'apikey' => env('SMS_KEY'),
+                                    'apikey'      => env('SMS_KEY'),
                                     'callbackurl' => config('url.app_url'),
-                                    'datapacket'=>array()
+                                    'datapacket'  => array(),
                                 );
 
-                                array_push($senddata['datapacket'],array(
-                                    'number' => trim($recipient),
-                                    'message' => urlencode(stripslashes(utf8_encode($content))),
+                                array_push($senddata['datapacket'], array(
+                                    'number'          => trim($recipient),
+                                    'message'         => urlencode(stripslashes(utf8_encode($content))),
                                     'sendingdatetime' => ""));
 
                                 $this->rajasms->setData($senddata);
@@ -676,25 +674,25 @@ class ApiFraud extends Controller
                 }
             }
 
-            if($fraudSetting['whatsapp_toogle'] == '1'){
+            if ($fraudSetting['whatsapp_toogle'] == '1') {
                 $recipient_whatsapp = explode(',', str_replace(' ', ',', str_replace(';', ',', $fraudSetting['whatsapp_recipient'])));
-                foreach($recipient_whatsapp as $key => $recipient){
+                foreach ($recipient_whatsapp as $key => $recipient) {
                     //cek api key whatsapp
                     $api_key = Setting::where('key', 'api_key_whatsapp')->first();
-                    if($api_key){
-                        if($api_key->value){
-                            if($recipient != ' ' && $recipient != ""){
+                    if ($api_key) {
+                        if ($api_key->value) {
+                            if ($recipient != ' ' && $recipient != "") {
                                 $content = $this->TextReplace($fraudSetting['whatsapp_content'], $user['phone'], $additionalData);
 
                                 // add country code in number
-                                $ptn = "/^0/";
+                                $ptn    = "/^0/";
                                 $rpltxt = "62";
-                                $phone = preg_replace($ptn, $rpltxt, $recipient);
+                                $phone  = preg_replace($ptn, $rpltxt, $recipient);
 
-                                $send = $this->apiwha->send($api_key->value, $phone, $content);
+                                $send = $this->Apiwha->send($api_key->value, $phone, $content);
 
                                 //api key whatsapp not valid
-                                if(isset($send['result_code']) && $send['result_code'] == -1){
+                                if (isset($send['result_code']) && $send['result_code'] == -1) {
                                     break 1;
                                 }
                             }
@@ -704,24 +702,36 @@ class ApiFraud extends Controller
             }
         }
 
-        if($autoSuspend && $delToken){
+        if ($autoSuspend && $delToken) {
             return true;
-        }else{
+        } else {
             return false;
         }
-	}
+    }
 
-    function fraudTrxPoint($sumBalance, $user, $data){
-        $fraudTrxPoint = FraudSetting::where('parameter', 'LIKE', '%point%')->where('fraud_settings_status','Active')->first();
-        if($fraudTrxPoint){
-            if($sumBalance > $fraudTrxPoint['parameter_detail']){
-                $countOutlet = Transaction::where('transaction_payment_status','Completed')->where('id_user', $user['id'])
+    public function fraudTrxPoint($sumBalance, $user, $data)
+    {
+        $fraudTrxPoint = FraudSetting::where('parameter', 'LIKE', '%point%')->where('fraud_settings_status', 'Active')->first();
+        if ($fraudTrxPoint) {
+            if ($sumBalance > $fraudTrxPoint['parameter_detail']) {
+                $countOutlet = Transaction::where('transaction_payment_status', 'Completed')->where('id_user', $user['id'])
                     ->groupBy('id_outlet')->selectRaw('count(id_outlet) as "total_oultet", id_outlet')->orderBy('total_oultet', 'desc')->get()->toArray();
 
-                if(!empty($countOutlet)){
-                    if($countOutlet[0]['id_outlet'] != $data['id_outlet']){
-                        $checkFraud = $this->checkFraud($fraudTrxPoint, $user, null, 0, 0, date('Y-m-d H:i:s'), 0,null,
-                            $sumBalance, $countOutlet[0]['id_outlet'], $data['id_outlet']);
+                if (!empty($countOutlet)) {
+                    if ($countOutlet[0]['id_outlet'] != $data['id_outlet']) {
+                        $checkFraud = $this->checkFraud(
+                            $fraudTrxPoint,
+                            $user,
+                            null,
+                            0,
+                            0,
+                            date('Y-m-d H:i:s'),
+                            0,
+                            null,
+                            $sumBalance,
+                            $countOutlet[0]['id_outlet'],
+                            $data['id_outlet']
+                        );
                         return ['status' => 'fail', 'messages' => ['Transaction failed. Point can not use in this outlet.']];
                     }
                 }
@@ -731,131 +741,134 @@ class ApiFraud extends Controller
         return true;
     }
 
-	function fraudCheckPromoCode($data){
-        $fraudCheckPromo = FraudSetting::where('parameter', 'LIKE', '%promo code%')->where('fraud_settings_status','Active')->first();
+    public function fraudCheckPromoCode($data)
+    {
+        $fraudCheckPromo = FraudSetting::where('parameter', 'LIKE', '%promo code%')->where('fraud_settings_status', 'Active')->first();
 
-        if(!$fraudCheckPromo){
+        if (!$fraudCheckPromo) {
             return [
-                'status'=>'success'
+                'status' => 'success',
             ];
         }
 
         $folder1 = 'fraud';
         $folder2 = 'checkPromoCode';
-        $file = $data['id_user'].'.json';
+        $file    = $data['id_user'] . '.json';
 
         //check folder
-        if(env('STORAGE') == 'local'){
-            if(!Storage::disk(env('STORAGE'))->exists($folder1)){
+        if (env('STORAGE') == 'local') {
+            if (!Storage::disk(env('STORAGE'))->exists($folder1)) {
                 Storage::makeDirectory($folder1);
             }
 
-            if(!Storage::disk(env('STORAGE'))->exists($folder1.'/'.$folder2)){
-                Storage::makeDirectory($folder1.'/'.$folder2);
+            if (!Storage::disk(env('STORAGE'))->exists($folder1 . '/' . $folder2)) {
+                Storage::makeDirectory($folder1 . '/' . $folder2);
             }
         }
 
-        if(Storage::disk(env('STORAGE'))->exists($folder1.'/'.$folder2.'/'.$file)){
-            $readContent = Storage::disk(env('STORAGE'))->get($folder1.'/'.$folder2.'/'.$file);
-            $content = json_decode($readContent);
+        if (Storage::disk(env('STORAGE'))->exists($folder1 . '/' . $folder2 . '/' . $file)) {
+            $readContent = Storage::disk(env('STORAGE'))->get($folder1 . '/' . $folder2 . '/' . $file);
+            $content     = json_decode($readContent);
             $currentTime = date('Y-m-d H:i:s');
 
-            if(strtotime($currentTime) < strtotime($content->available_access)){
+            if (strtotime($currentTime) < strtotime($content->available_access)) {
                 return [
-                    'status'=>'fail',
-                    'messages'=>[$fraudCheckPromo['result_text']]
+                    'status'   => 'fail',
+                    'messages' => [$fraudCheckPromo['result_text']],
                 ];
-            }else{
+            } else {
                 $deleteData = DailyCheckPromoCode::where('id_user', $data['id_user'])->delete();
-                MyHelper::deleteFile($folder1.'/'.$folder2.'/'.$file);
+                MyHelper::deleteFile($folder1 . '/' . $folder2 . '/' . $file);
             }
         }
 
-        $createLogCheckPromoCode  = LogCheckPromoCode::create($data);
-        $createDailyCheckPromoCode  = DailyCheckPromoCode::create($data);
+        $createLogCheckPromoCode   = LogCheckPromoCode::create($data);
+        $createDailyCheckPromoCode = DailyCheckPromoCode::create($data);
 
-        $time = $fraudCheckPromo->parameter_detail_time;
+        $time              = $fraudCheckPromo->parameter_detail_time;
         $numberOfViolation = $fraudCheckPromo->parameter_detail;
-        $end = date('Y-m-d H:i:s');
-        $start = date('Y-m-d H:i:s',strtotime('-'.(int)$time.' minutes',strtotime($end)));
+        $end               = date('Y-m-d H:i:s');
+        $start             = date('Y-m-d H:i:s', strtotime('-' . (int) $time . ' minutes', strtotime($end)));
 
         $getDailyLog = DailyCheckPromoCode::where('id_user', $data['id_user'])
-            ->where('created_at','>=',$start)
-            ->where('created_at','<=',$end)
+            ->where('created_at', '>=', $start)
+            ->where('created_at', '<=', $end)
             ->count();
 
-        if($getDailyLog > $numberOfViolation){
-            $userData = User::where('id', $data['id_user'])->first();
+        if ($getDailyLog > $numberOfViolation) {
+            $userData  = User::where('id', $data['id_user'])->first();
             $createLog = FraudDetectionLogCheckPromoCode::create([
-                'id_user' => $data['id_user'],
-                'count' => $getDailyLog,
-                'fraud_setting_parameter_detail' => $fraudCheckPromo['parameter_detail'],
-                'fraud_parameter_detail_time' => $fraudCheckPromo['parameter_detail_time'],
-                'fraud_hold_time' => $fraudCheckPromo['hold_time'],
-                'fraud_setting_forward_admin_status' => $fraudCheckPromo['forward_admin_status'],
-                'fraud_setting_auto_suspend_status' => $fraudCheckPromo['auto_suspend_status'],
-                'fraud_setting_auto_suspend_value' => $fraudCheckPromo['auto_suspend_value'],
-                'fraud_setting_auto_suspend_time_period' => $fraudCheckPromo['suspend_time_period']
+                'id_user'                                => $data['id_user'],
+                'count'                                  => $getDailyLog,
+                'fraud_setting_parameter_detail'         => $fraudCheckPromo['parameter_detail'],
+                'fraud_parameter_detail_time'            => $fraudCheckPromo['parameter_detail_time'],
+                'fraud_hold_time'                        => $fraudCheckPromo['hold_time'],
+                'fraud_setting_forward_admin_status'     => $fraudCheckPromo['forward_admin_status'],
+                'fraud_setting_auto_suspend_status'      => $fraudCheckPromo['auto_suspend_status'],
+                'fraud_setting_auto_suspend_value'       => $fraudCheckPromo['auto_suspend_value'],
+                'fraud_setting_auto_suspend_time_period' => $fraudCheckPromo['suspend_time_period'],
             ]);
 
-            if($createLog){
-                $availebleTime = date('Y-m-d H:i:s',strtotime('+'.(int)$fraudCheckPromo['hold_time'].' minutes',strtotime(date('Y-m-d H:i:s'))));
-                $contentFile = [
-                    'available_access' => $availebleTime
+            if ($createLog) {
+                $availebleTime = date('Y-m-d H:i:s', strtotime('+' . (int) $fraudCheckPromo['hold_time'] . ' minutes', strtotime(date('Y-m-d H:i:s'))));
+                $contentFile   = [
+                    'available_access' => $availebleTime,
                 ];
                 $createFile = MyHelper::createFile($contentFile, 'json', 'fraud/checkPromoCode/', $data['id_user']);
-                $sendFraud = $this->checkFraud($fraudCheckPromo, $userData, null, 0, 0, null, 0, 0, null, null, null);
+                $sendFraud  = $this->checkFraud($fraudCheckPromo, $userData, null, 0, 0, null, 0, 0, null, null, null);
                 return [
-                    'status'=>'fail',
-                    'messages'=>[$fraudCheckPromo['result_text']]
+                    'status'   => 'fail',
+                    'messages' => [$fraudCheckPromo['result_text']],
                 ];
-            }else{
+            } else {
                 return [
-                    'status'=>'fail',
-                    'messages'=>['Failed to add log promo code']
+                    'status'   => 'fail',
+                    'messages' => ['Failed to add log promo code'],
                 ];
             }
-        }else{
+        } else {
             return [
-                'status'=>'success'
+                'status' => 'success',
             ];
         }
     }
 
-    function fraudCheckReferralUser($data){
-        $fraudSetting = FraudSetting::where('parameter', 'LIKE', '%referral user%')->where('fraud_settings_status','Active')->first();
-        if($fraudSetting){
+    public function fraudCheckReferralUser($data)
+    {
+        $fraudSetting = FraudSetting::where('parameter', 'LIKE', '%referral user%')->where('fraud_settings_status', 'Active')->first();
+        if ($fraudSetting) {
             $chekFraudRefferalCode = PromoCampaignReferralTransaction::where('id_user', $data['id_user'])->count();
-            if($chekFraudRefferalCode > 1){
+            if ($chekFraudRefferalCode > 1) {
                 $data['fraud_setting_forward_admin_status'] = $fraudSetting['forward_admin_status'];
-                $data['fraud_setting_auto_suspend_status'] = $fraudSetting['forward_admin_status'];
+                $data['fraud_setting_auto_suspend_status']  = $fraudSetting['forward_admin_status'];
                 FraudDetectionLogReferralUsers::create($data);
             }
         }
         return true;
     }
 
-    function fraudCheckReferral($data){
-        $fraudSetting = FraudSetting::where('parameter', 'LIKE', '%referral global%')->where('fraud_settings_status','Active')->first();
-        if($fraudSetting){
-            $paramater = $fraudSetting['parameter_detail'];
+    public function fraudCheckReferral($data)
+    {
+        $fraudSetting = FraudSetting::where('parameter', 'LIKE', '%referral global%')->where('fraud_settings_status', 'Active')->first();
+        if ($fraudSetting) {
+            $paramater     = $fraudSetting['parameter_detail'];
             $paramaterTime = $fraudSetting['parameter_detail_time'] - 1;
-            $end = date('Y-m-d');
-            $start = date('Y-m-d', strtotime('-'.$paramaterTime.' day', strtotime($end)));
+            $end           = date('Y-m-d');
+            $start         = date('Y-m-d', strtotime('-' . $paramaterTime . ' day', strtotime($end)));
 
             $getDataTransaction = PromoCampaignPromoCode::join('promo_campaign_referral_transactions', 'promo_campaign_referral_transactions.id_promo_campaign_promo_code', 'promo_campaign_promo_codes.id_promo_campaign_promo_code')
-                                ->whereRaw('DATE(promo_campaign_referral_transactions.created_at) BETWEEN "'.$start.'" AND "'.$end.'"')
-                                ->where('promo_code', $data['referral_code'])
-                                ->select('promo_code', DB::raw('COUNT(promo_code) as count_data'))
-                                ->get()->toArray();
+                ->whereRaw('DATE(promo_campaign_referral_transactions.created_at) BETWEEN "' . $start . '" AND "' . $end . '"')
+                ->where('promo_code', $data['referral_code'])
+                ->select('promo_code', DB::raw('COUNT(promo_code) as count_data'))
+                ->get()->toArray();
 
             $sendNotif = $this->detailfraudReferral('referral', $data);
-            if($sendNotif){
-                if(isset($getDataTransaction[0]['count_data']) && $getDataTransaction[0]['count_data'] > $paramater){
-                    $data['fraud_setting_parameter_detail'] = $fraudSetting['parameter_detail'];
+            if ($sendNotif) {
+                if (isset($getDataTransaction[0]['count_data']) && $getDataTransaction[0]['count_data'] > $paramater) {
+                    $data['fraud_setting_parameter_detail']      = $fraudSetting['parameter_detail'];
                     $data['fraud_setting_parameter_detail_time'] = $fraudSetting['parameter_detail_time'];
-                    $data['fraud_setting_forward_admin_status'] = $fraudSetting['forward_admin_status'];
-                    $data['fraud_setting_auto_suspend_status'] = $fraudSetting['forward_admin_status'];
+                    $data['fraud_setting_forward_admin_status']  = $fraudSetting['forward_admin_status'];
+                    $data['fraud_setting_auto_suspend_status']   = $fraudSetting['forward_admin_status'];
                     FraudDetectionLogReferral::create($data);
                 }
             }
@@ -863,222 +876,220 @@ class ApiFraud extends Controller
         return true;
     }
 
-    function logFraud(Request $request, $type){
-        $post = $request->json()->all();
+    public function logFraud(Request $request, $type)
+    {
+        $post       = $request->json()->all();
         $date_start = date('Y-m-d');
-        $date_end = date('Y-m-d');
+        $date_end   = date('Y-m-d');
 
-        if(isset($post['date_start'])){
+        if (isset($post['date_start'])) {
             $date_start = date('Y-m-d', strtotime($post['date_start']));
         }
 
-        if(isset($post['date_end'])){
+        if (isset($post['date_end'])) {
             $date_end = date('Y-m-d', strtotime($post['date_end']));
         }
 
-        if($type == 'device'){
-            $table = 'fraud_detection_log_device';
-            $id = 'id_fraud_detection_log_device';
+        if ($type == 'device') {
+            $table     = 'fraud_detection_log_device';
+            $id        = 'id_fraud_detection_log_device';
             $queryList = FraudDetectionLogDevice::join('users', 'users.id', '=', 'fraud_detection_log_device.id_user')
                 ->join('users_device_login', 'users_device_login.device_id', '=', 'fraud_detection_log_device.device_id')
-                ->whereRaw("DATE(fraud_detection_log_device.created_at) BETWEEN '".$date_start."' AND '".$date_end."'")
-                ->where('users_device_login.status','Active')
-                ->orderBy('fraud_detection_log_device.created_at','desc')->groupBy('fraud_detection_log_device.device_id')->with(['usersFraud','usersNoFraud','allUsersdevice']);
-        }elseif($type == 'transaction-day'){
+                ->whereRaw("DATE(fraud_detection_log_device.created_at) BETWEEN '" . $date_start . "' AND '" . $date_end . "'")
+                ->where('users_device_login.status', 'Active')
+                ->orderBy('fraud_detection_log_device.created_at', 'desc')->groupBy('fraud_detection_log_device.device_id')->with(['usersFraud', 'usersNoFraud', 'allUsersdevice']);
+        } elseif ($type == 'transaction-day') {
             $table = 'fraud_detection_log_transaction_day';
-            $id = 'id_fraud_detection_log_transaction_day';
+            $id    = 'id_fraud_detection_log_transaction_day';
 
-            if(isset($post['export']) && $post['export'] == 1){
+            if (isset($post['export']) && $post['export'] == 1) {
                 $queryList = FraudDetectionLogTransactionDay::
-                join('users', 'users.id', '=', 'fraud_detection_log_transaction_day.id_user')
+                    join('users', 'users.id', '=', 'fraud_detection_log_transaction_day.id_user')
                     ->join('transactions', 'transactions.id_user', '=', 'fraud_detection_log_transaction_day.id_user')
-                    ->join('outlets','outlets.id_outlet', '=', 'transactions.id_outlet')
+                    ->join('outlets', 'outlets.id_outlet', '=', 'transactions.id_outlet')
                     ->leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-                    ->where('transactions.transaction_payment_status','Completed')
+                    ->where('transactions.transaction_payment_status', 'Completed')
                     ->whereNull('transaction_pickups.reject_at')
                     ->whereNotNull('transactions.fraud_flag')
                     ->whereRaw('DATE(fraud_detection_log_transaction_day.fraud_detection_date) = DATE(transactions.transaction_date)')
-                    ->whereRaw("DATE(fraud_detection_log_transaction_day.created_at) BETWEEN '".$date_start."' AND '".$date_end."'")
-                    ->where('fraud_detection_log_transaction_day.status','Active')
-                    ->orderBy('fraud_detection_log_transaction_day.created_at','desc')->select('users.name', 'users.phone', 'users.email', 'outlets.outlet_name', 'fraud_detection_log_transaction_day.*', 'transactions.*', 'fraud_detection_log_transaction_day.created_at as log_date');
-            }else{
+                    ->whereRaw("DATE(fraud_detection_log_transaction_day.created_at) BETWEEN '" . $date_start . "' AND '" . $date_end . "'")
+                    ->where('fraud_detection_log_transaction_day.status', 'Active')
+                    ->orderBy('fraud_detection_log_transaction_day.created_at', 'desc')->select('users.name', 'users.phone', 'users.email', 'outlets.outlet_name', 'fraud_detection_log_transaction_day.*', 'transactions.*', 'fraud_detection_log_transaction_day.created_at as log_date');
+            } else {
                 $queryList = FraudDetectionLogTransactionDay::join('users', 'users.id', '=', 'fraud_detection_log_transaction_day.id_user')
                     ->join('transactions', 'transactions.id_user', '=', 'fraud_detection_log_transaction_day.id_user')
                     ->leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-                    ->where('transactions.transaction_payment_status','Completed')
+                    ->where('transactions.transaction_payment_status', 'Completed')
                     ->whereNull('transaction_pickups.reject_at')
-                    ->whereRaw("DATE(fraud_detection_log_transaction_day.created_at) BETWEEN '".$date_start."' AND '".$date_end."'")
-                    ->where('fraud_detection_log_transaction_day.status','Active')
-                    ->select('users.name', 'users.phone','fraud_detection_log_transaction_day.*', 'transactions.*')
-                    ->orderBy('fraud_detection_log_transaction_day.created_at','desc')->groupBy('fraud_detection_log_transaction_day.id_fraud_detection_log_transaction_day');
+                    ->whereRaw("DATE(fraud_detection_log_transaction_day.created_at) BETWEEN '" . $date_start . "' AND '" . $date_end . "'")
+                    ->where('fraud_detection_log_transaction_day.status', 'Active')
+                    ->select('users.name', 'users.phone', 'fraud_detection_log_transaction_day.*', 'transactions.*')
+                    ->orderBy('fraud_detection_log_transaction_day.created_at', 'desc')->groupBy('fraud_detection_log_transaction_day.id_fraud_detection_log_transaction_day');
             }
-
-        }elseif($type == 'transaction-week'){
+        } elseif ($type == 'transaction-week') {
             $table = 'fraud_detection_log_transaction_week';
-            $id = 'id_fraud_detection_log_transaction_week';
-            if(isset($post['export']) && $post['export'] == 1){
+            $id    = 'id_fraud_detection_log_transaction_week';
+            if (isset($post['export']) && $post['export'] == 1) {
                 $queryList = FraudDetectionLogTransactionWeek::join('users', 'users.id', '=', 'fraud_detection_log_transaction_week.id_user')
                     ->join('transactions', 'transactions.id_user', '=', 'fraud_detection_log_transaction_week.id_user')
-                    ->join('outlets','outlets.id_outlet', '=', 'transactions.id_outlet')
+                    ->join('outlets', 'outlets.id_outlet', '=', 'transactions.id_outlet')
                     ->leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-                    ->where('transactions.transaction_payment_status','Completed')
+                    ->where('transactions.transaction_payment_status', 'Completed')
                     ->whereNull('transaction_pickups.reject_at')
                     ->whereNotNull('transactions.fraud_flag')
-                    ->whereRaw("DATE(fraud_detection_log_transaction_week.created_at) BETWEEN '".$date_start."' AND '".$date_end."'")
-                    ->where('fraud_detection_log_transaction_week.status','Active')
-                    ->orderBy('fraud_detection_log_transaction_week.created_at','desc')->select('users.name', 'users.phone', 'users.email', 'outlets.outlet_name','fraud_detection_log_transaction_week.*', 'transactions.*', 'fraud_detection_log_transaction_week.created_at as log_date');
-
-            }else{
+                    ->whereRaw("DATE(fraud_detection_log_transaction_week.created_at) BETWEEN '" . $date_start . "' AND '" . $date_end . "'")
+                    ->where('fraud_detection_log_transaction_week.status', 'Active')
+                    ->orderBy('fraud_detection_log_transaction_week.created_at', 'desc')->select('users.name', 'users.phone', 'users.email', 'outlets.outlet_name', 'fraud_detection_log_transaction_week.*', 'transactions.*', 'fraud_detection_log_transaction_week.created_at as log_date');
+            } else {
                 $queryList = FraudDetectionLogTransactionWeek::join('users', 'users.id', '=', 'fraud_detection_log_transaction_week.id_user')
                     ->join('transactions', 'transactions.id_user', '=', 'fraud_detection_log_transaction_week.id_user')
                     ->leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-                    ->where('transactions.transaction_payment_status','Completed')
+                    ->where('transactions.transaction_payment_status', 'Completed')
                     ->whereNull('transaction_pickups.reject_at')
-                    ->whereRaw("DATE(fraud_detection_log_transaction_week.created_at) BETWEEN '".$date_start."' AND '".$date_end."'")
-                    ->where('fraud_detection_log_transaction_week.status','Active')
-                    ->select('users.name', 'users.phone','fraud_detection_log_transaction_week.*', 'transactions.*')
-                    ->orderBy('fraud_detection_log_transaction_week.created_at','desc')->groupBy('fraud_detection_log_transaction_week.id_fraud_detection_log_transaction_week');
+                    ->whereRaw("DATE(fraud_detection_log_transaction_week.created_at) BETWEEN '" . $date_start . "' AND '" . $date_end . "'")
+                    ->where('fraud_detection_log_transaction_week.status', 'Active')
+                    ->select('users.name', 'users.phone', 'fraud_detection_log_transaction_week.*', 'transactions.*')
+                    ->orderBy('fraud_detection_log_transaction_week.created_at', 'desc')->groupBy('fraud_detection_log_transaction_week.id_fraud_detection_log_transaction_week');
             }
-        }elseif($type == 'transaction-between'){
+        } elseif ($type == 'transaction-between') {
             $table = 'fraud_detection_log_transaction_in_between';
-            $id = 'id_fraud_detection_log_transaction_in_between';
-            if(isset($post['export']) && $post['export'] == 1){
+            $id    = 'id_fraud_detection_log_transaction_in_between';
+            if (isset($post['export']) && $post['export'] == 1) {
                 $queryList = FraudDetectionLogTransactionInBetween::join('users', 'users.id', '=', 'fraud_detection_log_transaction_in_between.id_user')
                     ->join('fraud_between_transaction', 'fraud_detection_log_transaction_in_between.id_fraud_detection_log_transaction_in_between', '=', 'fraud_between_transaction.id_fraud_detection_log_transaction_in_between')
                     ->join('transaction_groups', 'transaction_groups.id_transaction_group', '=', 'fraud_between_transaction.id_transaction_group')
-                    ->whereRaw("DATE(fraud_detection_log_transaction_in_between.created_at) BETWEEN '".$date_start."' AND '".$date_end."'")
+                    ->whereRaw("DATE(fraud_detection_log_transaction_in_between.created_at) BETWEEN '" . $date_start . "' AND '" . $date_end . "'")
                     ->groupBy('transaction_groups.id_transaction_group')
                     ->select('transactions.*', 'fraud_detection_log_transaction_in_between.*', 'users.name', 'users.phone', 'users.email', 'fraud_detection_log_transaction_in_between.created_at as log_date');
-            }else{
+            } else {
                 $queryList = FraudDetectionLogTransactionInBetween::join('users', 'users.id', '=', 'fraud_detection_log_transaction_in_between.id_user')
-                    ->whereRaw("DATE(fraud_detection_log_transaction_in_between.created_at) BETWEEN '".$date_start."' AND '".$date_end."'")
-                    ->where('fraud_detection_log_transaction_in_between.status','Active')
-                    ->orderBy('fraud_detection_log_transaction_in_between.created_at','desc')
+                    ->whereRaw("DATE(fraud_detection_log_transaction_in_between.created_at) BETWEEN '" . $date_start . "' AND '" . $date_end . "'")
+                    ->where('fraud_detection_log_transaction_in_between.status', 'Active')
+                    ->orderBy('fraud_detection_log_transaction_in_between.created_at', 'desc')
                     ->groupBy(DB::raw('Date(fraud_detection_log_transaction_in_between.created_at)'), 'id_user')
-                    ->select('users.name', 'users.phone','fraud_detection_log_transaction_in_between.*');
+                    ->select('users.name', 'users.phone', 'fraud_detection_log_transaction_in_between.*');
             }
-        }elseif($type == 'transaction-point'){
-            $table = 'fraud_detection_log_transaction_point';
-            $id = 'id_fraud_detection_log_transaction_point';
+        } elseif ($type == 'transaction-point') {
+            $table     = 'fraud_detection_log_transaction_point';
+            $id        = 'id_fraud_detection_log_transaction_point';
             $queryList = FraudDetectionLogTransactionPoint::join('users', 'users.id', '=', 'fraud_detection_log_transaction_point.id_user')
-                ->whereRaw("DATE(fraud_detection_log_transaction_point.created_at) BETWEEN '".$date_start."' AND '".$date_end."'")
-                ->where('fraud_detection_log_transaction_point.status','Active')
-                ->orderBy('fraud_detection_log_transaction_point.created_at','desc')->with(['mostOutlet', 'atOutlet']);
-        }elseif($type == 'referral-user'){
-            $table = 'fraud_detection_log_referral_users';
-            $id = 'id_fraud_detection_log_referral_users';
+                ->whereRaw("DATE(fraud_detection_log_transaction_point.created_at) BETWEEN '" . $date_start . "' AND '" . $date_end . "'")
+                ->where('fraud_detection_log_transaction_point.status', 'Active')
+                ->orderBy('fraud_detection_log_transaction_point.created_at', 'desc')->with(['mostOutlet', 'atOutlet']);
+        } elseif ($type == 'referral-user') {
+            $table     = 'fraud_detection_log_referral_users';
+            $id        = 'id_fraud_detection_log_referral_users';
             $queryList = FraudDetectionLogReferralUsers::join('users', 'users.id', 'fraud_detection_log_referral_users.id_user')
-                        ->join('transactions', 'fraud_detection_log_referral_users.id_transaction', 'transactions.id_transaction')
-                        ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
-                        ->whereRaw("DATE(fraud_detection_log_referral_users.created_at) BETWEEN '".$date_start."' AND '".$date_end."'")
-                        ->select('fraud_detection_log_referral_users.*', 'outlets.outlet_name', 'transactions.transaction_receipt_number', 'transactions.trasaction_type', 'users.name', 'users.phone', 'users.email');
-        }elseif($type == 'referral'){
-            $table = 'fraud_detection_log_referral';
-            $id = 'id_fraud_detection_log_referral';
+                ->join('transactions', 'fraud_detection_log_referral_users.id_transaction', 'transactions.id_transaction')
+                ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
+                ->whereRaw("DATE(fraud_detection_log_referral_users.created_at) BETWEEN '" . $date_start . "' AND '" . $date_end . "'")
+                ->select('fraud_detection_log_referral_users.*', 'outlets.outlet_name', 'transactions.transaction_receipt_number', 'transactions.trasaction_type', 'users.name', 'users.phone', 'users.email');
+        } elseif ($type == 'referral') {
+            $table     = 'fraud_detection_log_referral';
+            $id        = 'id_fraud_detection_log_referral';
             $queryList = FraudDetectionLogReferral::join('users', 'users.id', 'fraud_detection_log_referral.id_user')
                 ->join('transactions', 'fraud_detection_log_referral.id_transaction', 'transactions.id_transaction')
                 ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
-                ->whereRaw("DATE(fraud_detection_log_referral.created_at) BETWEEN '".$date_start."' AND '".$date_end."'")
+                ->whereRaw("DATE(fraud_detection_log_referral.created_at) BETWEEN '" . $date_start . "' AND '" . $date_end . "'")
                 ->select('fraud_detection_log_referral.*', 'outlets.outlet_name', 'transactions.transaction_receipt_number', 'transactions.trasaction_type', 'users.name', 'users.phone', 'users.email');
-        }elseif($type == 'promo-code'){
-            $table = 'fraud_detection_log_check_promo_code';
-            $id = 'id_fraud_detection_log_check_promo_code';
+        } elseif ($type == 'promo-code') {
+            $table     = 'fraud_detection_log_check_promo_code';
+            $id        = 'id_fraud_detection_log_check_promo_code';
             $queryList = FraudDetectionLogCheckPromoCode::join('users', 'users.id', 'fraud_detection_log_check_promo_code.id_user')
-                ->whereRaw("DATE(fraud_detection_log_check_promo_code.created_at) BETWEEN '".$date_start."' AND '".$date_end."'")
+                ->whereRaw("DATE(fraud_detection_log_check_promo_code.created_at) BETWEEN '" . $date_start . "' AND '" . $date_end . "'")
                 ->select('fraud_detection_log_check_promo_code.*', 'users.name', 'users.phone', 'users.email');
         }
 
-        if(isset($post['conditions']) && !empty($post['conditions'])){
+        if (isset($post['conditions']) && !empty($post['conditions'])) {
             $conditions = $post['conditions'];
             foreach ($conditions as $key => $cond) {
-                foreach($cond as $index => $condition){
-                    if(isset($condition['subject'])){
-                        if($condition['operator'] != '='){
+                foreach ($cond as $index => $condition) {
+                    if (isset($condition['subject'])) {
+                        if ($condition['operator'] != '=') {
                             $conditionParameter = $condition['operator'];
                         }
 
-                        if($cond['rule'] == 'and'){
-                            if($condition['subject'] == 'name' || $condition['subject'] == 'phone'){
-                                $var = "users.".$condition['subject'];
+                        if ($cond['rule'] == 'and') {
+                            if ($condition['subject'] == 'name' || $condition['subject'] == 'phone') {
+                                $var = "users." . $condition['subject'];
 
-                                if($condition['operator'] == 'like')
-                                    $queryList = $queryList->where($var,'like','%'.$condition['parameter'].'%');
-                                else
-                                    $queryList = $queryList->where($var,'=',$condition['parameter']);
+                                if ($condition['operator'] == 'like') {
+                                    $queryList = $queryList->where($var, 'like', '%' . $condition['parameter'] . '%');
+                                } else {
+                                    $queryList = $queryList->where($var, '=', $condition['parameter']);
+                                }
                             }
 
-                            if($condition['subject'] == 'device'){
-
-                                if($conditionParameter == 'None'){
+                            if ($condition['subject'] == 'device') {
+                                if ($conditionParameter == 'None') {
                                     $queryList = $queryList->whereNull('users.android_device')->whereNull('users.ios_device');
                                 }
 
-                                if($conditionParameter == 'Android'){
+                                if ($conditionParameter == 'Android') {
                                     $queryList = $queryList->whereNotNull('users.android_device')->whereNull('users.ios_device');
                                 }
 
-                                if($conditionParameter == 'IOS'){
+                                if ($conditionParameter == 'IOS') {
                                     $queryList = $queryList->notNull('users.android_device')->whereNotNull('users.ios_device');
                                 }
 
-                                if($conditionParameter == 'Both'){
+                                if ($conditionParameter == 'Both') {
                                     $queryList = $queryList->whereNotNull('users.android_device')->whereNotNull('users.ios_device');
                                 }
-
                             }
 
-                            if($condition['subject'] == 'outlet' && $type == 'transaction-between'){
+                            if ($condition['subject'] == 'outlet' && $type == 'transaction-between') {
                                 $queryList = $queryList->whereRaw('fraud_detection_log_transaction_in_between.id_user in
                                                 (SELECT id_user FROM fraud_between_transaction fbt
                                                 JOIN transactions t ON t.id_transaction = fbt.id_transaction
-                                                JOIN outlets o ON o.id_outlet = t.id_outlet WHERE t.id_outlet = '.$conditionParameter.')');
-                            }elseif($condition['subject'] == 'outlet'){
-                                $queryList = $queryList->where('transactions.id_outlet','=',$conditionParameter);
+                                                JOIN outlets o ON o.id_outlet = t.id_outlet WHERE t.id_outlet = ' . $conditionParameter . ')');
+                            } elseif ($condition['subject'] == 'outlet') {
+                                $queryList = $queryList->where('transactions.id_outlet', '=', $conditionParameter);
                             }
 
-                            if($condition['subject'] == 'number_of_breaking'){
-                                $queryList = $queryList->havingRaw('COUNT(distinct '.$table.'.'.$id.') '.$condition['operator'].$condition['parameter']);
+                            if ($condition['subject'] == 'number_of_breaking') {
+                                $queryList = $queryList->havingRaw('COUNT(distinct ' . $table . '.' . $id . ') ' . $condition['operator'] . $condition['parameter']);
                             }
-                        }else{
-                            if($condition['subject'] == 'name' || $condition['subject'] == 'phone'){
-                                $var = "users.".$condition['subject'];
+                        } else {
+                            if ($condition['subject'] == 'name' || $condition['subject'] == 'phone') {
+                                $var = "users." . $condition['subject'];
 
-                                if($condition['operator'] == 'like')
-                                    $queryList = $queryList->orWhere($var,'like','%'.$condition['parameter'].'%');
-                                else
-                                    $queryList = $queryList->orWhere($var,'=',$condition['parameter']);
+                                if ($condition['operator'] == 'like') {
+                                    $queryList = $queryList->orWhere($var, 'like', '%' . $condition['parameter'] . '%');
+                                } else {
+                                    $queryList = $queryList->orWhere($var, '=', $condition['parameter']);
+                                }
                             }
 
-                            if($condition['subject'] == 'device'){
-
-                                if($conditionParameter == 'None'){
+                            if ($condition['subject'] == 'device') {
+                                if ($conditionParameter == 'None') {
                                     $queryList = $queryList->orWhereNull('users.android_device')->orWhereNull('users.ios_device');
                                 }
 
-                                if($conditionParameter == 'Android'){
+                                if ($conditionParameter == 'Android') {
                                     $queryList = $queryList->orwhereNotNull('users.android_device')->orWhereNull('users.ios_device');
                                 }
 
-                                if($conditionParameter == 'IOS'){
+                                if ($conditionParameter == 'IOS') {
                                     $queryList = $queryList->orwhereNull('users.android_device')->orwhereNotNull('users.ios_device');
                                 }
 
-                                if($conditionParameter == 'Both'){
+                                if ($conditionParameter == 'Both') {
                                     $queryList = $queryList->orwhereNotNull('users.android_device')->orwhereNotNull('users.ios_device');
                                 }
                             }
 
-                            if($condition['subject'] == 'outlet' && $type == 'transaction-between'){
+                            if ($condition['subject'] == 'outlet' && $type == 'transaction-between') {
                                 $queryList = $queryList->orWhere('fraud_detection_log_transaction_in_between.id_user in
                                                 (SELECT id_user FROM fraud_between_transaction fbt
                                                 JOIN transactions t ON t.id_transaction = fbt.id_transaction
-                                                JOIN outlets o ON o.id_outlet = t.id_outlet WHERE t.id_outlet = '.$conditionParameter.')');
-                            }elseif($condition['subject'] == 'outlet'){
-                                $queryList = $queryList->orWhere('transactions.id_outlet','=',$conditionParameter);
+                                                JOIN outlets o ON o.id_outlet = t.id_outlet WHERE t.id_outlet = ' . $conditionParameter . ')');
+                            } elseif ($condition['subject'] == 'outlet') {
+                                $queryList = $queryList->orWhere('transactions.id_outlet', '=', $conditionParameter);
                             }
 
-                            if($condition['subject'] == 'number_of_breaking'){
-                                $queryList = $queryList->orhavingRaw('COUNT(distinct '.$table.'.'.$id.') '.$condition['operator'].$condition['parameter']);
+                            if ($condition['subject'] == 'number_of_breaking') {
+                                $queryList = $queryList->orhavingRaw('COUNT(distinct ' . $table . '.' . $id . ') ' . $condition['operator'] . $condition['parameter']);
                             }
                         }
                     }
@@ -1090,154 +1101,167 @@ class ApiFraud extends Controller
 
         return response()->json([
             'status' => 'success',
-            'result' => $list
+            'result' => $list,
         ]);
     }
 
-    function detailFraudDevice(Request $request){
+    public function detailFraudDevice(Request $request)
+    {
         $post = $request->json()->all();
 
-        if(isset($post['device_id'])){
+        if (isset($post['device_id'])) {
             $detail = UsersDeviceLogin::join('users', 'users.id', '=', 'users_device_login.id_user')
                 ->leftJoin('fraud_detection_log_device', 'fraud_detection_log_device.device_id', '=', 'users_device_login.device_id')
-                ->select('users.*', 'users_device_login.*', 'fraud_detection_log_device.fraud_setting_parameter_detail', 'fraud_detection_log_device.fraud_setting_forward_admin_status',
-                    'fraud_detection_log_device.fraud_setting_auto_suspend_status', 'fraud_detection_log_device.fraud_setting_auto_suspend_value',
-                    'fraud_detection_log_device.fraud_setting_auto_suspend_time_period','fraud_detection_log_device.id_fraud_detection_log_device', 'fraud_detection_log_device.device_type')
-                ->whereRaw('fraud_detection_log_device.device_id = "'.$post['device_id'].'"')->orderBy('users_device_login.created_at','asc')
+                ->select(
+                    'users.*',
+                    'users_device_login.*',
+                    'fraud_detection_log_device.fraud_setting_parameter_detail',
+                    'fraud_detection_log_device.fraud_setting_forward_admin_status',
+                    'fraud_detection_log_device.fraud_setting_auto_suspend_status',
+                    'fraud_detection_log_device.fraud_setting_auto_suspend_value',
+                    'fraud_detection_log_device.fraud_setting_auto_suspend_time_period',
+                    'fraud_detection_log_device.id_fraud_detection_log_device',
+                    'fraud_detection_log_device.device_type'
+                )
+                ->whereRaw('fraud_detection_log_device.device_id = "' . $post['device_id'] . '"')->orderBy('users_device_login.created_at', 'asc')
                 ->groupBy('users.id')
                 ->get()->toArray();
             $detail_fraud = FraudDetectionLogDevice::join('users', 'users.id', '=', 'fraud_detection_log_device.id_user')
-                    ->select('users.name','users.phone','fraud_detection_log_device.*')
-                    ->whereRaw('fraud_detection_log_device.device_id = "'.$post['device_id'].'"')
-                    ->where('fraud_detection_log_device.status', 'Active')
-                    ->get()->toArray();
+                ->select('users.name', 'users.phone', 'fraud_detection_log_device.*')
+                ->whereRaw('fraud_detection_log_device.device_id = "' . $post['device_id'] . '"')
+                ->where('fraud_detection_log_device.status', 'Active')
+                ->get()->toArray();
         }
 
         return response()->json([
             'status' => 'success',
             'result' => [
-                'detail_user' => $detail,
-                'detail_fraud' => $detail_fraud
-            ]
+                'detail_user'  => $detail,
+                'detail_fraud' => $detail_fraud,
+            ],
         ]);
     }
 
-    function detailFraudTransactionDay(Request $request){
+    public function detailFraudTransactionDay(Request $request)
+    {
         $post = $request->json()->all();
 
-        if(isset($post['id_fraud_detection_log_transaction_day'])){
-            $detailLog = FraudDetectionLogTransactionDay::where('id_fraud_detection_log_transaction_day',$post['id_fraud_detection_log_transaction_day'])->with('user')->first();
+        if (isset($post['id_fraud_detection_log_transaction_day'])) {
+            $detailLog = FraudDetectionLogTransactionDay::where('id_fraud_detection_log_transaction_day', $post['id_fraud_detection_log_transaction_day'])->with('user')->first();
         }
 
         $detailTransaction = Transaction::leftJoin('transaction_groups', 'transaction_groups.id_transaction_group', '=', 'transactions.id_transaction_group')
-            ->where('transactions.transaction_payment_status','Completed')
-            ->whereRaw('Date(transaction_date) = "'.date('Y-m-d', strtotime($detailLog['fraud_detection_date'])).'"')
-            ->where('transactions.id_user',$detailLog['id_user'])
-            ->select('transactions.*',  DB::raw('(CASE
-                                WHEN (select balance from log_balances  where log_balances.id_reference = transactions.id_transaction AND log_balances.balance > 0 AND  log_balances.source ="Transaction" ) 
+            ->where('transactions.transaction_payment_status', 'Completed')
+            ->whereRaw('Date(transaction_date) = "' . date('Y-m-d', strtotime($detailLog['fraud_detection_date'])) . '"')
+            ->where('transactions.id_user', $detailLog['id_user'])
+            ->select('transactions.*', DB::raw('(CASE
+                                WHEN (select balance from log_balances  where log_balances.id_reference = transactions.id_transaction AND log_balances.balance > 0 AND  log_balances.source ="Transaction" )
                                 is NULL THEN NULL
                                 ELSE (select balance from log_balances  where log_balances.id_reference = transactions.id_transaction AND log_balances.balance > 0 AND  log_balances.source ="Transaction" )
                             END) as balance'), 'transaction_groups.transaction_receipt_number as receipt_number_group')
             ->with('outlet')->get();
-        $detailUser = User::where('id',$detailLog['id_user'])->first();
+        $detailUser = User::where('id', $detailLog['id_user'])->first();
         return response()->json([
             'status' => 'success',
             'result' => [
-                'detail_log' => $detailLog,
+                'detail_log'         => $detailLog,
                 'detail_transaction' => $detailTransaction,
-                'detail_user' => $detailUser
-            ]
+                'detail_user'        => $detailUser,
+            ],
         ]);
     }
 
-    function detailFraudTransactionWeek(Request $request){
+    public function detailFraudTransactionWeek(Request $request)
+    {
         $post = $request->json()->all();
 
-        if(isset($post['id_fraud_detection_log_transaction_week'])){
-            $detailLog = FraudDetectionLogTransactionWeek::where('id_fraud_detection_log_transaction_week',$post['id_fraud_detection_log_transaction_week'])->with('user')->first();
+        if (isset($post['id_fraud_detection_log_transaction_week'])) {
+            $detailLog = FraudDetectionLogTransactionWeek::where('id_fraud_detection_log_transaction_week', $post['id_fraud_detection_log_transaction_week'])->with('user')->first();
         }
         $year = $detailLog['fraud_detection_year'];
         $week = $detailLog['fraud_detection_week'];
-        $dto = new DateTime();
+        $dto  = new DateTime();
         $dto->setISODate($year, $week);
         $start = $dto->format('Y-m-d');
         $dto->modify('+6 days');
-        $end = $dto->format('Y-m-d');
+        $end               = $dto->format('Y-m-d');
         $detailTransaction = Transaction::leftJoin('transaction_groups', 'transaction_groups.id_transaction_group', '=', 'transactions.id_transaction_group')
-            ->where('transactions.transaction_payment_status','Completed')
-            ->where('transactions.id_user',$detailLog['id_user'])
-            ->whereRaw('Date(transaction_date) BETWEEN "'.$start.'" AND "'.$end.'"')
-            ->select('transactions.*',  DB::raw('(CASE
-                                WHEN (select balance from log_balances  where log_balances.id_reference = transactions.id_transaction AND log_balances.balance > 0 AND  log_balances.source ="Transaction" ) 
+            ->where('transactions.transaction_payment_status', 'Completed')
+            ->where('transactions.id_user', $detailLog['id_user'])
+            ->whereRaw('Date(transaction_date) BETWEEN "' . $start . '" AND "' . $end . '"')
+            ->select('transactions.*', DB::raw('(CASE
+                                WHEN (select balance from log_balances  where log_balances.id_reference = transactions.id_transaction AND log_balances.balance > 0 AND  log_balances.source ="Transaction" )
                                 is NULL THEN NULL
                                 ELSE (select balance from log_balances  where log_balances.id_reference = transactions.id_transaction AND log_balances.balance > 0 AND  log_balances.source ="Transaction" )
                             END) as balance'), 'transaction_groups.transaction_receipt_number as receipt_number_group')
             ->with('outlet')->get();
-        $detailUser = User::where('id',$detailLog['id_user'])->first();
+        $detailUser = User::where('id', $detailLog['id_user'])->first();
+        return response()->json([
+            'status' => 'success',
+            'result' => [
+                'detail_log'         => $detailLog,
+                'detail_transaction' => $detailTransaction,
+                'detail_user'        => $detailUser,
+            ],
+        ]);
+    }
+
+    public function detailFraudTransactionBetween(Request $request)
+    {
+        $post = $request->json()->all();
+
+        $detailLog = FraudDetectionLogTransactionInBetween::join('fraud_between_transaction', 'fraud_detection_log_transaction_in_between.id_fraud_detection_log_transaction_in_between', '=', 'fraud_between_transaction.id_fraud_detection_log_transaction_in_between')
+            ->join('transaction_groups', 'transaction_groups.id_transaction_group', '=', 'fraud_between_transaction.id_transaction_group')
+            ->where('fraud_detection_log_transaction_in_between.id_user', $post['id_user'])->whereDate('fraud_detection_log_transaction_in_between.created_at', $post['date_fraud'])
+            ->groupBy('transaction_groups.id_transaction_group')
+            ->select('transaction_groups.*', 'fraud_detection_log_transaction_in_between.*')
+            ->with(['user'])->get()->toArray();
+
         return response()->json([
             'status' => 'success',
             'result' => [
                 'detail_log' => $detailLog,
-                'detail_transaction' => $detailTransaction,
-                'detail_user' => $detailUser
-            ]
+            ],
         ]);
     }
 
-    function detailFraudTransactionBetween(Request $request){
+    public function detailFraudPromoCode(Request $request)
+    {
         $post = $request->json()->all();
 
-
-        $detailLog = FraudDetectionLogTransactionInBetween::join('fraud_between_transaction', 'fraud_detection_log_transaction_in_between.id_fraud_detection_log_transaction_in_between', '=', 'fraud_between_transaction.id_fraud_detection_log_transaction_in_between')
-                    ->join('transaction_groups', 'transaction_groups.id_transaction_group', '=', 'fraud_between_transaction.id_transaction_group')
-                    ->where('fraud_detection_log_transaction_in_between.id_user',$post['id_user'])->whereDate('fraud_detection_log_transaction_in_between.created_at',$post['date_fraud'])
-                    ->groupBy('transaction_groups.id_transaction_group')
-                    ->select('transaction_groups.*', 'fraud_detection_log_transaction_in_between.*')
-                    ->with(['user'])->get()->toArray();
-
-        return response()->json([
-            'status' => 'success',
-            'result' => [
-                'detail_log' => $detailLog
-            ]
-        ]);
-    }
-
-    function detailFraudPromoCode(Request $request){
-        $post = $request->json()->all();
-
-        if(isset($post['id_fraud_detection_log_check_promo_code'])){
+        if (isset($post['id_fraud_detection_log_check_promo_code'])) {
             $detail_fraud = FraudDetectionLogCheckPromoCode::join('users', 'users.id', '=', 'fraud_detection_log_check_promo_code.id_user')
                 ->where('id_fraud_detection_log_check_promo_code', $post['id_fraud_detection_log_check_promo_code'])
                 ->select('fraud_detection_log_check_promo_code.*', 'users.name', 'users.phone', 'users.email')
                 ->first();
-            $end = $detail_fraud['created_at'];
-            $start = date('Y-m-d H:i:s',strtotime('-'.(int)$detail_fraud['fraud_parameter_detail_time'].' minutes',strtotime($end)));
-            $listCheckPromo = DailyCheckPromoCode::where('created_at','>=',$start)
-                ->where('created_at','<=',$end)->get()->toArray();
+            $end            = $detail_fraud['created_at'];
+            $start          = date('Y-m-d H:i:s', strtotime('-' . (int) $detail_fraud['fraud_parameter_detail_time'] . ' minutes', strtotime($end)));
+            $listCheckPromo = DailyCheckPromoCode::where('created_at', '>=', $start)
+                ->where('created_at', '<=', $end)->get()->toArray();
         }
 
         return response()->json([
             'status' => 'success',
             'result' => [
                 'list_promo_code' => $listCheckPromo,
-                'detail_fraud' => $detail_fraud
-            ]
+                'detail_fraud'    => $detail_fraud,
+            ],
         ]);
     }
 
-    function updateLog(Request $request){
+    public function updateLog(Request $request)
+    {
         $post = $request->json()->all();
 
-        if(isset($post['type']) && $post['type'] == 'device'){
+        if (isset($post['type']) && $post['type'] == 'device') {
             unset($post['type']);
-            $update = FraudDetectionLogDevice::where('device_id', $post['device_id'])->where('id_user',$post['id_user'])
-            ->update($post);
-        }elseif(isset($post['type']) && $post['type'] == 'transaction-day'){
+            $update = FraudDetectionLogDevice::where('device_id', $post['device_id'])->where('id_user', $post['id_user'])
+                ->update($post);
+        } elseif (isset($post['type']) && $post['type'] == 'transaction-day') {
             unset($post['type']);
             $update = FraudDetectionLogTransactionDay::where('id_fraud_detection_log_transaction_day', $post['id_fraud_detection_log_transaction_day'])
                 ->update($post);
-        }elseif(isset($post['type']) && $post['type'] == 'transaction-week'){
+        } elseif (isset($post['type']) && $post['type'] == 'transaction-week') {
             unset($post['type']);
             $update = FraudDetectionLogTransactionWeek::where('id_fraud_detection_log_transaction_week', $post['id_fraud_detection_log_transaction_week'])
                 ->update($post);
@@ -1245,113 +1269,115 @@ class ApiFraud extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
 
-    function detailLogUser(Request $request){
+    public function detailLogUser(Request $request)
+    {
         $post = $request->json()->all();
-        if(isset($post['phone'])){
-            $user = User::where('phone',$post['phone'])->first();
+        if (isset($post['phone'])) {
+            $user      = User::where('phone', $post['phone'])->first();
             $logDevice = User::join('fraud_detection_log_device', 'users.id', '=', 'fraud_detection_log_device.id_user')
-                ->where('users.phone',$post['phone'])->where('fraud_detection_log_device.status','Active')
+                ->where('users.phone', $post['phone'])->where('fraud_detection_log_device.status', 'Active')
                 ->select('users.name', 'users.phone', 'users.email', 'fraud_detection_log_device.*')->get()->toArray();
             $logTransactionDay = User::join('fraud_detection_log_transaction_day', 'users.id', '=', 'fraud_detection_log_transaction_day.id_user')
-                ->where('users.phone',$post['phone'])->where('fraud_detection_log_transaction_day.status','Active')
+                ->where('users.phone', $post['phone'])->where('fraud_detection_log_transaction_day.status', 'Active')
                 ->select('users.name', 'users.phone', 'users.email', 'fraud_detection_log_transaction_day.*')->get()->toArray();
             $logTransactionWeek = User::join('fraud_detection_log_transaction_week', 'users.id', '=', 'fraud_detection_log_transaction_week.id_user')
-                ->where('users.phone',$post['phone'])->where('fraud_detection_log_transaction_week.status','Active')
+                ->where('users.phone', $post['phone'])->where('fraud_detection_log_transaction_week.status', 'Active')
                 ->select('users.name', 'users.phone', 'users.email', 'fraud_detection_log_transaction_week.*')->get()->toArray();
             $logTransactionPoint = User::join('fraud_detection_log_transaction_point', 'users.id', '=', 'fraud_detection_log_transaction_point.id_user')
-                ->where('users.phone',$post['phone'])->where('fraud_detection_log_transaction_point.status','Active')
+                ->where('users.phone', $post['phone'])->where('fraud_detection_log_transaction_point.status', 'Active')
                 ->select('users.name', 'users.phone', 'users.email', 'fraud_detection_log_transaction_point.*')->get()->toArray();
             $logTransactionBetween = User::join('fraud_detection_log_transaction_in_between', 'users.id', '=', 'fraud_detection_log_transaction_in_between.id_user')
-                ->where('users.phone',$post['phone'])->where('fraud_detection_log_transaction_in_between.status','Active')
+                ->where('users.phone', $post['phone'])->where('fraud_detection_log_transaction_in_between.status', 'Active')
                 ->select('users.name', 'users.phone', 'users.email', 'fraud_detection_log_transaction_in_between.*')->get()->toArray();
             $logReferralUser = User::join('fraud_detection_log_referral_users', 'users.id', '=', 'fraud_detection_log_referral_users.id_user')
                 ->join('transactions', 'fraud_detection_log_referral_users.id_transaction', 'transactions.id_transaction')
-                ->where('users.phone',$post['phone'])
+                ->where('users.phone', $post['phone'])
                 ->select('users.name', 'users.phone', 'users.email', 'fraud_detection_log_referral_users.*', 'transactions.transaction_receipt_number', 'transactions.trasaction_type')->get()->toArray();
             $logReferral = User::join('fraud_detection_log_referral', 'users.id', '=', 'fraud_detection_log_referral.id_user')
-                ->where('users.phone',$post['phone'])
+                ->where('users.phone', $post['phone'])
                 ->select('users.name', 'users.phone', 'users.email', 'fraud_detection_log_referral.*')->get()->toArray();
             $logPromoCode = User::join('fraud_detection_log_check_promo_code', 'users.id', '=', 'fraud_detection_log_check_promo_code.id_user')
-                ->where('users.phone',$post['phone'])
+                ->where('users.phone', $post['phone'])
                 ->select('users.name', 'users.phone', 'users.email', 'fraud_detection_log_check_promo_code.*')->get()->toArray();
 
             $result = [
                 'status' => 'success',
                 'result' => [
-                    'detail_user' => $user,
-                    'list_device' => $logDevice,
-                    'list_trans_day' => $logTransactionDay,
-                    'list_trans_week' => $logTransactionWeek,
-                    'list_trans_point' => $logTransactionPoint,
+                    'detail_user'        => $user,
+                    'list_device'        => $logDevice,
+                    'list_trans_day'     => $logTransactionDay,
+                    'list_trans_week'    => $logTransactionWeek,
+                    'list_trans_point'   => $logTransactionPoint,
                     'list_trans_between' => $logTransactionBetween,
                     'list_referral_user' => $logReferralUser,
-                    'list_referral' => $logReferral,
-                    'list_promo_code' => $logPromoCode
-                ]
+                    'list_referral'      => $logReferral,
+                    'list_promo_code'    => $logPromoCode,
+                ],
             ];
-        }else{
+        } else {
             $result = [
                 'status' => 'fail',
-                'result' => []
+                'result' => [],
             ];
         }
 
         return response()->json($result);
     }
 
-    function listUserFraud(Request $request){
-        $post = $request->json()->all();
+    public function listUserFraud(Request $request)
+    {
+        $post       = $request->json()->all();
         $date_start = date('Y-m-d');
-        $date_end = date('Y-m-d');
+        $date_end   = date('Y-m-d');
 
-        if(isset($post['date_start'])){
+        if (isset($post['date_start'])) {
             $date_start = date('Y-m-d', strtotime($post['date_start']));
         }
 
-        if(isset($post['date_end'])){
+        if (isset($post['date_end'])) {
             $date_end = date('Y-m-d', strtotime($post['date_end']));
         }
 
         $data = [
             'date_start' => $date_start,
-            'date_end' => $date_end
+            'date_end'   => $date_end,
         ];
 
         $queryList = User::where(function ($query) use ($data) {
-            $query->orwhereRaw('users.id in (SELECT id_user FROM fraud_detection_log_device WHERE id_user = users.id AND DATE(created_at) BETWEEN "'.$data['date_start'].'" AND "'.$data['date_end'].'")');
-            $query->orwhereRaw('users.id in (SELECT id_user FROM fraud_detection_log_transaction_day WHERE id_user = users.id AND DATE(created_at) BETWEEN "'.$data['date_start'].'" AND "'.$data['date_end'].'")');
-            $query->orwhereRaw('users.id in (SELECT id_user FROM fraud_detection_log_transaction_week WHERE id_user = users.id AND DATE(created_at) BETWEEN "'.$data['date_start'].'" AND "'.$data['date_end'].'")');
-            $query->orwhereRaw('users.id in (SELECT id_user FROM fraud_detection_log_transaction_point WHERE id_user = users.id AND DATE(created_at) BETWEEN "'.$data['date_start'].'" AND "'.$data['date_end'].'")');
-            $query->orwhereRaw('users.id in (SELECT id_user FROM fraud_detection_log_transaction_in_between WHERE id_user = users.id AND DATE(created_at) BETWEEN "'.$data['date_start'].'" AND "'.$data['date_end'].'")');
-            $query->orwhereRaw('users.id in (SELECT id_user FROM fraud_detection_log_referral_users WHERE id_user = users.id AND DATE(created_at) BETWEEN "'.$data['date_start'].'" AND "'.$data['date_end'].'")');
-            $query->orwhereRaw('users.id in (SELECT id_user FROM fraud_detection_log_check_promo_code WHERE id_user = users.id AND DATE(created_at) BETWEEN "'.$data['date_start'].'" AND "'.$data['date_end'].'")');
-            $query->orwhereRaw('users.id in (SELECT id_user FROM fraud_detection_log_referral WHERE id_user = users.id AND DATE(created_at) BETWEEN "'.$data['date_start'].'" AND "'.$data['date_end'].'")');
+            $query->orwhereRaw('users.id in (SELECT id_user FROM fraud_detection_log_device WHERE id_user = users.id AND DATE(created_at) BETWEEN "' . $data['date_start'] . '" AND "' . $data['date_end'] . '")');
+            $query->orwhereRaw('users.id in (SELECT id_user FROM fraud_detection_log_transaction_day WHERE id_user = users.id AND DATE(created_at) BETWEEN "' . $data['date_start'] . '" AND "' . $data['date_end'] . '")');
+            $query->orwhereRaw('users.id in (SELECT id_user FROM fraud_detection_log_transaction_week WHERE id_user = users.id AND DATE(created_at) BETWEEN "' . $data['date_start'] . '" AND "' . $data['date_end'] . '")');
+            $query->orwhereRaw('users.id in (SELECT id_user FROM fraud_detection_log_transaction_point WHERE id_user = users.id AND DATE(created_at) BETWEEN "' . $data['date_start'] . '" AND "' . $data['date_end'] . '")');
+            $query->orwhereRaw('users.id in (SELECT id_user FROM fraud_detection_log_transaction_in_between WHERE id_user = users.id AND DATE(created_at) BETWEEN "' . $data['date_start'] . '" AND "' . $data['date_end'] . '")');
+            $query->orwhereRaw('users.id in (SELECT id_user FROM fraud_detection_log_referral_users WHERE id_user = users.id AND DATE(created_at) BETWEEN "' . $data['date_start'] . '" AND "' . $data['date_end'] . '")');
+            $query->orwhereRaw('users.id in (SELECT id_user FROM fraud_detection_log_check_promo_code WHERE id_user = users.id AND DATE(created_at) BETWEEN "' . $data['date_start'] . '" AND "' . $data['date_end'] . '")');
+            $query->orwhereRaw('users.id in (SELECT id_user FROM fraud_detection_log_referral WHERE id_user = users.id AND DATE(created_at) BETWEEN "' . $data['date_start'] . '" AND "' . $data['date_end'] . '")');
         });
 
-        if(isset($post['conditions']) && !empty($post['conditions'])){
+        if (isset($post['conditions']) && !empty($post['conditions'])) {
             $conditions = $post['conditions'];
             foreach ($conditions as $key => $cond) {
-                foreach($cond as $index => $condition){
-                    if(isset($condition['subject'])){
+                foreach ($cond as $index => $condition) {
+                    if (isset($condition['subject'])) {
+                        if ($cond['rule'] == 'and') {
+                            if ($condition['subject'] == 'name' || $condition['subject'] == 'phone') {
+                                $var = "users." . $condition['subject'];
 
-                        if($cond['rule'] == 'and'){
-                            if($condition['subject'] == 'name' || $condition['subject'] == 'phone'){
-                                $var = "users.".$condition['subject'];
-
-                                if($condition['operator'] == 'like')
-                                    $queryList = $queryList->where($var,'like','%'.$condition['parameter'].'%');
-                                else
-                                    $queryList = $queryList->where($var,'=',$condition['parameter']);
+                                if ($condition['operator'] == 'like') {
+                                    $queryList = $queryList->where($var, 'like', '%' . $condition['parameter'] . '%');
+                                } else {
+                                    $queryList = $queryList->where($var, '=', $condition['parameter']);
+                                }
                             }
+                        } else {
+                            if ($condition['subject'] == 'name' || $condition['subject'] == 'phone') {
+                                $var = "users." . $condition['subject'];
 
-                        }else{
-                            if($condition['subject'] == 'name' || $condition['subject'] == 'phone'){
-                                $var = "users.".$condition['subject'];
-
-                                if($condition['operator'] == 'like')
-                                    $queryList = $queryList->orWhere($var,'like','%'.$condition['parameter'].'%');
-                                else
-                                    $queryList = $queryList->orWhere($var,'=',$condition['parameter']);
+                                if ($condition['operator'] == 'like') {
+                                    $queryList = $queryList->orWhere($var, 'like', '%' . $condition['parameter'] . '%');
+                                } else {
+                                    $queryList = $queryList->orWhere($var, '=', $condition['parameter']);
+                                }
                             }
                         }
                     }
@@ -1359,107 +1385,109 @@ class ApiFraud extends Controller
             }
         }
         $total = $queryList->count();
-        $list = $queryList->skip($post['skip'])->take($post['take'])->get()->toArray();
+        $list  = $queryList->skip($post['skip'])->take($post['take'])->get()->toArray();
 
         return response()->json([
             'status' => 'success',
             'result' => $list,
-            'total' => $total
+            'total'  => $total,
         ]);
     }
 
-    function updateDeviceLoginStatus(Request $request) {
+    public function updateDeviceLoginStatus(Request $request)
+    {
         $post = $request->json()->all();
-        if(isset($post['device_id']) && isset($post['id_user'])){
+        if (isset($post['device_id']) && isset($post['id_user'])) {
             $save = UsersDeviceLogin::where('device_id', $post['device_id'])->where('id_user', $post['id_user'])->update($post);
 
-            if($save){
-                if($post['status'] == 'Inactive'){
+            if ($save) {
+                if ($post['status'] == 'Inactive') {
                     $delToken = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
                         ->where('oauth_access_tokens.user_id', $post['id_user'])->where('oauth_access_token_providers.provider', 'users')->delete();
                 }
             }
             return response()->json(MyHelper::checkUpdate($save));
-        }else{
-            return response()->json(['status' => 'fail','messages' => ['incomplete data']]);
+        } else {
+            return response()->json(['status' => 'fail', 'messages' => ['incomplete data']]);
         }
-
     }
 
     /*=============== All Cron ===============*/
-    public function fraudCron(){
+    public function fraudCron()
+    {
         $log = MyHelper::logCron('Fraud Cron');
         try {
-          //cron fraud in between
-          $fraudBetween = $this->cronFraudInBetween();
-          if (!$fraudBetween) {
-              $log->fail('Failed to check fraud "Transaction in Between"');
-              return false;
-          }
+            //cron fraud in between
+            $fraudBetween = $this->cronFraudInBetween();
+            if (!$fraudBetween) {
+                $log->fail('Failed to check fraud "Transaction in Between"');
+                return false;
+            }
 
-          //delete data from table daily check promo code
-          $deleteDailyPromoCode = $this->deleteDailyLogCheckPromo();
-          if (!$deleteDailyPromoCode) {
-              $log->fail('Failed delete from table daily check promo code');
-              return false;
-          }
+            //delete data from table daily check promo code
+            $deleteDailyPromoCode = $this->deleteDailyLogCheckPromo();
+            if (!$deleteDailyPromoCode) {
+                $log->fail('Failed delete from table daily check promo code');
+                return false;
+            }
 
-          //delete data daily trx
-          $deleteDailyTrx = $this->deleteDailyTransactions();
-          if (!$deleteDailyTrx) {
-              $log->fail('Failed delete daily transactions');
-              return false;
-          }
+            //delete data daily trx
+            $deleteDailyTrx = $this->deleteDailyTransactions();
+            if (!$deleteDailyTrx) {
+                $log->fail('Failed delete daily transactions');
+                return false;
+            }
 
-          $log->success('success');
-          return true;
+            $log->success('success');
+            return true;
         } catch (\Exception $e) {
-          $log->fail($e->getMessage());
+            $log->fail($e->getMessage());
         }
     }
 
-    public function cronFraudInBetween(){
-        $fraudSetting = FraudSetting::where('parameter', 'LIKE', '%between%')->where('fraud_settings_status','Active')->first();
+    public function cronFraudInBetween()
+    {
+        $fraudSetting = FraudSetting::where('parameter', 'LIKE', '%between%')->where('fraud_settings_status', 'Active')->first();
 
-        if($fraudSetting){
+        if ($fraudSetting) {
             $parameterDetail = $fraudSetting->parameter_detail;
-            $currentDate = date('Y-m-d');
-            $bellowDate = date('Y-m-d',strtotime($currentDate." -3 Months"));
+            $currentDate     = date('Y-m-d');
+            $bellowDate      = date('Y-m-d', strtotime($currentDate . " -3 Months"));
 
             //Delete data bellow 3 months from current date
             $deleteDailyTrx = DailyTransactions::whereDate('transaction_date', '<', $bellowDate)->delete();
 
             //Count current transaction by user
-            $getTrxFisrt = DailyTransactions::whereDate('transaction_date','=',$currentDate)
-                                ->where('flag_check',0)
-                               ->orderBy('id_user')
-                               ->orderBy('transaction_date', 'asc')
-                               ->pluck('id_transaction_group');
+            $getTrxFisrt = DailyTransactions::whereDate('transaction_date', '=', $currentDate)
+                ->where('flag_check', 0)
+                ->orderBy('id_user')
+                ->orderBy('transaction_date', 'asc')
+                ->pluck('id_transaction_group');
 
-            $getTrxStatusCompleted = TransactionGroup::whereIn('id_transaction_group',$getTrxFisrt)
-                    ->where('transaction_payment_status', 'Completed')->pluck('id_transaction_group');
+            $getTrxStatusCompleted = TransactionGroup::whereIn('id_transaction_group', $getTrxFisrt)
+                ->where('transaction_payment_status', 'Completed')->pluck('id_transaction_group');
 
-            $getTrx = DailyTransactions::whereDate('transaction_date','=',$currentDate)
-                ->where('flag_check',0)
-                ->whereIn('id_transaction_group',$getTrxStatusCompleted)
+            $getTrx = DailyTransactions::whereDate('transaction_date', '=', $currentDate)
+                ->where('flag_check', 0)
+                ->whereIn('id_transaction_group', $getTrxStatusCompleted)
                 ->orderBy('id_user')
                 ->orderBy('transaction_date', 'asc')
                 ->get()->toArray();
 
             //checking between transaction
             $count = count($getTrx);
-            if($count > 0){
-                for($i=0;$i<$count-1;$i++){
-                    if($getTrx[$i]['id_user'] != $getTrx[$i+1]['id_user']){
+            if ($count > 0) {
+                for ($i = 0; $i < $count - 1; $i++) {
+                    if ($getTrx[$i]['id_user'] != $getTrx[$i + 1]['id_user']) {
                         continue;
                     }
-                    $toTime = strtotime($getTrx[$i]['transaction_date']);
-                    $fromTime = strtotime($getTrx[$i+1]['transaction_date']);
+                    $toTime        = strtotime($getTrx[$i]['transaction_date']);
+                    $fromTime      = strtotime($getTrx[$i + 1]['transaction_date']);
                     $differentTime = abs($toTime - $fromTime) / 60;
 
-                    if($differentTime <= (int)$parameterDetail){
-                        $userData = User::where('id', $getTrx[$i]['id_user'])->first();
-                        $checkFraudMinute = $this->checkFraud($fraudSetting, $userData, null, 0, 0, null, 0, [$getTrx[$i]['id_transaction_group'], $getTrx[$i+1]['id_transaction_group']]);
+                    if ($differentTime <= (int) $parameterDetail) {
+                        $userData         = User::where('id', $getTrx[$i]['id_user'])->first();
+                        $checkFraudMinute = $this->checkFraud($fraudSetting, $userData, null, 0, 0, null, 0, [$getTrx[$i]['id_transaction_group'], $getTrx[$i + 1]['id_transaction_group']]);
                     }
                     DailyTransactions::where('id_daily_transaction', $getTrx[$i]['id_daily_transaction'])->update(['flag_check' => 1]);
                 }
@@ -1467,89 +1495,90 @@ class ApiFraud extends Controller
         }
 
         return 'true';
-
     }
 
-    function detailfraudReferral($type, $dt){
+    public function detailfraudReferral($type, $dt)
+    {
         //this cron only execution action by setting
-        if($type == 'referral user'){
+        if ($type == 'referral user') {
             //referral user
-            $fraudSetting = FraudSetting::where('parameter', 'LIKE', '%referral user%')->where('fraud_settings_status','Active')->first();
-            $userData = User::where('id', $dt['id_user'])->first();
-            $dataTrx = Transaction::where('id_transaction', $dt['id_transaction'])->first();
+            $fraudSetting = FraudSetting::where('parameter', 'LIKE', '%referral user%')->where('fraud_settings_status', 'Active')->first();
+            $userData     = User::where('id', $dt['id_user'])->first();
+            $dataTrx      = Transaction::where('id_transaction', $dt['id_transaction'])->first();
 
             $content = '<table>';
             $content .= '<tr>';
             $content .= '<td>User Name</td>';
-            $content .= '<td>: '.$userData['name'].'</td>';
+            $content .= '<td>: ' . $userData['name'] . '</td>';
             $content .= '</tr>';
             $content .= '<tr>';
             $content .= '<td>User Phone</td>';
-            $content .= '<td>: '.$userData['phone'].'</td>';
+            $content .= '<td>: ' . $userData['phone'] . '</td>';
             $content .= '</tr>';
             $content .= '<tr>';
             $content .= '<td>Receipt Number</td>';
-            $content .= '<td>: '.$dataTrx['id_transaction'].'</td>';
+            $content .= '<td>: ' . $dataTrx['id_transaction'] . '</td>';
             $content .= '</tr>';
             $content .= '<tr>';
             $content .= '<td>Referral code</td>';
-            $content .= '<td>: '.$dt['referral_code'].'</td>';
+            $content .= '<td>: ' . $dt['referral_code'] . '</td>';
             $content .= '</tr>';
             $content .= '<tr>';
             $content .= '<td>Transaction Date</td>';
-            $content .= '<td>: '.date('d F Y', strtotime($dt['referral_code_use_date'])).'</td>';
+            $content .= '<td>: ' . date('d F Y', strtotime($dt['referral_code_use_date'])) . '</td>';
             $content .= '</tr>';
             $content .= '<tr>';
             $content .= '<td>Transaction Time</td>';
-            $content .= '<td>: '.date('H:i', strtotime($dt['referral_code_use_date'])).'</td>';
+            $content .= '<td>: ' . date('H:i', strtotime($dt['referral_code_use_date'])) . '</td>';
             $content .= '</tr>';
             $content .= '</table>';
 
-            $contentEmail = ['data_fraud' => $content, 'fraud_date' => date('d F Y'), 'fraud_time' => date('H:i'), ];
-            $sendFraud = $this->SendFraudDetection($fraudSetting['id_fraud_setting'], $userData, null, null, 0, $fraudSetting['auto_suspend_status'], $fraudSetting['forward_admin_status'], $contentEmail);
-        }elseif ($type == 'referral'){
+            $contentEmail = ['data_fraud' => $content, 'fraud_date' => date('d F Y'), 'fraud_time' => date('H:i')];
+            $sendFraud    = $this->SendFraudDetection($fraudSetting['id_fraud_setting'], $userData, null, null, 0, $fraudSetting['auto_suspend_status'], $fraudSetting['forward_admin_status'], $contentEmail);
+        } elseif ($type == 'referral') {
             //referral global
-            $fraudSetting = FraudSetting::where('parameter', 'LIKE', '%referral global%')->where('fraud_settings_status','Active')->first();
-            $userData = User::where('id', $dt['id_user'])->first();
-            $dataTrx = Transaction::where('id_transaction', $dt['id_transaction'])->first();
+            $fraudSetting = FraudSetting::where('parameter', 'LIKE', '%referral global%')->where('fraud_settings_status', 'Active')->first();
+            $userData     = User::where('id', $dt['id_user'])->first();
+            $dataTrx      = Transaction::where('id_transaction', $dt['id_transaction'])->first();
 
             $content = '<table>';
             $content .= '<tr>';
             $content .= '<td>User Name</td>';
-            $content .= '<td>: '.$userData['name'].'</td>';
+            $content .= '<td>: ' . $userData['name'] . '</td>';
             $content .= '</tr>';
             $content .= '<tr>';
             $content .= '<td>User Phone</td>';
-            $content .= '<td>: '.$userData['phone'].'</td>';
+            $content .= '<td>: ' . $userData['phone'] . '</td>';
             $content .= '</tr>';
             $content .= '<tr>';
             $content .= '<td>Receipt Number</td>';
-            $content .= '<td>: '.$dataTrx['id_transaction'].'</td>';
+            $content .= '<td>: ' . $dataTrx['id_transaction'] . '</td>';
             $content .= '</tr>';
             $content .= '<tr>';
             $content .= '<td>Referral code</td>';
-            $content .= '<td>: '.$dt['referral_code'].'</td>';
+            $content .= '<td>: ' . $dt['referral_code'] . '</td>';
             $content .= '</tr>';
             $content .= '<tr>';
             $content .= '<td>Transaction Date</td>';
-            $content .= '<td>: '.date('d F Y', strtotime($dt['referral_code_use_date'])).'</td>';
+            $content .= '<td>: ' . date('d F Y', strtotime($dt['referral_code_use_date'])) . '</td>';
             $content .= '</tr>';
             $content .= '<tr>';
             $content .= '<td>Transaction Time</td>';
-            $content .= '<td>: '.date('H:i', strtotime($dt['referral_code_use_date'])).'</td>';
+            $content .= '<td>: ' . date('H:i', strtotime($dt['referral_code_use_date'])) . '</td>';
             $content .= '</tr>';
             $content .= '</table>';
 
-            $contentEmail = ['data_fraud' => $content, 'fraud_date' => date('d F Y'), 'fraud_time' => date('H:i'), ];
-            $sendFraud = $this->SendFraudDetection($fraudSetting['id_fraud_setting'], $userData, null, null, 0, $fraudSetting['auto_suspend_status'], $fraudSetting['forward_admin_status'], $contentEmail);
+            $contentEmail = ['data_fraud' => $content, 'fraud_date' => date('d F Y'), 'fraud_time' => date('H:i')];
+            $sendFraud    = $this->SendFraudDetection($fraudSetting['id_fraud_setting'], $userData, null, null, 0, $fraudSetting['auto_suspend_status'], $fraudSetting['forward_admin_status'], $contentEmail);
         }
 
         return true;
     }
 
-    public function deleteDailyLogCheckPromo(){
+    public function deleteDailyLogCheckPromo()
+    {
         $currentDate = date('Y-m-d');
-        $bellowDate = date('Y-m-d',strtotime($currentDate." -1 Months"));
+        $bellowDate  = date('Y-m-d', strtotime($currentDate . " -1 Months"));
 
         //Delete data bellow 3 months from current date
         $deleteDailyTrx = DailyCheckPromoCode::whereDate('created_at', '<', $bellowDate)->delete();
@@ -1557,9 +1586,10 @@ class ApiFraud extends Controller
         return 'true';
     }
 
-    public function deleteDailyTransactions(){
+    public function deleteDailyTransactions()
+    {
         $currentDate = date('Y-m-d');
-        $bellowDate = date('Y-m-d',strtotime($currentDate." -1 Months"));
+        $bellowDate  = date('Y-m-d', strtotime($currentDate . " -1 Months"));
 
         //Delete data bellow 3 months from current date
         $deleteDailyTrx = DailyTransactions::whereDate('created_at', '<', $bellowDate)->delete();

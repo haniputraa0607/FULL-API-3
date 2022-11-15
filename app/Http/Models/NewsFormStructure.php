@@ -6,11 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class NewsFormStructure extends Model
 {
-	protected $connection = 'mysql';
-	public $incrementing = false;
+    protected $connection = 'mysql';
+    public $incrementing = false;
     /**
      * The table associated with the model.
-     * 
+     *
      * @var string
      */
     protected $table = 'news_form_structures';

@@ -8,14 +8,14 @@ class Disburse extends Model
 {
     protected $connection = 'mysql3';
     protected $table = 'disburse';
-	protected $primaryKey = 'id_disburse';
+    protected $primaryKey = 'id_disburse';
 
-	protected $fillable = [
-	    'disburse_nominal',
+    protected $fillable = [
+        'disburse_nominal',
         'disburse_fee',
         'total_income_outlet',
         'id_bank_account',
-		'disburse_status',
+        'disburse_status',
         'beneficiary_bank_name',
         'beneficiary_account_number',
         'beneficiary_name',
@@ -31,7 +31,7 @@ class Disburse extends Model
         'total_outlet',
         'count_retry',
         'send_email_status'
-	];
+    ];
 
     public function disburse_outlet()
     {

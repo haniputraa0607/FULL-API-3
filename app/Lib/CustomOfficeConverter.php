@@ -1,10 +1,11 @@
 <?php
+
 namespace App\Lib;
 
 use NcJoes\OfficeConverter\OfficeConverterException;
 
-class CustomOfficeConverter {
-    
+class CustomOfficeConverter
+{
     /** @var string */
     private $file;
     /** @var string */
@@ -65,7 +66,7 @@ class CustomOfficeConverter {
     protected function open($filename)
     {
         if (!file_exists($filename) || false === realpath($filename)) {
-            throw new OfficeConverterException('File does not exist --'.$filename);
+            throw new OfficeConverterException('File does not exist --' . $filename);
         }
 
         $this->file = realpath($filename);
@@ -92,7 +93,7 @@ class CustomOfficeConverter {
 
         //Check for valid input file extension
         if (!array_key_exists($extension, $this->getAllowedConverter())) {
-            throw new OfficeConverterException('Input file extension not supported -- '.$extension);
+            throw new OfficeConverterException('Input file extension not supported -- ' . $extension);
         }
         $this->extension = $extension;
 
@@ -138,11 +139,11 @@ class CustomOfficeConverter {
     protected function prepOutput($outdir, $filename, $outputExtension)
     {
         $DS = DIRECTORY_SEPARATOR;
-        $tmpName = ($this->extension ? str_replace($this->extension, '', $this->basename) : $this->basename . '.').$outputExtension;
-        if (rename($outdir.$DS.$tmpName, $outdir.$DS.$filename)) {
-            return $outdir.$DS.$filename;
-        } elseif (is_file($outdir.$DS.$tmpName)) {
-            return $outdir.$DS.$tmpName;
+        $tmpName = ($this->extension ? str_replace($this->extension, '', $this->basename) : $this->basename . '.') . $outputExtension;
+        if (rename($outdir . $DS . $tmpName, $outdir . $DS . $filename)) {
+            return $outdir . $DS . $filename;
+        } elseif (is_file($outdir . $DS . $tmpName)) {
+            return $outdir . $DS . $tmpName;
         }
 
         return null;
@@ -240,7 +241,7 @@ class CustomOfficeConverter {
         if ($this->prefixExecWithExportHome) {
             $home = getenv('HOME');
             if (!is_writable($home)) {
-                $cmd = 'export HOME=/tmp && '.$cmd;
+                $cmd = 'export HOME=/tmp && ' . $cmd;
             }
         }
         $process = proc_open($cmd, [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
@@ -264,5 +265,3 @@ class CustomOfficeConverter {
         ];
     }
 }
-
-?>

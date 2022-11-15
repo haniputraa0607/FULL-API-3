@@ -11,8 +11,15 @@ use Modules\Subscription\Entities\Subscription;
 
 class SendSubscriptionJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-    protected $data, $autocrm, $subscription_voucher, $subscription_claim;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
+
+    protected $data;
+    protected $autocrm;
+    protected $subscription_voucher;
+    protected $subscription_claim;
 
     /**
      * Create a new job instance.
@@ -21,7 +28,7 @@ class SendSubscriptionJob implements ShouldQueue
      */
     public function __construct($data)
     {
-        $this->data   	= $data;
+        $this->data     = $data;
         $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->subscription_voucher = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
         $this->subscription_claim   = "Modules\Subscription\Http\Controllers\ApiSubscriptionClaim";
@@ -38,23 +45,25 @@ class SendSubscriptionJob implements ShouldQueue
 
         $count = 0;
         $total_subs = 0;
-        foreach ($data['subs'] as $val){
-        	$data_subs = Subscription::where('id_subscription', $val['id_subscription'])->first();
+        foreach ($data['subs'] as $val) {
+            $data_subs = Subscription::where('id_subscription', $val['id_subscription'])->first();
 
-        	if ( $data_subs['subscription_total'] > $data_subs['subscription_bought'] || $data_subs['subscription_total'] == 0) {
-	            $generateUser = app($this->subscription_voucher)->autoClaimedAssign($data_subs, $data['user']);
-	            $count++;
-	            $dataSubs = Subscription::where('id_subscription', $data_subs['id_subscription'])->first(); // get newest update of total claimed subscription
-	            app($this->subscription_claim)->updateSubs($dataSubs);
-        	}
+            if ($data_subs['subscription_total'] > $data_subs['subscription_bought'] || $data_subs['subscription_total'] == 0) {
+                $generateUser = app($this->subscription_voucher)->autoClaimedAssign($data_subs, $data['user']);
+                $count++;
+                $dataSubs = Subscription::where('id_subscription', $data_subs['id_subscription'])->first(); // get newest update of total claimed subscription
+                app($this->subscription_claim)->updateSubs($dataSubs);
+            }
         }
 
         if (!empty($count)) {
-	        $autocrm = app($this->autocrm)->SendAutoCRM('Receive Welcome Subscription', $data['phone'],
-	            [
-	                'count_subscription'      => (string)$count
-	            ]
-        	);
+            $autocrm = app($this->autocrm)->SendAutoCRM(
+                'Receive Welcome Subscription',
+                $data['phone'],
+                [
+                    'count_subscription'      => (string)$count
+                ]
+            );
         }
 
         return true;

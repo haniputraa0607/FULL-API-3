@@ -16,7 +16,7 @@ class UpdateComplete extends FormRequest
     public function rules()
     {
         return [
-            'id_deals'           	=> 'required'
+            'id_deals'              => 'required'
         ];
     }
 

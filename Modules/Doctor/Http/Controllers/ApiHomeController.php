@@ -5,18 +5,17 @@ namespace Modules\Doctor\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use Modules\Doctor\Entities\Doctor;
 use Modules\Doctor\Entities\DoctorSchedule;
 use Modules\Doctor\Entities\DoctorDevice;
 use App\Http\Models\Transaction;
 use App\Http\Models\User;
-
 use DateTime;
 
 class ApiHomeController extends Controller
 {
-    function __construct() {
+    public function __construct()
+    {
         ini_set('max_execution_time', 0);
         date_default_timezone_set('Asia/Jakarta');
 
@@ -51,8 +50,8 @@ class ApiHomeController extends Controller
 
         //get detail doctor
         $specialist_name = null;
-        foreach($doctor['specialists'] as $key => $specialists){
-            if($key == 0) {
+        foreach ($doctor['specialists'] as $key => $specialists) {
+            if ($key == 0) {
                 $specialist_name .= $specialists['doctor_specialist_name'];
             } else {
                 $specialist_name .= ", ";
@@ -69,37 +68,37 @@ class ApiHomeController extends Controller
 
         //get doctor consultation
         $id = $doctor['id_doctor'];
-        $transaction = Transaction::with('consultation')->where('transaction_payment_status', 'Completed')->whereHas('consultation', function($query) use ($id){
+        $transaction = Transaction::with('consultation')->where('transaction_payment_status', 'Completed')->whereHas('consultation', function ($query) use ($id) {
             $query->where('id_doctor', $id)->onlySoon();
         })->get()->toArray();
 
         $now = new DateTime();
 
         $data_consultation = array();
-        foreach($transaction as $key => $value) {
+        foreach ($transaction as $key => $value) {
             $user_selected = User::where('id', $value['consultation']['id_user'])->first()->toArray();
 
             //get diff datetime
             $now = new DateTime();
-            $schedule_date_start_time = $value['consultation']['schedule_date'] .' '. $value['consultation']['schedule_start_time'];
-            $schedule_date_start_time =new DateTime($schedule_date_start_time);
-            $schedule_date_end_time = $value['consultation']['schedule_date'] .' '. $value['consultation']['schedule_end_time'];
-            $schedule_date_end_time =new DateTime($schedule_date_end_time);
+            $schedule_date_start_time = $value['consultation']['schedule_date'] . ' ' . $value['consultation']['schedule_start_time'];
+            $schedule_date_start_time = new DateTime($schedule_date_start_time);
+            $schedule_date_end_time = $value['consultation']['schedule_date'] . ' ' . $value['consultation']['schedule_end_time'];
+            $schedule_date_end_time = new DateTime($schedule_date_end_time);
             $diff_date = null;
 
             //logic schedule diff date
-            if($schedule_date_start_time > $now && $schedule_date_end_time > $now) {
+            if ($schedule_date_start_time > $now && $schedule_date_end_time > $now) {
                 $diff = $now->diff($schedule_date_start_time);
-                if($diff->d == 0) {
+                if ($diff->d == 0) {
                     $diff_date = $now->diff($schedule_date_start_time)->format("%h jam, %i mnt");
-                } elseif($diff->d == 0 && $diff->h == 0) {
+                } elseif ($diff->d == 0 && $diff->h == 0) {
                     $diff_date = $now->diff($schedule_date_start_time)->format("%i mnt");
-                } elseif($diff->d == 0 && $diff->h == 0 && $diff->i == 0) {
+                } elseif ($diff->d == 0 && $diff->h == 0 && $diff->i == 0) {
                     $diff_date = $now->diff($schedule_date_start_time)->format("sebentar lagi");
                 } else {
                     $diff_date = $now->diff($schedule_date_start_time)->format("%d hr %h jam");
                 }
-            } elseif($schedule_date_start_time < $now && $schedule_date_end_time > $now) {
+            } elseif ($schedule_date_start_time < $now && $schedule_date_end_time > $now) {
                 $diff_date = "now";
             } else {
                 $diff_date = "missed";
@@ -119,14 +118,14 @@ class ApiHomeController extends Controller
         $data_schedule = app($this->doctor)->getScheduleDoctor($user['id_doctor']);
 
         $result = [
-            "data_doctor" => $data_doctor, 
-            "data_consultation" => $data_consultation, 
+            "data_doctor" => $data_doctor,
+            "data_consultation" => $data_consultation,
             "data_schedule" => $data_schedule
         ];
 
         return response()->json([
-            'status'  => 'success', 
-            'result' => $result 
+            'status'  => 'success',
+            'result' => $result
         ]);
     }
 
@@ -190,7 +189,8 @@ class ApiHomeController extends Controller
         //
     }
 
-    public function updateDeviceUserGuest($device_id, $device_token, $device_type, $user) {
+    public function updateDeviceUserGuest($device_id, $device_token, $device_type, $user)
+    {
         $dataUpdate = [
             'device_id'    => $device_id,
             'device_token' => $device_token,
@@ -198,28 +198,27 @@ class ApiHomeController extends Controller
         ];
 
         $checkDevice = DoctorDevice::where('device_id', $device_id)
-								->where('device_token', $device_token)
-								->where('device_type', $device_type)
-								->count();
+                                ->where('device_token', $device_token)
+                                ->where('device_type', $device_type)
+                                ->count();
         if ($checkDevice == 0) {
             $update                = DoctorDevice::updateOrCreate(['device_id' => $device_id], [
-                'device_token'		=> $device_token,
-                'device_type'		=> $device_type,
+                'device_token'      => $device_token,
+                'device_type'       => $device_type,
                 'id_doctor'         => $user->id_doctor
             ]);
             $result = [
                 'status' => 'updated'
             ];
-        }
-        else {
+        } else {
             $result = [
                 'status' => 'success'
             ];
         }
 
         $checkDevice = DoctorDevice::where('device_id', $device_id)
-								->where('device_token', $device_token)
-								->where('device_type', $device_type)
+                                ->where('device_token', $device_token)
+                                ->where('device_type', $device_type)
                                 ->first();
 
         $result['check_device'] = $checkDevice;

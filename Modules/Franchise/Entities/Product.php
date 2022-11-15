@@ -41,35 +41,35 @@ use Modules\Product\Entities\ProductModifierGroup;
 class Product extends Model
 {
     protected $connection = 'mysql3';
-	protected $primaryKey = 'id_product';
+    protected $primaryKey = 'id_product';
 
-	protected $casts = [
-		'id_product_category' => 'int',
-		'product_weight' => 'int'
-	];
+    protected $casts = [
+        'id_product_category' => 'int',
+        'product_weight' => 'int'
+    ];
 
-	protected $fillable = [
-		'id_product_category',
-		'product_code',
-		'product_name',
-		'product_name_pos',
+    protected $fillable = [
+        'id_product_category',
+        'product_code',
+        'product_name',
+        'product_name_pos',
         'product_description',
         'product_photo_detail',
-		'product_video',
-		'product_weight',
-		'product_allow_sync',
-		'product_visibility',
-		'position',
-		'product_type',
+        'product_video',
+        'product_weight',
+        'product_allow_sync',
+        'product_visibility',
+        'position',
+        'product_type',
         'id_plastic_type',
-		'product_capacity',
-		'plastic_used',
+        'product_capacity',
+        'plastic_used',
         'product_variant_status',
         'is_inactive'
     ];
-    
 
-    protected static $_isInactive= false;
+
+    protected static $_isInactive = false;
 
     public function newQuery()
     {
@@ -89,81 +89,84 @@ class Product extends Model
     {
         static::$_isInactive = true;
 
-        return new static;
+        return new static();
     }
 
-	public function getPhotoAttribute() {
-		return config('url.storage_url_api').($this->photos[0]['product_photo']??'img/product/item/default.png');
-	}
-	public function product_category()
-	{
-		return $this->belongsTo(\App\Http\Models\ProductCategory::class, 'id_product_category');
-	}
-
-	 public function category()
+    public function getPhotoAttribute()
     {
-        return $this->belongsToMany(ProductCategory::class,'brand_product', 'id_product', 'id_product_category');
+        return config('url.storage_url_api') . ($this->photos[0]['product_photo'] ?? 'img/product/item/default.png');
+    }
+    public function product_category()
+    {
+        return $this->belongsTo(\App\Http\Models\ProductCategory::class, 'id_product_category');
     }
 
-    public function photos() {
+    public function category()
+    {
+        return $this->belongsToMany(ProductCategory::class, 'brand_product', 'id_product', 'id_product_category');
+    }
+
+    public function photos()
+    {
         return $this->hasMany(ProductPhoto::class, 'id_product', 'id_product')->orderBy('product_photo_order', 'ASC');
     }
 
-    public function discount() {
+    public function discount()
+    {
         return $this->hasMany(ProductDiscount::class, 'id_product', 'id_product');
     }
 
-	public function deals()
-	{
-		return $this->hasMany(\App\Http\Models\Deal::class, 'id_product');
-	}
+    public function deals()
+    {
+        return $this->hasMany(\App\Http\Models\Deal::class, 'id_product');
+    }
 
-	public function news()
-	{
-		return $this->belongsToMany(\App\Http\Models\News::class, 'news_products', 'id_product', 'id_news');
-	}
+    public function news()
+    {
+        return $this->belongsToMany(\App\Http\Models\News::class, 'news_products', 'id_product', 'id_news');
+    }
 
-	public function product_discounts()
-	{
-		return $this->hasMany(\App\Http\Models\ProductDiscount::class, 'id_product');
-	}
+    public function product_discounts()
+    {
+        return $this->hasMany(\App\Http\Models\ProductDiscount::class, 'id_product');
+    }
 
-	public function product_photos()
-	{
-		return $this->hasMany(\App\Http\Models\ProductPhoto::class, 'id_product');
-	}
+    public function product_photos()
+    {
+        return $this->hasMany(\App\Http\Models\ProductPhoto::class, 'id_product');
+    }
 
-	public function product_prices()
-	{
-		return $this->hasMany(\App\Http\Models\ProductPrice::class, 'id_product');
-	}
+    public function product_prices()
+    {
+        return $this->hasMany(\App\Http\Models\ProductPrice::class, 'id_product');
+    }
 
     public function product_detail()
     {
         return $this->hasMany(\Modules\Product\Entities\ProductDetail::class, 'id_product')->where('product_detail_visibility', 'Visible');
     }
 
-	public function prices()
-	{
-		return $this->hasMany(\App\Http\Models\ProductPrice::class, 'id_product')->join('outlets', 'product_prices.id_outlet', 'outlets.id_outlet')->select('id_product', 'outlets.id_outlet', 'product_price');
-	}
+    public function prices()
+    {
+        return $this->hasMany(\App\Http\Models\ProductPrice::class, 'id_product')->join('outlets', 'product_prices.id_outlet', 'outlets.id_outlet')->select('id_product', 'outlets.id_outlet', 'product_price');
+    }
 
-	public function transactions()
-	{
-		return $this->belongsToMany(\App\Http\Models\Transaction::class, 'transaction_products', 'id_product', 'id_transaction')
-					->withPivot('id_transaction_product', 'transaction_product_qty', 'transaction_product_price', 'transaction_product_subtotal', 'transaction_product_note')
-					->withTimestamps();
-	}
+    public function transactions()
+    {
+        return $this->belongsToMany(\App\Http\Models\Transaction::class, 'transaction_products', 'id_product', 'id_transaction')
+                    ->withPivot('id_transaction_product', 'transaction_product_qty', 'transaction_product_price', 'transaction_product_subtotal', 'transaction_product_note')
+                    ->withTimestamps();
+    }
 
-	public function product_tags()
-	{
-		return $this->hasMany(\App\Http\Models\ProductTag::class, 'id_product');
-	}
+    public function product_tags()
+    {
+        return $this->hasMany(\App\Http\Models\ProductTag::class, 'id_product');
+    }
 
-	public function product_price_hiddens()
-	{
-		return $this->hasMany(\App\Http\Models\ProductPrice::class, 'id_product')->where('product_visibility', 'Hidden');
-	}
+    public function product_price_hiddens()
+    {
+        return $this->hasMany(\App\Http\Models\ProductPrice::class, 'id_product')->where('product_visibility', 'Hidden');
+    }
 
     public function product_detail_hiddens()
     {
@@ -180,43 +183,46 @@ class Product extends Model
         return $this->hasMany(\Modules\Product\Entities\ProductSpecialPrice::class, 'id_product');
     }
 
-	public function all_prices()
-	{
-		return $this->hasMany(\App\Http\Models\ProductPrice::class, 'id_product');
-	}
-	public function brands()
+    public function all_prices()
     {
-        return $this->belongsToMany(\Modules\Brand\Entities\Brand::class, 'brand_product','id_product','id_brand');
+        return $this->hasMany(\App\Http\Models\ProductPrice::class, 'id_product');
     }
-	public function brand_category()
+    public function brands()
     {
-        return $this->hasMany(\Modules\Brand\Entities\BrandProduct::class, 'id_product','id_product')->select('id_brand','id_product_category','id_product');
+        return $this->belongsToMany(\Modules\Brand\Entities\Brand::class, 'brand_product', 'id_product', 'id_brand');
+    }
+    public function brand_category()
+    {
+        return $this->hasMany(\Modules\Brand\Entities\BrandProduct::class, 'id_product', 'id_product')->select('id_brand', 'id_product_category', 'id_product');
     }
 
-    public function modifiers(){
-        return $this->hasMany(ProductModifier::class, 'id_product','id_product');
+    public function modifiers()
+    {
+        return $this->hasMany(ProductModifier::class, 'id_product', 'id_product');
     }
-    
+
     public function discountActive()
     {
         $now = date('Y-m-d');
         $time = date('H:i:s');
         $day = date('l');
 
-        return $this->hasMany(ProductDiscount::class, 'id_product', 'id_product')->where('discount_days', 'like', '%'.$day.'%')->where('discount_start', '<=', $now)->where('discount_end', '>=', $now)->where('discount_time_start', '<=', $time)->where('discount_time_end', '>=', $time);
+        return $this->hasMany(ProductDiscount::class, 'id_product', 'id_product')->where('discount_days', 'like', '%' . $day . '%')->where('discount_start', '<=', $now)->where('discount_end', '>=', $now)->where('discount_time_start', '<=', $time)->where('discount_time_end', '>=', $time);
     }
 
-    public function product_promo_categories(){
-        return $this->belongsToMany(\Modules\Product\Entities\ProductPromoCategory::class,'product_product_promo_categories', 'id_product','id_product_promo_category')->withPivot('id_product','id_product_promo_category','position');
-    }
- 
-    protected static function getCacheName($id_product, $outlet, $with_index = false) 
+    public function product_promo_categories()
     {
-        return 'product_get_variant_tree_'.$id_product.'_'.$outlet['id_outlet'].'_'.($with_index ? 'true' : 'false');
+        return $this->belongsToMany(\Modules\Product\Entities\ProductPromoCategory::class, 'product_product_promo_categories', 'id_product', 'id_product_promo_category')->withPivot('id_product', 'id_product_promo_category', 'position');
     }
 
-    public function product_variant_group(){
-        return $this->hasMany(\Modules\ProductVariant\Entities\ProductVariantGroup::class,'id_product','id_product')
+    protected static function getCacheName($id_product, $outlet, $with_index = false)
+    {
+        return 'product_get_variant_tree_' . $id_product . '_' . $outlet['id_outlet'] . '_' . ($with_index ? 'true' : 'false');
+    }
+
+    public function product_variant_group()
+    {
+        return $this->hasMany(\Modules\ProductVariant\Entities\ProductVariantGroup::class, 'id_product', 'id_product')
             ->join('product_variant_pivot', 'product_variant_pivot.id_product_variant_group', 'product_variant_groups.id_product_variant_group')
             ->join('product_variants', 'product_variants.id_product_variant', 'product_variant_pivot.id_product_variant');
     }
@@ -271,7 +277,7 @@ class Product extends Model
         $variant_group_raws = ProductVariantGroup::select('product_variant_groups.id_product_variant_group', 'product_variant_group_stock_status')->where('id_product', $id_product)->with(['id_product_variants']);
 
         if ($outlet['outlet_different_price']) {
-            $variant_group_raws->addSelect('product_variant_group_special_prices.product_variant_group_price')->join('product_variant_group_special_prices', function($join) use ($outlet) {
+            $variant_group_raws->addSelect('product_variant_group_special_prices.product_variant_group_price')->join('product_variant_group_special_prices', function ($join) use ($outlet) {
                 $join->on('product_variant_groups.id_product_variant_group', '=', 'product_variant_group_special_prices.id_product_variant_group')
                     ->where('product_variant_group_special_prices.id_outlet', '=', $outlet['id_outlet']);
             });
@@ -279,12 +285,12 @@ class Product extends Model
             $variant_group_raws->addSelect('product_variant_group_price');
         }
 
-        $variant_group_raws->leftJoin('product_variant_group_details', function($join) use ($outlet) {
+        $variant_group_raws->leftJoin('product_variant_group_details', function ($join) use ($outlet) {
             $join->on('product_variant_group_details.id_product_variant_group', '=', 'product_variant_groups.id_product_variant_group')
                 ->where('product_variant_group_details.id_outlet', $outlet['id_outlet']);
-        })->where(function($query) {
+        })->where(function ($query) {
             $query->where('product_variant_group_details.product_variant_group_visibility', 'Visible')
-                ->orWhere(function($q2) {
+                ->orWhere(function ($q2) {
                     $q2->whereNull('product_variant_group_details.product_variant_group_visibility')
                         ->where('product_variant_groups.product_variant_group_visibility', 'Visible');
                 });
@@ -314,28 +320,28 @@ class Product extends Model
             $modifiers = ProductModifier::select('product_modifiers.id_product_modifier as id_product_variant', \DB::raw('coalesce(product_modifier_price,0) as product_variant_price'), 'text as product_variant_name', \DB::raw('coalesce(product_modifier_stock_status, "Available") as product_variant_stock_status'))
                 ->where('modifier_type', 'Modifier Group')
                 ->where('id_product_modifier_group', $modifier_group['id_product_modifier_group'])
-                ->leftJoin('product_modifier_details', function($join) use ($outlet) {
-                    $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
-                        ->where('product_modifier_details.id_outlet',$outlet['id_outlet']);
+                ->leftJoin('product_modifier_details', function ($join) use ($outlet) {
+                    $join->on('product_modifier_details.id_product_modifier', '=', 'product_modifiers.id_product_modifier')
+                        ->where('product_modifier_details.id_outlet', $outlet['id_outlet']);
                 })
-                ->where(function($query){
-                    $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
-                    ->orWhere(function($q){
+                ->where(function ($query) {
+                    $query->where('product_modifier_details.product_modifier_visibility', '=', 'Visible')
+                    ->orWhere(function ($q) {
                         $q->whereNull('product_modifier_details.product_modifier_visibility')
                         ->where('product_modifiers.product_modifier_visibility', 'Visible');
                     });
                 })
-                ->where(function($q){
-                    $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
+                ->where(function ($q) {
+                    $q->where('product_modifier_status', 'Active')->orWhereNull('product_modifier_status');
                 })
                 ->groupBy('product_modifiers.id_product_modifier');
             if ($outlet['outlet_different_price']) {
-                $modifiers->leftJoin('product_modifier_prices', function($join) use ($outlet) {
-                    $join->on('product_modifier_prices.id_product_modifier','=','product_modifiers.id_product_modifier')
-                        ->where('product_modifier_prices.id_outlet',$outlet['id_outlet']);
+                $modifiers->leftJoin('product_modifier_prices', function ($join) use ($outlet) {
+                    $join->on('product_modifier_prices.id_product_modifier', '=', 'product_modifiers.id_product_modifier')
+                        ->where('product_modifier_prices.id_outlet', $outlet['id_outlet']);
                 });
             } else {
-                $modifiers->leftJoin('product_modifier_global_prices', 'product_modifier_global_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
+                $modifiers->leftJoin('product_modifier_global_prices', 'product_modifier_global_prices.id_product_modifier', '=', 'product_modifiers.id_product_modifier');
             }
             $modifiers = $modifiers->orderBy('product_modifiers.product_modifier_order', 'asc')->get()->toArray();
             if (!$modifiers) {
@@ -411,16 +417,16 @@ class Product extends Model
      */
     protected static function recursiveCheck(&$variants, $variant_groups, $last = [], $with_index = false, $with_name_detail_trx = false)
     {
-        if (!($variants['childs']??false)) {
+        if (!($variants['childs'] ?? false)) {
             $variants = null;
             return;
         }
         // looping through childs of variant
         foreach ($variants['childs'] as $key => &$variant) {
             // list of parent id and current id
-            if (!$variant['variant'] || ($variant['variant']['childs'][0]['id_parent']??false) !== $variant['id_product_variant']) {
+            if (!$variant['variant'] || ($variant['variant']['childs'][0]['id_parent'] ?? false) !== $variant['id_product_variant']) {
                 $current = array_merge($last, [$variant['id_product_variant']]);
-            } else{
+            } else {
                 $current = $last;
             }
             // variant has variant / this a parent variant?
@@ -428,7 +434,7 @@ class Product extends Model
                 // get variant tree of variant childs
                 self::recursiveCheck($variant['variant'], $variant_groups, $current, $with_index, $with_name_detail_trx);
                 // check if still a parent
-                if ($variant['variant']) { 
+                if ($variant['variant']) {
                     // assign price, from lowest price of variant with lower level, [previously saved in variant detail]
                     $variant['product_variant_group_price'] = $variant['variant']['product_variant_group_price'];
                     $variant['product_variant_stock_status'] = $variant['variant']['product_variant_stock_status'];
@@ -482,7 +488,7 @@ class Product extends Model
                 'product_variant_price' => $variant['product_variant_price'],
                 'product_variant_stock_status' => $variant['product_variant_stock_status'],
             ];
-            if($with_name_detail_trx){
+            if ($with_name_detail_trx) {
                 $new_order['product_variant_name_detail_trx']  = $variant['product_variant_name'];
             }
 
@@ -533,7 +539,7 @@ class Product extends Model
      * @param  integer              $last_price            last price (sum of parent price)
      * @return boolean              true / false
      */
-    public static function getVariantPrice($product_variant_group,$variant = null, $variants = [], $last_price = 0) 
+    public static function getVariantPrice($product_variant_group, $variant = null, $variants = [], $last_price = 0)
     {
         if (is_numeric($product_variant_group)) {
             $product_variant_group = ProductVariantGroup::where('id_product_variant_group', $product_variant_group)->first();
@@ -548,9 +554,9 @@ class Product extends Model
 
         foreach ($variant['childs'] as $child) {
             $next_variants = $variants;
-            if($child['variant']) {
+            if ($child['variant']) {
                 // check child or parent
-                if ($child['id_product_variant'] != $child['variant']['id_product_variant'] && !($child['is_modifier']??false)) { //child
+                if ($child['id_product_variant'] != $child['variant']['id_product_variant'] && !($child['is_modifier'] ?? false)) { //child
                     $next_variants[$child['id_product_variant']] = $last_price + $child['product_variant_price'];
                     $next_last_price = 0;
                 } else { //parent
@@ -562,7 +568,7 @@ class Product extends Model
                 }
             } else {
                 if ($child['id_product_variant_group'] == $product_variant_group->id_product_variant_group) {
-                    if (!($child['is_modifier']??false)) {
+                    if (!($child['is_modifier'] ?? false)) {
                         $variants[$child['id_product_variant']] = $last_price + $child['product_variant_price'];
                     }
                     return $variants;
@@ -581,7 +587,7 @@ class Product extends Model
      * @return boolean              true / false
      */
     // validasi : if is modifier dan ada di extra variant
-    public static function getVariantParentId($product_variant_group,$variant = null, $extra_modifiers = [], $variants = [])
+    public static function getVariantParentId($product_variant_group, $variant = null, $extra_modifiers = [], $variants = [])
     {
         if (is_numeric($product_variant_group)) {
             $product_variant_group = ProductVariantGroup::where('id_product_variant_group', $product_variant_group)->first();
@@ -595,8 +601,8 @@ class Product extends Model
         }
         foreach ($variant['childs'] as $child) {
             $next_variants = $variants;
-            if($child['variant']) {
-                if (($child['is_modifier']??false) && !in_array($child['id_product_variant'], $extra_modifiers)) {
+            if ($child['variant']) {
+                if (($child['is_modifier'] ?? false) && !in_array($child['id_product_variant'], $extra_modifiers)) {
                     continue;
                 }
                 // check child or parent
@@ -605,7 +611,7 @@ class Product extends Model
                     return $result;
                 }
             } else {
-                if (($child['is_modifier']??false) && !in_array($child['id_product_variant'], $extra_modifiers)) {
+                if (($child['is_modifier'] ?? false) && !in_array($child['id_product_variant'], $extra_modifiers)) {
                     continue;
                 }
                 if ($child['id_product_variant_group'] == $product_variant_group->id_product_variant_group) {
@@ -618,23 +624,25 @@ class Product extends Model
     }
 
     /**
-     * Merge product modifiers 
+     * Merge product modifiers
      * @param  [type] $variants        [description]
      * @param  [type] $modifier_groups [description]
      * @return [type]                  [description]
      */
     public static function mergeModifierGroup(&$variants, $modifier_groups, $selected_id = [])
     {
-        if(!$modifier_groups || !$variants){return;}
+        if (!$modifier_groups || !$variants) {
+            return;
+        }
         foreach ($variants['childs'] as &$variant) {
             $new_selected_id = array_merge($selected_id, [$variant['id_product_variant']]);
-            if($variant['variant']) {
+            if ($variant['variant']) {
                 self::mergeModifierGroup($variant['variant'], $modifier_groups, $new_selected_id);
             } else {
                 // ambil kemungkinan modifier group
-                $modifiers = $modifier_groups['*']??[];
-                foreach($new_selected_id as $variant_id) {
-                    $modifiers = array_merge($modifiers, $modifier_groups[$variant_id]??[]);
+                $modifiers = $modifier_groups['*'] ?? [];
+                foreach ($new_selected_id as $variant_id) {
+                    $modifiers = array_merge($modifiers, $modifier_groups[$variant_id] ?? []);
                 }
                 // loop modifier group
                 $variant['variant'] = self::insertModifierGroup($variant, $modifiers, $variant['id_product_variant_group']);
@@ -651,15 +659,18 @@ class Product extends Model
      * @param  int      $id_product_variant_group id_product_variant_group
      * @return [type]                           [description]
      */
-    public static function insertModifierGroup(&$variant, $modifier_groups, $id_product_variant_group) {
+    public static function insertModifierGroup(&$variant, $modifier_groups, $id_product_variant_group)
+    {
         $starter = array_shift($modifier_groups);
-        if(!($starter['childs']??false)) {return null;}
+        if (!($starter['childs'] ?? false)) {
+            return null;
+        }
         $result = [
             'product_variant_name'  => $starter['product_modifier_group_name'],
             'id_product_variant'    => $starter['id_product_modifier_group'],
             'childs'                => $starter['childs']
         ];
-        foreach($result['childs'] as &$variant_child) {
+        foreach ($result['childs'] as &$variant_child) {
             $variant_child['product_variant_group_price'] = $variant['product_variant_group_price'] + $variant_child['product_variant_price'];
             $variant_child['extra_modifiers'] = $variant['extra_modifiers'];
             $variant_child['extra_modifiers'][] = $variant_child['id_product_variant'];
@@ -715,7 +726,7 @@ class Product extends Model
         $variant_group_raws = ProductVariantGroup::select('product_variant_groups.id_product_variant_group', 'product_variant_group_stock_status')->where('id_product', $id_product)->where('product_variant_groups.id_product_variant_group', $id_product_variant_group)->with(['id_product_variants']);
 
         if ($outlet['outlet_different_price']) {
-            $variant_group_raws->addSelect('product_variant_group_special_prices.product_variant_group_price')->join('product_variant_group_special_prices', function($join) use ($outlet) {
+            $variant_group_raws->addSelect('product_variant_group_special_prices.product_variant_group_price')->join('product_variant_group_special_prices', function ($join) use ($outlet) {
                 $join->on('product_variant_groups.id_product_variant_group', '=', 'product_variant_group_special_prices.id_product_variant_group')
                     ->where('product_variant_group_special_prices.id_outlet', '=', $outlet['id_outlet']);
             });
@@ -723,12 +734,12 @@ class Product extends Model
             $variant_group_raws->addSelect('product_variant_group_price');
         }
 
-        $variant_group_raws->leftJoin('product_variant_group_details', function($join) use ($outlet) {
+        $variant_group_raws->leftJoin('product_variant_group_details', function ($join) use ($outlet) {
             $join->on('product_variant_group_details.id_product_variant_group', '=', 'product_variant_groups.id_product_variant_group')
                 ->where('product_variant_group_details.id_outlet', $outlet['id_outlet']);
-        })->where(function($query) {
+        })->where(function ($query) {
             $query->where('product_variant_group_details.product_variant_group_visibility', 'Visible')
-                ->orWhere(function($q2) {
+                ->orWhere(function ($q2) {
                     $q2->whereNull('product_variant_group_details.product_variant_group_visibility')
                         ->where('product_variant_groups.product_variant_group_visibility', 'Visible');
                 });
@@ -758,28 +769,28 @@ class Product extends Model
             $modifiers = ProductModifier::select('product_modifiers.id_product_modifier as id_product_variant', \DB::raw('coalesce(product_modifier_price,0) as product_variant_price'), 'text as product_variant_name', 'text_detail_trx as product_variant_name_detail_trx', \DB::raw('coalesce(product_modifier_stock_status, "Available") as product_variant_stock_status'))
                 ->where('modifier_type', 'Modifier Group')
                 ->where('id_product_modifier_group', $modifier_group['id_product_modifier_group'])
-                ->leftJoin('product_modifier_details', function($join) use ($outlet) {
-                    $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
-                        ->where('product_modifier_details.id_outlet',$outlet['id_outlet']);
+                ->leftJoin('product_modifier_details', function ($join) use ($outlet) {
+                    $join->on('product_modifier_details.id_product_modifier', '=', 'product_modifiers.id_product_modifier')
+                        ->where('product_modifier_details.id_outlet', $outlet['id_outlet']);
                 })
-                ->where(function($query){
-                    $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
-                        ->orWhere(function($q){
+                ->where(function ($query) {
+                    $query->where('product_modifier_details.product_modifier_visibility', '=', 'Visible')
+                        ->orWhere(function ($q) {
                             $q->whereNull('product_modifier_details.product_modifier_visibility')
                                 ->where('product_modifiers.product_modifier_visibility', 'Visible');
                         });
                 })
-                ->where(function($q){
-                    $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
+                ->where(function ($q) {
+                    $q->where('product_modifier_status', 'Active')->orWhereNull('product_modifier_status');
                 })
                 ->groupBy('product_modifiers.id_product_modifier');
             if ($outlet['outlet_different_price']) {
-                $modifiers->leftJoin('product_modifier_prices', function($join) use ($outlet) {
-                    $join->on('product_modifier_prices.id_product_modifier','=','product_modifiers.id_product_modifier')
-                        ->where('product_modifier_prices.id_outlet',$outlet['id_outlet']);
+                $modifiers->leftJoin('product_modifier_prices', function ($join) use ($outlet) {
+                    $join->on('product_modifier_prices.id_product_modifier', '=', 'product_modifiers.id_product_modifier')
+                        ->where('product_modifier_prices.id_outlet', $outlet['id_outlet']);
                 });
             } else {
-                $modifiers->leftJoin('product_modifier_global_prices', 'product_modifier_global_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
+                $modifiers->leftJoin('product_modifier_global_prices', 'product_modifier_global_prices.id_product_modifier', '=', 'product_modifiers.id_product_modifier');
             }
             $modifiers = $modifiers->orderBy('product_modifiers.product_modifier_order', 'asc')->get()->toArray();
             if (!$modifiers) {

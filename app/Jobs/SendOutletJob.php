@@ -10,8 +10,13 @@ use Illuminate\Foundation\Bus\Dispatchable;
 
 class SendOutletJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-    protected $data,$autocrm;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
+
+    protected $data;
+    protected $autocrm;
 
     /**
      * Create a new job instance.
@@ -21,7 +26,7 @@ class SendOutletJob implements ShouldQueue
     public function __construct($data)
     {
         $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
-        $this->data   	= $data;
+        $this->data     = $data;
     }
 
     /**
@@ -34,14 +39,14 @@ class SendOutletJob implements ShouldQueue
         // sent pin to outlet
         $data = $this->data;
         foreach ($data as $key => $value) {
-	        if (isset($value['outlet_email'])) {
-		        $send 	= app($this->autocrm)->SendAutoCRM('Outlet Pin Sent', $value['outlet_email'], [
-			                'pin' 			=> $value['pin'],
-			                'date_sent' 	=> date('Y-m-d H:i:s'),
-			                'outlet_name' 	=> $value['outlet_name'],
-			                'outlet_code' 	=> $value['outlet_code'],
-			            ], null, false, false, 'outlet');
-	        }
+            if (isset($value['outlet_email'])) {
+                $send   = app($this->autocrm)->SendAutoCRM('Outlet Pin Sent', $value['outlet_email'], [
+                            'pin'           => $value['pin'],
+                            'date_sent'     => date('Y-m-d H:i:s'),
+                            'outlet_name'   => $value['outlet_name'],
+                            'outlet_code'   => $value['outlet_code'],
+                        ], null, false, false, 'outlet');
+            }
         }
         return true;
     }

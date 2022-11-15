@@ -11,23 +11,23 @@ use Illuminate\Database\Eloquent\Model;
 
 class PromotionContentShortenLink extends Model
 {
-	protected $primaryKey = 'id_promotion_content_shorten_link';
+    protected $primaryKey = 'id_promotion_content_shorten_link';
 
-	protected $casts = [
-		'id_promotion_content' => 'int',
-	];
+    protected $casts = [
+        'id_promotion_content' => 'int',
+    ];
 
-	protected $fillable = [
-		'id_promotion_content',
-		'original_link',
-		'short_link',
-		'type',
-		'created_at',
-		'updated_at',
-	];
+    protected $fillable = [
+        'id_promotion_content',
+        'original_link',
+        'short_link',
+        'type',
+        'created_at',
+        'updated_at',
+    ];
 
-	public function promotionContent()
-	{
-		return $this->belongsTo(\App\Http\Models\PromotionContent::class, 'id_promotion');
-	}
+    public function promotionContent()
+    {
+        return $this->belongsTo(\App\Http\Models\PromotionContent::class, 'id_promotion');
+    }
 }

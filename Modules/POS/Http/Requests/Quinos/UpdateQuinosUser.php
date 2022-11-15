@@ -16,8 +16,8 @@ class UpdateQuinosUser extends FormRequest
     public function rules()
     {
         return [
-            'username'		=> 'required',
-            'new_password'	=> 'required',
+            'username'      => 'required',
+            'new_password'  => 'required',
         ];
     }
 

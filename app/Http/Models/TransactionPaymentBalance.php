@@ -8,16 +8,16 @@ class TransactionPaymentBalance extends Model
 {
     protected $primaryKey = 'id_transaction_payment_balance';
 
-	protected $fillable = [
-		'id_transaction',
+    protected $fillable = [
+        'id_transaction',
         'id_transaction_group',
-		'balance_nominal',
-		'created_at',
-		'updated_at'
-	];
+        'balance_nominal',
+        'created_at',
+        'updated_at'
+    ];
 
-	public function transaction()
-	{
-		return $this->belongsTo(Transaction::class, 'id_transaction', 'id_transaction');
-	}
+    public function transaction()
+    {
+        return $this->belongsTo(Transaction::class, 'id_transaction', 'id_transaction');
+    }
 }

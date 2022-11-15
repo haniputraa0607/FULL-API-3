@@ -15,7 +15,10 @@ use Modules\Membership\Http\Controllers\ApiMembership;
 
 class AchievementCheck implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     protected $data;
     /**
@@ -35,7 +38,7 @@ class AchievementCheck implements ShouldQueue
      */
     public function handle()
     {
-        
+
         $this->achievement = new ApiAchievement();
         $this->achievement->checkAchievementV2($this->data['id_transaction']);
         $this->membership = new ApiMembership();

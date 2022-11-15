@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class UserOutlet
- * 
+ *
  * @property int $id_user
  * @property int $id_outlet
  * @property string $enquiry
@@ -24,29 +24,29 @@ use Illuminate\Database\Eloquent\Model;
  */
 class UserOutlet extends Model
 {
-	protected $primaryKey = 'id_user_outlet';
-	
-	public $incrementing = false;
-	
-	protected $casts = [
-		'id_user' => 'int',
-		'id_outlet' => 'int'
-	];
+    protected $primaryKey = 'id_user_outlet';
 
-	protected $fillable = [
-		'phone',
-		'email',
-		'name',
-		'id_outlet',
-		'enquiry',
-		'pickup_order',
-		'delivery',
-		'outlet_apps',
-		'payment'
-	];
+    public $incrementing = false;
 
-	public function outlet()
-	{
-		return $this->belongsTo(\App\Http\Models\Outlet::class, 'id_outlet');
-	}
+    protected $casts = [
+        'id_user' => 'int',
+        'id_outlet' => 'int'
+    ];
+
+    protected $fillable = [
+        'phone',
+        'email',
+        'name',
+        'id_outlet',
+        'enquiry',
+        'pickup_order',
+        'delivery',
+        'outlet_apps',
+        'payment'
+    ];
+
+    public function outlet()
+    {
+        return $this->belongsTo(\App\Http\Models\Outlet::class, 'id_outlet');
+    }
 }

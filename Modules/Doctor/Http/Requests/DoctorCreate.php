@@ -11,14 +11,14 @@ class DoctorCreate extends FormRequest
     public function rules()
     {
         return [
-            'doctor_name'=>'required|string',
-            'doctor_phone'=>'required|string',
-            'gender'=>'required|string',
-            'birthday'=>'required|string',
-            'id_outlet'=>'required|integer',
-            'doctor_session_price'=>'required|string',
-            'alumni'=>'required|string',
-            'registration_certificate_number'=>'required|string',
+            'doctor_name' => 'required|string',
+            'doctor_phone' => 'required|string',
+            'gender' => 'required|string',
+            'birthday' => 'required|string',
+            'id_outlet' => 'required|integer',
+            'doctor_session_price' => 'required|string',
+            'alumni' => 'required|string',
+            'registration_certificate_number' => 'required|string',
         ];
     }
 

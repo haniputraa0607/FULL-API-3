@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class TransactionConsultationRecomendation
- * 
+ *
  * @property int $id_transaction_product
  * @property int $id_transaction
  * @property int $id_product
@@ -21,7 +21,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $transaction_product_note
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
- * 
+ *
  * @property \App\Http\Models\Product $product
  * @property \App\Http\Models\Transaction $transaction
  *
@@ -29,16 +29,16 @@ use Illuminate\Database\Eloquent\Model;
  */
 class TransactionConsultationReschedule extends model
 {
-	protected $primaryKey = 'id_transaction_consultation_reschedule';
+    protected $primaryKey = 'id_transaction_consultation_reschedule';
 
-	protected $fillable = [
-		'id_transaction',
+    protected $fillable = [
+        'id_transaction',
         'id_transaction_consultation',
-		'id_user',
-		'id_doctor',
-		'schedule_start_time',
-		'schedule_end_time',
+        'id_user',
+        'id_doctor',
+        'schedule_start_time',
+        'schedule_end_time',
         'status',
         'id_user_responder'
-	];
+    ];
 }

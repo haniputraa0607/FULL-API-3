@@ -5,7 +5,6 @@ namespace Modules\Outlet\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Http\Models\Outlet;
 use App\Lib\MyHelper;
 
@@ -40,7 +39,7 @@ class ApiOutletGofoodController extends Controller
         return response()->json($dataReturn);
     }
 
-    function count($latitudeFrom, $longitudeFrom, $latitudeTo, $longitudeTo, $earthRadius = 6371000)
+    public function count($latitudeFrom, $longitudeFrom, $latitudeTo, $longitudeTo, $earthRadius = 6371000)
     {
         // convert from degrees to radians
         $latFrom = deg2rad($latitudeFrom);

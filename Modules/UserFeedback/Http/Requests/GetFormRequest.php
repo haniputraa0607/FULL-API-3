@@ -14,7 +14,7 @@ class GetFormRequest extends FormRequest
     public function rules()
     {
         return [
-            'id' =>'string|required'
+            'id' => 'string|required'
         ];
     }
 

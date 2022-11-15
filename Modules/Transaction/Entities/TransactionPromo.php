@@ -25,5 +25,4 @@ class TransactionPromo extends Model
         'id_promo_campaign_promo_code',
         'discount_value'
     ];
-
 }

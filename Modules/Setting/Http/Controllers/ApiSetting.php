@@ -7,11 +7,9 @@ use App\Http\Models\Setting;
 use App\Http\Models\User;
 use App\Http\Models\LogPoint;
 use App\Http\Models\LogBalance;
-
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Http\Models\Level;
 use App\Http\Models\Outlet;
 use App\Http\Models\Faq;
@@ -19,34 +17,28 @@ use App\Http\Models\FaqDoctor;
 use App\Http\Models\OutletHoliday;
 use App\Http\Models\Holiday;
 use App\Http\Models\DateHoliday;
-
 use Modules\Setting\Http\Requests\Level\LevelList;
 use Modules\Setting\Http\Requests\Level\LevelCreate;
 use Modules\Setting\Http\Requests\Level\LevelEdit;
 use Modules\Setting\Http\Requests\Level\LevelUpdate;
 use Modules\Setting\Http\Requests\Level\LevelDelete;
-
 use Modules\Setting\Http\Requests\Holiday\HolidayList;
 use Modules\Setting\Http\Requests\Holiday\HolidayCreate;
 use Modules\Setting\Http\Requests\Holiday\HolidayStore;
 use Modules\Setting\Http\Requests\Holiday\HolidayEdit;
 use Modules\Setting\Http\Requests\Holiday\HolidayUpdate;
 use Modules\Setting\Http\Requests\Holiday\HolidayDelete;
-
 use Modules\Setting\Http\Requests\Faq\FaqCreate;
 use Modules\Setting\Http\Requests\Faq\FaqList;
 use Modules\Setting\Http\Requests\Faq\FaqEdit;
 use Modules\Setting\Http\Requests\Faq\FaqUpdate;
 use Modules\Setting\Http\Requests\Faq\FaqDelete;
-
 use Modules\Setting\Http\Requests\SettingList;
 use Modules\Setting\Http\Requests\SettingEdit;
 use Modules\Setting\Http\Requests\SettingUpdate;
 use Modules\Setting\Http\Requests\DatePost;
-
 use App\Exports\DefaultExport;
 use Maatwebsite\Excel\Facades\Excel;
-
 use App\Lib\MyHelper;
 use Validator;
 use Hash;
@@ -56,24 +48,24 @@ use Image;
 
 class ApiSetting extends Controller
 {
-
     public $saveImage = "img/";
     public $endPoint;
 
-    function __construct() {
+    public function __construct()
+    {
         date_default_timezone_set('Asia/Jakarta');
         $this->endPoint = config('url.storage_url_api');
-		$this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
+        $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
     }
-    public function emailUpdate(Request $request) {
-		$data = $request->json()->all();
-		if (isset($data['email_logo'])) {
+    public function emailUpdate(Request $request)
+    {
+        $data = $request->json()->all();
+        if (isset($data['email_logo'])) {
             $upload = MyHelper::uploadPhoto($data['email_logo'], $this->saveImage, 300);
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $data['email_logo'] = $upload['path'];
-            }
-            else {
+            } else {
                 $result = [
                     'error'    => 1,
                     'status'   => 'fail',
@@ -84,95 +76,104 @@ class ApiSetting extends Controller
             }
         }
 
-		foreach($data as $key => $row){
+        foreach ($data as $key => $row) {
             $setting = Setting::updateOrCreate(['key' => $key], ['value' => $row]);
-		}
-		return response()->json(MyHelper::checkUpdate($setting));
-	}
+        }
+        return response()->json(MyHelper::checkUpdate($setting));
+    }
 
-	public function Navigation() {
-		$setting_logo = Setting::where('key','like','app_logo%')->get()->toArray();
-		$setting_navbar = Setting::where('key','like','app_navbar%')->get()->toArray();
-		$setting_sidebar = Setting::where('key','like','app_sidebar%')->get()->toArray();
+    public function Navigation()
+    {
+        $setting_logo = Setting::where('key', 'like', 'app_logo%')->get()->toArray();
+        $setting_navbar = Setting::where('key', 'like', 'app_navbar%')->get()->toArray();
+        $setting_sidebar = Setting::where('key', 'like', 'app_sidebar%')->get()->toArray();
 
-		$set = array();
-		foreach($setting_logo as $setting){
-			array_push($set, array($setting['key'] => $this->endPoint.$setting['value']));
-		}
+        $set = array();
+        foreach ($setting_logo as $setting) {
+            array_push($set, array($setting['key'] => $this->endPoint . $setting['value']));
+        }
 
-		foreach($setting_navbar as $setting){
-			array_push($set, array($setting['key'] => $setting['value']));
-		}
+        foreach ($setting_navbar as $setting) {
+            array_push($set, array($setting['key'] => $setting['value']));
+        }
 
-		foreach($setting_sidebar as $setting){
-			array_push($set, array($setting['key'] => $setting['value']));
-		}
+        foreach ($setting_sidebar as $setting) {
+            array_push($set, array($setting['key'] => $setting['value']));
+        }
 
-		return response()->json(MyHelper::checkGet($set));
-	}
+        return response()->json(MyHelper::checkGet($set));
+    }
 
-    public function NavigationLogo() {
-		$setting_logo = Setting::where('key','like','app_logo%')->get()->toArray();
+    public function NavigationLogo()
+    {
+        $setting_logo = Setting::where('key', 'like', 'app_logo%')->get()->toArray();
 
-		$set = array();
-		foreach($setting_logo as $setting){
-			array_push($set, array($setting['key'] => $this->endPoint.$setting['value']."?"));
-		}
+        $set = array();
+        foreach ($setting_logo as $setting) {
+            array_push($set, array($setting['key'] => $this->endPoint . $setting['value'] . "?"));
+        }
 
-		return response()->json(MyHelper::checkGet($set));
-	}
+        return response()->json(MyHelper::checkGet($set));
+    }
 
-	public function NavigationNavbar() {
-		$setting_navbar = Setting::where('key','like','app_navbar%')->get()->toArray();
+    public function NavigationNavbar()
+    {
+        $setting_navbar = Setting::where('key', 'like', 'app_navbar%')->get()->toArray();
 
-		$set = array();
-		foreach($setting_navbar as $setting){
-			array_push($set, array($setting['key'] => $setting['value']));
-		}
+        $set = array();
+        foreach ($setting_navbar as $setting) {
+            array_push($set, array($setting['key'] => $setting['value']));
+        }
 
-		return response()->json(MyHelper::checkGet($set));
-	}
+        return response()->json(MyHelper::checkGet($set));
+    }
 
-	public function NavigationSidebar() {
-		$setting_sidebar = Setting::where('key','like','app_sidebar%')->get()->toArray();
+    public function NavigationSidebar()
+    {
+        $setting_sidebar = Setting::where('key', 'like', 'app_sidebar%')->get()->toArray();
 
-		$set = array();
+        $set = array();
 
-		foreach($setting_sidebar as $setting){
-			array_push($set, array($setting['key'] => $setting['value']));
-		}
+        foreach ($setting_sidebar as $setting) {
+            array_push($set, array($setting['key'] => $setting['value']));
+        }
 
-		return response()->json(MyHelper::checkGet($set));
-	}
+        return response()->json(MyHelper::checkGet($set));
+    }
 
-    public function settingCourier() {
+    public function settingCourier()
+    {
         $setting = Setting::get()->toArray();
 
         return response()->json(MyHelper::checkGet($setting));
     }
 
-    public function settingList(SettingList $request){
+    public function settingList(SettingList $request)
+    {
         $data = $request->json()->all();
-        
-		if(isset($data['key']))
-        $setting = Setting::where('key', $data['key'])->first();
 
-		if(isset($data['key-like']))
-        $setting = Setting::where('key', 'like', "%".$data['key-like']."%")->get()->toArray();
+        if (isset($data['key'])) {
+            $setting = Setting::where('key', $data['key'])->first();
+        }
+
+        if (isset($data['key-like'])) {
+            $setting = Setting::where('key', 'like', "%" . $data['key-like'] . "%")->get()->toArray();
+        }
 
         return response()->json(MyHelper::checkGet($setting));
     }
 
-    public function settingEdit(SettingEdit $request){
+    public function settingEdit(SettingEdit $request)
+    {
         $id = $request->json('id_setting');
 
         $setting = Setting::where('id_setting', $id)->get()->toArray();
 
         return response()->json(MyHelper::checkGet($setting));
-
     }
 
-    public function settingUpdate(SettingUpdate $request){
+    public function settingUpdate(SettingUpdate $request)
+    {
         $post = $request->json()->all();
         $id = $request->json('id_setting');
 
@@ -181,30 +182,31 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
 
-    public function pointResetUpdate(Request $request, $type){
+    public function pointResetUpdate(Request $request, $type)
+    {
         $post = $request->json()->all();
 
-        if(isset($post['setting'])){
+        if (isset($post['setting'])) {
             DB::beginTransaction();
 
             $idSetting = [];
-            foreach($post['setting'] as $key => $value){
-                if($value['value']){
-                    if($value['id_setting']){
+            foreach ($post['setting'] as $key => $value) {
+                if ($value['value']) {
+                    if ($value['id_setting']) {
                         $save = Setting::where('id_setting', $value['id_setting'])->update(['value' => $value['value']]);
-                        if(!$save){
+                        if (!$save) {
                             DB::rollback();
                             return response()->json(MyHelper::checkUpdate($save));
                         }
 
                         $idSetting[] = $value['id_setting'];
-                    }else{
+                    } else {
                         $save = Setting::create([
                             'key' => $type,
                             'value' => $value['value']
                         ]);
 
-                        if(!$save){
+                        if (!$save) {
                             DB::rollback();
                             return response()->json(MyHelper::checkCreate($save));
                         }
@@ -218,35 +220,35 @@ class ApiSetting extends Controller
 
             DB::commit();
             return response()->json(['status' => 'success']);
-        }else{
+        } else {
             $delete = Setting::where('key', $type)->delete();
         }
 
         return response()->json(['status' => 'success']);
-
     }
 
-    public function consultationSettingUpdate(Request $request, $type){
+    public function consultationSettingUpdate(Request $request, $type)
+    {
         $post = $request->json()->all();
 
-        if(!empty($post)){
+        if (!empty($post)) {
             DB::beginTransaction();
 
             $idSetting = [];
-            if(isset($post['value']) || isset($post['value_text'])){
-                if(isset($post['id_setting'])){
+            if (isset($post['value']) || isset($post['value_text'])) {
+                if (isset($post['id_setting'])) {
                     if (str_contains($type, 'usage_rules') !== false || strpos($type, 'diagnosis') !== false || strpos($type, 'complaints') !== false) {
                         $save = Setting::where('id_setting', $post['id_setting'])->update(['value_text' => $post['value_text']]);
                     } else {
                         $save = Setting::where('id_setting', $post['id_setting'])->update(['value' => $post['value']]);
                     }
-                    if(!$save){
+                    if (!$save) {
                         DB::rollback();
                         return response()->json(MyHelper::checkUpdate($save));
                     }
 
                     $idSetting[] = $post['id_setting'];
-                }else{
+                } else {
                     if (str_contains($type, 'usage_rules') !== false || strpos($type, 'diagnosis') !== false || strpos($type, 'complaints') !== false) {
                         $save = Setting::create([
                             'key' => $type,
@@ -259,7 +261,7 @@ class ApiSetting extends Controller
                         ]);
                     }
 
-                    if(!$save){
+                    if (!$save) {
                         DB::rollback();
                         return response()->json(MyHelper::checkCreate($save));
                     }
@@ -272,30 +274,30 @@ class ApiSetting extends Controller
 
             DB::commit();
             return response()->json(['status' => 'success']);
-        }else{
+        } else {
             $delete = Setting::where('key', $type)->delete();
         }
 
         return response()->json(['status' => 'success']);
-
     }
 
-    public function cronPointReset(){
+    public function cronPointReset()
+    {
         $log = MyHelper::logCron('Point Reset');
         try {
-            $user = User::select('id','name','phone')->orderBy('name');
+            $user = User::select('id', 'name', 'phone')->orderBy('name');
 
             //point reset
             $setting = Setting::where('key', 'point_reset')->get();
             $attachments = [];
             DB::beginTransaction();
-            if($setting){
+            if ($setting) {
                 $userData = [];
-                foreach($setting as $date){
-                    if($date['value'] == date('d F')){
-                        foreach($user->cursor() as $datauser){
+                foreach ($setting as $date) {
+                    if ($date['value'] == date('d F')) {
+                        foreach ($user->cursor() as $datauser) {
                             $totalPoint = LogPoint::where('id_user', $datauser['id'])->sum('point');
-                            if($totalPoint){
+                            if ($totalPoint) {
                                 $dataLog = [
                                     'id_user'                     => $datauser['id'],
                                     'point'                       => -$totalPoint,
@@ -303,7 +305,7 @@ class ApiSetting extends Controller
                                 ];
                                 $userData[] = [
                                     'User' => "{$datauser['name']} ({$datauser['phone']})",
-                                    'Previous Point' => MyHelper::requestNumber($totalBalance,'_CURRENCY')
+                                    'Previous Point' => MyHelper::requestNumber($totalBalance, '_CURRENCY')
                                 ];
 
                                 $insertDataLog = LogPoint::create($dataLog);
@@ -317,7 +319,7 @@ class ApiSetting extends Controller
                                 }
 
                                 //update point user
-                                $totalPoint = LogPoint::where('id_user',$datauser['id'])->sum('point');
+                                $totalPoint = LogPoint::where('id_user', $datauser['id'])->sum('point');
                                 $updateUserPoint = User::where('id', $datauser['id'])->update(['points' => $totalPoint]);
                                 if (!$updateUserPoint) {
                                     DB::rollback();
@@ -331,10 +333,9 @@ class ApiSetting extends Controller
                         }
                     }
                 }
-                if($userData){
+                if ($userData) {
                     $attachments[] = Excel::download(new DefaultExport($userData), 'point.xlsx')->getFile();
                 }
-
             }
             DB::commit();
 
@@ -342,13 +343,13 @@ class ApiSetting extends Controller
             $setting = Setting::where('key', 'balance_reset')->get();
 
             DB::beginTransaction();
-            if($setting){
+            if ($setting) {
                 $userData1 = [];
-                foreach($setting as $date){
-                    if($date['value'] == date('d F')){
-                        foreach($user->cursor() as $datauser){
+                foreach ($setting as $date) {
+                    if ($date['value'] == date('d F')) {
+                        foreach ($user->cursor() as $datauser) {
                             $totalBalance = LogBalance::where('id_user', $datauser['id'])->sum('balance');
-                            if($totalBalance){
+                            if ($totalBalance) {
                                 $dataLog = [
                                     'id_user'                     => $datauser['id'],
                                     'balance'                       => -$totalBalance,
@@ -356,7 +357,7 @@ class ApiSetting extends Controller
                                 ];
                                 $userData1[] = [
                                     'User' => "{$datauser['name']} ({$datauser['phone']})",
-                                    'Previous Point' => MyHelper::requestNumber($totalBalance,'_CURRENCY')
+                                    'Previous Point' => MyHelper::requestNumber($totalBalance, '_CURRENCY')
                                 ];
                                 $insertDataLog = LogBalance::create($dataLog);
                                 if (!$insertDataLog) {
@@ -369,7 +370,7 @@ class ApiSetting extends Controller
                                 }
 
                                 //update balance user
-                                $totalBalance = LogBalance::where('id_user',$datauser['id'])->sum('balance');
+                                $totalBalance = LogBalance::where('id_user', $datauser['id'])->sum('balance');
                                 $updateUserBalance = User::where('id', $datauser['id'])->update(['balance' => $totalBalance]);
                                 if (!$updateUserBalance) {
                                     DB::rollback();
@@ -384,15 +385,14 @@ class ApiSetting extends Controller
                     }
                 }
 
-                if($userData){
+                if ($userData) {
                     $attachments[] = Excel::download(new DefaultExport($userData), 'point.xlsx')->getFile();
                 }
-                
-                DB::commit();
 
+                DB::commit();
             }
 
-            $send = app($this->autocrm)->SendAutoCRM('Report Point Reset', $user->first()->phone, ['datetime_reset' => date('d F Y H:i'), 'attachment' => $attachments],null,true);
+            $send = app($this->autocrm)->SendAutoCRM('Report Point Reset', $user->first()->phone, ['datetime_reset' => date('d F Y H:i'), 'attachment' => $attachments], null, true);
 
             $log->success();
             return response()->json([
@@ -401,10 +401,11 @@ class ApiSetting extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             $log->fail($e->getMessage());
-        }        
+        }
     }
 
-    public function levelList(LevelList $request) {
+    public function levelList(LevelList $request)
+    {
         $post = $request->json()->all();
 
         $levelList = Level::orderBy('id_level', 'ASC')->get()->toArray();
@@ -412,7 +413,8 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkGet($levelList));
     }
 
-    public function levelCreate(LevelCreate $request) {
+    public function levelCreate(LevelCreate $request)
+    {
         $post = $request->json()->all();
 
         $createLevel = Level::create($post);
@@ -420,7 +422,8 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkCreate($createLevel));
     }
 
-    public function levelEdit(LevelEdit $request) {
+    public function levelEdit(LevelEdit $request)
+    {
         $id_level = $request->json('id_level');
 
         $level = Level::where('id_level', $id_level)->first();
@@ -428,7 +431,8 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkGet($level));
     }
 
-    public function levelUpdate(LevelUpdate $request) {
+    public function levelUpdate(LevelUpdate $request)
+    {
         $post = $request->json()->all();
 
         $id_level = $request->json('id_level');
@@ -438,7 +442,8 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
 
-    public function levelDelete(LevelDelete $request) {
+    public function levelDelete(LevelDelete $request)
+    {
         $id_level = $request->json('id_level');
 
         $delete = Level::where('id_level', $id_level)->delete();
@@ -446,19 +451,21 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkDelete($delete));
     }
 
-    public function holidayList(HolidayList $request) {
+    public function holidayList(HolidayList $request)
+    {
         $post = $request->json()->all();
 
-        $holidayList = Holiday::select('holidays.id_holiday', 'holidays.holiday_name', 'date_holidays.day','holidays.created_at')
-								->join('date_holidays','date_holidays.id_holiday','=','holidays.id_holiday')
-								->orderBy('id_holiday', 'ASC')
-								->get()
-								->toArray();
+        $holidayList = Holiday::select('holidays.id_holiday', 'holidays.holiday_name', 'date_holidays.day', 'holidays.created_at')
+                                ->join('date_holidays', 'date_holidays.id_holiday', '=', 'holidays.id_holiday')
+                                ->orderBy('id_holiday', 'ASC')
+                                ->get()
+                                ->toArray();
 
         return response()->json(MyHelper::checkGet($holidayList));
     }
 
-    public function holidayCreate(HolidayCreate $request) {
+    public function holidayCreate(HolidayCreate $request)
+    {
         $post = $request->json()->all();
 
         $outlet = Outlet::orderBy('id_outlet', 'ASC')->get()->toArray();
@@ -466,7 +473,8 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkGet($outlet));
     }
 
-    public function holidayStore(HolidayStore $request) {
+    public function holidayStore(HolidayStore $request)
+    {
         $post = $request->json()->all();
 
         $holiday = [
@@ -515,7 +523,6 @@ class ApiSetting extends Controller
                     return response()->json([
                         'status'    => 'success'
                     ]);
-
                 } else {
                     DB::rollBack();
                     return response()->json([
@@ -534,7 +541,6 @@ class ApiSetting extends Controller
                     ]
                 ]);
             }
-
         } else {
             DB::rollBack();
             return response()->json([
@@ -546,7 +552,8 @@ class ApiSetting extends Controller
         }
     }
 
-    public function holidayEdit(HolidayEdit $request) {
+    public function holidayEdit(HolidayEdit $request)
+    {
         $id_holiday = $request->json('id_holiday');
 
         $data = Holiday::where('id_holiday', $id_holiday)->with('dateHoliday')->first();
@@ -569,7 +576,6 @@ class ApiSetting extends Controller
                     ]
                 ]);
             }
-
         } else {
             return response()->json([
                     'status'    => 'fail',
@@ -582,7 +588,8 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkGet($data));
     }
 
-    public function holidayUpdate(HolidayUpdate $request) {
+    public function holidayUpdate(HolidayUpdate $request)
+    {
         $post = $request->json()->all();
         $holiday = [
             'holiday_name'  => $post['holiday_name']
@@ -636,7 +643,6 @@ class ApiSetting extends Controller
                             return response()->json([
                                 'status'    => 'success'
                             ]);
-
                         } else {
                             DB::rollBack();
                             return response()->json([
@@ -655,7 +661,6 @@ class ApiSetting extends Controller
                             ]
                         ]);
                     }
-
                 } else {
                     DB::rollBack();
                     return response()->json([
@@ -671,7 +676,8 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
 
-    public function holidayDelete(HolidayDelete $request) {
+    public function holidayDelete(HolidayDelete $request)
+    {
         $id_holiday = $request->json('id_holiday');
 
         $delete = Holiday::where('id_holiday', $id_holiday)->delete();
@@ -679,7 +685,8 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkDelete($delete));
     }
 
-    public function holidayDetail(HolidayDelete $request) {
+    public function holidayDetail(HolidayDelete $request)
+    {
         $id_holiday = $request->json('id_holiday');
 
         $detail = Holiday::where('id_holiday', $id_holiday)->with('dateHoliday')->first();
@@ -701,7 +708,6 @@ class ApiSetting extends Controller
                     ]
                 ]);
             }
-
         } else {
             return response()->json([
                 'status'    => 'fail',
@@ -714,7 +720,8 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkGet($detail));
     }
 
-    public function faqCreate(FaqCreate $request) {
+    public function faqCreate(FaqCreate $request)
+    {
         $post = $request->json()->all();
 
         $faq = Faq::create($post);
@@ -722,13 +729,15 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkCreate($faq));
     }
 
-    public function faqList(FaqList $request) {
+    public function faqList(FaqList $request)
+    {
         $faqList = Faq::orderBy('faq_number_list', 'ASC')->get()->toArray();
 
         return response()->json(MyHelper::checkGet($faqList));
     }
 
-    public function faqEdit(FaqEdit $request) {
+    public function faqEdit(FaqEdit $request)
+    {
         $id = $request->json('id_faq');
 
         $faq = Faq::where('id_faq', $id)->first();
@@ -736,7 +745,8 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkGet($faq));
     }
 
-    public function faqUpdate(FaqUpdate $request) {
+    public function faqUpdate(FaqUpdate $request)
+    {
         $post = $request->json()->all();
 
         $update = Faq::where('id_faq', $post['id_faq'])->update($post);
@@ -744,7 +754,8 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
 
-    public function faqDelete(FaqDelete $request) {
+    public function faqDelete(FaqDelete $request)
+    {
         $id = $request->json('id_faq');
 
         $delete = Faq::where('id_faq', $id)->delete();
@@ -752,13 +763,14 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkDelete($delete));
     }
 
-    public function faqSortUpdate(Request $request) {
+    public function faqSortUpdate(Request $request)
+    {
         $id_faq = $request->json('id_faq');
         $number_list = 0;
 
-        foreach ($id_faq as $dt){
+        foreach ($id_faq as $dt) {
             $status = Faq::where('id_faq', $dt)->update(['faq_number_list' => $number_list + 1]);
-            if(!$status){
+            if (!$status) {
                 $result = [
                     'status' => 'fail'
                 ];
@@ -767,7 +779,7 @@ class ApiSetting extends Controller
             $number_list++;
         }
 
-        if($status){
+        if ($status) {
             $result = [
                 'status' => 'success'
             ];
@@ -776,7 +788,8 @@ class ApiSetting extends Controller
         return response()->json($result);
     }
 
-    public function date(DatePost $request) {
+    public function date(DatePost $request)
+    {
         $post = $request->json()->all();
 
         $setting = Setting::where('key', 'date_limit_reservation')->first();
@@ -796,12 +809,13 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkUpdate($setting));
     }
 
-    public function settingEmail(Request $request){
+    public function settingEmail(Request $request)
+    {
         $post = $request->json()->all();
 
         DB::beginTransaction();
-        if(isset($post['email_logo'])){
-            $upload = MyHelper::uploadPhoto($post['email_logo'],'img',1000,'email_logo');
+        if (isset($post['email_logo'])) {
+            $upload = MyHelper::uploadPhoto($post['email_logo'], 'img', 1000, 'email_logo');
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $post['email_logo'] = $upload['path'];
             }
@@ -809,7 +823,7 @@ class ApiSetting extends Controller
 
         foreach ($post as $key => $value) {
             $save = Setting::updateOrCreate(['key' => $key], ['key' => $key, 'value' => $value]);
-            if(!$save){
+            if (!$save) {
                 break;
                 DB::rollback();
             }
@@ -818,178 +832,182 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkUpdate($save));
     }
 
-    public function getSettingEmail(){
+    public function getSettingEmail()
+    {
         $setting = array();
 
         $set = Setting::where('key', 'email_from')->first();
-        if(!empty($set)){
+        if (!empty($set)) {
             $setting['email_from'] = $set['value'];
-        }else{
+        } else {
             $setting['email_from'] = null;
         }
 
         $set = Setting::where('key', 'email_sender')->first();
-        if(!empty($set)){
+        if (!empty($set)) {
             $setting['email_sender'] = $set['value'];
-        }else{
+        } else {
             $setting['email_sender'] = null;
         }
 
         $set = Setting::where('key', 'email_reply_to')->first();
-        if(!empty($set)){
+        if (!empty($set)) {
             $setting['email_reply_to'] = $set['value'];
-        }else{
+        } else {
             $setting['email_reply_to'] = null;
         }
 
         $set = Setting::where('key', 'email_reply_to_name')->first();
-        if(!empty($set)){
+        if (!empty($set)) {
             $setting['email_reply_to_name'] = $set['value'];
-        }else{
+        } else {
             $setting['email_reply_to_name'] = null;
         }
 
         $set = Setting::where('key', 'email_cc')->first();
-        if(!empty($set)){
+        if (!empty($set)) {
             $setting['email_cc'] = $set['value'];
-        }else{
+        } else {
             $setting['email_cc'] = null;
         }
 
         $set = Setting::where('key', 'email_cc_name')->first();
-        if(!empty($set)){
+        if (!empty($set)) {
             $setting['email_cc_name'] = $set['value'];
-        }else{
+        } else {
             $setting['email_cc_name'] = null;
         }
 
         $set = Setting::where('key', 'email_bcc')->first();
-        if(!empty($set)){
+        if (!empty($set)) {
             $setting['email_bcc'] = $set['value'];
-        }else{
+        } else {
             $setting['email_bcc'] = null;
         }
 
         $set = Setting::where('key', 'email_bcc_name')->first();
-        if(!empty($set)){
+        if (!empty($set)) {
             $setting['email_bcc_name'] = $set['value'];
-        }else{
+        } else {
             $setting['email_bcc_name'] = null;
         }
 
         $set = Setting::where('key', 'email_logo')->first();
-        if(!empty($set)){
+        if (!empty($set)) {
             $setting['email_logo'] = $set['value'];
-        }else{
+        } else {
             $setting['email_logo'] = null;
         }
 
         $set = Setting::where('key', 'email_logo_position')->first();
-        if(!empty($set)){
+        if (!empty($set)) {
             $setting['email_logo_position'] = $set['value'];
-        }else{
+        } else {
             $setting['email_logo_position'] = null;
         }
 
         $set = Setting::where('key', 'email_copyright')->first();
-        if(!empty($set)){
+        if (!empty($set)) {
             $setting['email_copyright'] = $set['value'];
-        }else{
+        } else {
             $setting['email_copyright'] = null;
         }
 
         $set = Setting::where('key', 'email_contact')->first();
-        if(!empty($set)){
+        if (!empty($set)) {
             $setting['email_contact'] = $set['value'];
-        }else{
+        } else {
             $setting['email_contact'] = null;
         }
         return response()->json(MyHelper::checkGet($setting));
     }
 
-    public function appLogo(Request $request) {
-		$post = $request->json()->all();
+    public function appLogo(Request $request)
+    {
+        $post = $request->json()->all();
 
-        if(empty($post)){
+        if (empty($post)) {
             $key = array_pluck(Setting::where('key', 'LIKE', '%app_logo%')->get()->toArray(), 'key');
             $value = array_pluck(Setting::where('key', 'LIKE', '%app_logo%')->get()->toArray(), 'value');
             $defaultHome = array_combine($key, $value);
-            if(isset($defaultHome['app_logo'])){
-                $defaultHome['app_logo'] = $this->endPoint.$defaultHome['app_logo'];
+            if (isset($defaultHome['app_logo'])) {
+                $defaultHome['app_logo'] = $this->endPoint . $defaultHome['app_logo'];
             }
             return response()->json(MyHelper::checkGet($defaultHome));
         } else {
-			if (isset($post['app_logo'])) {
-				$image = Setting::where('key', 'app_logo')->first();
+            if (isset($post['app_logo'])) {
+                $image = Setting::where('key', 'app_logo')->first();
 
-				if(isset($image['value']) && file_exists($image['value'])){
-					unlink($image['value']);
-				}
-				$upload = MyHelper::uploadPhotoStrict($post['app_logo'], $this->saveImage."app/", 433, 318,'logo3x','.png');
-				$upload = MyHelper::uploadPhotoStrict($post['app_logo'], $this->saveImage."app/", 304, 223,'logo2x','.png');
-				$upload = MyHelper::uploadPhotoStrict($post['app_logo'], $this->saveImage."app/", 130, 96,'logo','.png');
-				if (isset($upload['status']) && $upload['status'] == "success") {
-					$post['app_logo'] = $upload['path'];
-				}
-				else {
-					$result = [
-						'error'    => 1,
-						'status'   => 'fail',
-						'messages' => ['fail upload image']
-					];
+                if (isset($image['value']) && file_exists($image['value'])) {
+                    unlink($image['value']);
+                }
+                $upload = MyHelper::uploadPhotoStrict($post['app_logo'], $this->saveImage . "app/", 433, 318, 'logo3x', '.png');
+                $upload = MyHelper::uploadPhotoStrict($post['app_logo'], $this->saveImage . "app/", 304, 223, 'logo2x', '.png');
+                $upload = MyHelper::uploadPhotoStrict($post['app_logo'], $this->saveImage . "app/", 130, 96, 'logo', '.png');
+                if (isset($upload['status']) && $upload['status'] == "success") {
+                    $post['app_logo'] = $upload['path'];
+                } else {
+                    $result = [
+                        'error'    => 1,
+                        'status'   => 'fail',
+                        'messages' => ['fail upload image']
+                    ];
 
-					return $result;
-				}
-			}
+                    return $result;
+                }
+            }
 
-			return response()->json(['status'   => 'success']);
-		}
-	}
+            return response()->json(['status'   => 'success']);
+        }
+    }
 
-	public function appNavbar(Request $request) {
-		$post = $request->json()->all();
+    public function appNavbar(Request $request)
+    {
+        $post = $request->json()->all();
 
-        if(empty($post)){
+        if (empty($post)) {
             $key = array_pluck(Setting::where('key', 'LIKE', '%app_navbar%')->get()->toArray(), 'key');
             $value = array_pluck(Setting::where('key', 'LIKE', '%app_navbar%')->get()->toArray(), 'value');
             $defaultHome = array_combine($key, $value);
             return response()->json(MyHelper::checkGet($defaultHome));
         } else {
-			foreach($post as $key => $value){
-				$setting = Setting::where('key','=',$key)->update(['value' => $value]);
-			}
-			return response()->json(MyHelper::checkUpdate($setting));
-		}
-	}
+            foreach ($post as $key => $value) {
+                $setting = Setting::where('key', '=', $key)->update(['value' => $value]);
+            }
+            return response()->json(MyHelper::checkUpdate($setting));
+        }
+    }
 
-	public function appSidebar(Request $request) {
-		$post = $request->json()->all();
+    public function appSidebar(Request $request)
+    {
+        $post = $request->json()->all();
 
-        if(empty($post)){
+        if (empty($post)) {
             $key = array_pluck(Setting::where('key', 'LIKE', '%app_sidebar%')->get()->toArray(), 'key');
             $value = array_pluck(Setting::where('key', 'LIKE', '%app_sidebar%')->get()->toArray(), 'value');
             $defaultHome = array_combine($key, $value);
             return response()->json(MyHelper::checkGet($defaultHome));
-       } else {
-			foreach($post as $key => $value){
-				$setting = Setting::where('key','=',$key)->update(['value' => $value]);
-			}
-			return response()->json(MyHelper::checkUpdate($setting));
-	   }
-	}
+        } else {
+            foreach ($post as $key => $value) {
+                $setting = Setting::where('key', '=', $key)->update(['value' => $value]);
+            }
+            return response()->json(MyHelper::checkUpdate($setting));
+        }
+    }
 
-    public function homeNotLogin(Request $request) {
+    public function homeNotLogin(Request $request)
+    {
         $post = $request->json()->all();
 
-        if(empty($post)){
+        if (empty($post)) {
             $key = array_pluck(Setting::where('key', 'LIKE', '%default_home%')->get()->toArray(), 'key');
             $value = array_pluck(Setting::where('key', 'LIKE', '%default_home%')->get()->toArray(), 'value');
             $defaultHome = array_combine($key, $value);
-            if(isset($defaultHome['default_home_image'])){
-                $defaultHome['default_home_image_url'] = $this->endPoint.$defaultHome['default_home_image'];
+            if (isset($defaultHome['default_home_image'])) {
+                $defaultHome['default_home_image_url'] = $this->endPoint . $defaultHome['default_home_image'];
             }
-			if(isset($defaultHome['default_home_splash_screen'])){
-                $defaultHome['default_home_splash_screen_url'] = $this->endPoint.$defaultHome['default_home_splash_screen'];
+            if (isset($defaultHome['default_home_splash_screen'])) {
+                $defaultHome['default_home_splash_screen_url'] = $this->endPoint . $defaultHome['default_home_splash_screen'];
             }
             return response()->json(MyHelper::checkGet($defaultHome));
         }
@@ -997,15 +1015,14 @@ class ApiSetting extends Controller
         if (isset($post['default_home_image'])) {
             $image = Setting::where('key', 'default_home_image')->first();
 
-            if(isset($image['value']) && file_exists($image['value'])){
+            if (isset($image['value']) && file_exists($image['value'])) {
                 unlink($image['value']);
             }
             $upload = MyHelper::uploadPhotoStrict($post['default_home_image'], $this->saveImage, 1080, 270);
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $post['default_home_image'] = $upload['path'];
-            }
-            else {
+            } else {
                 $result = [
                     'error'    => 1,
                     'status'   => 'fail',
@@ -1016,19 +1033,18 @@ class ApiSetting extends Controller
             }
         }
 
-		if (isset($post['default_home_splash_screen'])) {
+        if (isset($post['default_home_splash_screen'])) {
             $image = Setting::where('key', 'default_home_splash_screen')->first();
 
-            if(isset($image['value']) && file_exists($image['value'])){
+            if (isset($image['value']) && file_exists($image['value'])) {
                 unlink($image['value']);
             }
             // base64 image,path,h,w,name,ext
-            $upload = MyHelper::uploadPhotoStrict($post['default_home_splash_screen'], $this->saveImage, 1080, 1920,'splash');
+            $upload = MyHelper::uploadPhotoStrict($post['default_home_splash_screen'], $this->saveImage, 1080, 1920, 'splash');
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $post['default_home_splash_screen'] = $upload['path'];
-            }
-            else {
+            } else {
                 $result = [
                     'error'    => 1,
                     'status'   => 'fail',
@@ -1046,7 +1062,7 @@ class ApiSetting extends Controller
                 'value' => $value
             ];
             $save = Setting::updateOrCreate(['key' => $key], $insert);
-            if(!$save){
+            if (!$save) {
                 return $insert;
                 DB::rollBack();
                 return response()->json([
@@ -1061,18 +1077,19 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkUpdate($save));
     }
 
-    public function homeDoctorNotLogin(Request $request) {
+    public function homeDoctorNotLogin(Request $request)
+    {
         $post = $request->json()->all();
 
-        if(empty($post)){
+        if (empty($post)) {
             $key = array_pluck(Setting::where('key', 'LIKE', '%default_home_doctor%')->get()->toArray(), 'key');
             $value = array_pluck(Setting::where('key', 'LIKE', '%default_home_doctor%')->get()->toArray(), 'value');
             $defaultHome = array_combine($key, $value);
-            if(isset($defaultHome['default_home_doctor_image'])){
-                $defaultHome['default_home_doctor_image_url'] = $this->endPoint.$defaultHome['default_home_doctor_image'];
+            if (isset($defaultHome['default_home_doctor_image'])) {
+                $defaultHome['default_home_doctor_image_url'] = $this->endPoint . $defaultHome['default_home_doctor_image'];
             }
-			if(isset($defaultHome['default_home_doctor_splash_screen'])){
-                $defaultHome['default_home_doctor_splash_screen_url'] = $this->endPoint.$defaultHome['default_home_doctor_splash_screen'];
+            if (isset($defaultHome['default_home_doctor_splash_screen'])) {
+                $defaultHome['default_home_doctor_splash_screen_url'] = $this->endPoint . $defaultHome['default_home_doctor_splash_screen'];
             }
             return response()->json(MyHelper::checkGet($defaultHome));
         }
@@ -1080,15 +1097,14 @@ class ApiSetting extends Controller
         if (isset($post['default_home_doctor_image'])) {
             $image = Setting::where('key', 'default_home_doctor_image')->first();
 
-            if(isset($image['value']) && file_exists($image['value'])){
+            if (isset($image['value']) && file_exists($image['value'])) {
                 unlink($image['value']);
             }
             $upload = MyHelper::uploadPhotoStrict($post['default_home_doctor_image'], $this->saveImage, 1080, 270);
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $post['default_home_doctor_image'] = $upload['path'];
-            }
-            else {
+            } else {
                 $result = [
                     'error'    => 1,
                     'status'   => 'fail',
@@ -1099,19 +1115,18 @@ class ApiSetting extends Controller
             }
         }
 
-		if (isset($post['default_home_doctor_splash_screen'])) {
+        if (isset($post['default_home_doctor_splash_screen'])) {
             $image = Setting::where('key', 'default_home_doctor_splash_screen')->first();
 
-            if(isset($image['value']) && file_exists($image['value'])){
+            if (isset($image['value']) && file_exists($image['value'])) {
                 unlink($image['value']);
             }
             // base64 image,path,h,w,name,ext
-            $upload = MyHelper::uploadPhotoStrict($post['default_home_doctor_splash_screen'], $this->saveImage, 1080, 1920,'splash_doctor');
+            $upload = MyHelper::uploadPhotoStrict($post['default_home_doctor_splash_screen'], $this->saveImage, 1080, 1920, 'splash_doctor');
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $post['default_home_doctor_splash_screen'] = $upload['path'];
-            }
-            else {
+            } else {
                 $result = [
                     'error'    => 1,
                     'status'   => 'fail',
@@ -1129,7 +1144,7 @@ class ApiSetting extends Controller
                 'value' => $value
             ];
             $save = Setting::updateOrCreate(['key' => $key], $insert);
-            if(!$save){
+            if (!$save) {
                 return $insert;
                 DB::rollBack();
                 return response()->json([
@@ -1144,12 +1159,13 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkUpdate($save));
     }
 
-    public function settingWhatsApp(Request $request){
+    public function settingWhatsApp(Request $request)
+    {
         $post = $request->json()->all();
 
-        if(isset($post['api_key_whatsapp'])){
+        if (isset($post['api_key_whatsapp'])) {
             $save = Setting::updateOrCreate(['key' => 'api_key_whatsapp'], ['value' => $post['api_key_whatsapp']]);
-            if(!$save){
+            if (!$save) {
                 return response()->json([
                     'status'    => 'fail',
                     'messages'      => [
@@ -1158,11 +1174,10 @@ class ApiSetting extends Controller
                 ]);
             }
             return response()->json(MyHelper::checkUpdate($save));
-        }else{
+        } else {
             $setting = Setting::where('key', 'api_key_whatsapp')->first();
             return response()->json(MyHelper::checkGet($setting));
         }
-
     }
 
     /* complete profile */
@@ -1174,8 +1189,9 @@ class ApiSetting extends Controller
 
         // get user profile success page content
         $value_text = Setting::where('key', 'complete_profile_success_page')->get()->pluck('value_text');
-        if(isset($value_text[0]))
-        $complete_profiles['complete_profile_success_page'] = $value_text[0];
+        if (isset($value_text[0])) {
+            $complete_profiles['complete_profile_success_page'] = $value_text[0];
+        }
 
         if (!isset($complete_profiles['complete_profile_popup'])) {
             $complete_profiles['complete_profile_popup'] = '';
@@ -1219,8 +1235,7 @@ class ApiSetting extends Controller
                 'status' => 'success',
                 'result' => $update
             ];
-        }
-        else {
+        } else {
             return [
                 'status' => 'fail',
                 'messages' => ['Failed to save data.']
@@ -1240,30 +1255,31 @@ class ApiSetting extends Controller
 
         return response()->json([
             'status' => 'success',
-            'url' => config('url.api_url').'api/setting/faq/webview'
+            'url' => config('url.api_url') . 'api/setting/faq/webview'
         ]);
     }
 
-    public function settingWebview(SettingList $request){
+    public function settingWebview(SettingList $request)
+    {
         $post = $request->json()->all();
-        if(isset($post['data'])){
+        if (isset($post['data'])) {
             $setting = Setting::where('key', $post['key'])->first();
             return response()->json(MyHelper::checkGet($setting));
         }
 
         return response()->json([
             'status' => 'success',
-            'url' => config('url.api_url').'api/setting/webview/'.$post['key']
+            'url' => config('url.api_url') . 'api/setting/webview/' . $post['key']
         ]);
-
     }
 
-    public function updateFreeDelivery(Request $request){
+    public function updateFreeDelivery(Request $request)
+    {
         $post = $request->json()->all();
 
         DB::beginTransaction();
 
-        foreach($post as $key => $value){
+        foreach ($post as $key => $value) {
             $data['key'] = $key;
             $data['value'] = $value;
 
@@ -1278,7 +1294,8 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
 
-    public function updateGoSendPackage(Request $request){
+    public function updateGoSendPackage(Request $request)
+    {
         $post = $request->json()->all();
 
         $update = Setting::updateOrCreate(['key' => 'go_send_package_detail'], ['value' => $post['value']]);
@@ -1290,79 +1307,82 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
 
-    public function viewTOS(){
+    public function viewTOS()
+    {
         $setting = Setting::where('key', 'tos')->first();
-        if($setting && $setting['value_text']){
-            $data['value'] =preg_replace('/font face="[^;"]*(")?/', 'div class="ProductSans"' , $setting['value_text']);
-            $data['value'] =preg_replace('/face="[^;"]*(")?/', '' , $data['value']);
-        }else{
+        if ($setting && $setting['value_text']) {
+            $data['value'] = preg_replace('/font face="[^;"]*(")?/', 'div class="ProductSans"', $setting['value_text']);
+            $data['value'] = preg_replace('/face="[^;"]*(")?/', '', $data['value']);
+        } else {
              $data['value'] = "";
         }
 
         return view('setting::tos', $data);
-
     }
 
-    public function jobsList(Request $request){
-        $post=$request->json()->all();
-        $setting=Setting::where('key','jobs_list')->first();
-        $data=[];
-        if($setting&&$setting->value_text){
-            try{
-                $data=json_decode($setting->value_text);
-            }catch(\Exception $e){
-                $data=[];
+    public function jobsList(Request $request)
+    {
+        $post = $request->json()->all();
+        $setting = Setting::where('key', 'jobs_list')->first();
+        $data = [];
+        if ($setting && $setting->value_text) {
+            try {
+                $data = json_decode($setting->value_text);
+            } catch (\Exception $e) {
+                $data = [];
             }
         }
-        if($post['jobs_list']??false){
-            $postedJobs=json_encode($post['jobs_list']);
-            if($setting){
-                $save=Setting::where('key','jobs_list')->update(['value_text'=>$postedJobs]);
-            }else{
-                $save=Setting::create(['key'=>'jobs_list','value_text'=>$postedJobs]);
+        if ($post['jobs_list'] ?? false) {
+            $postedJobs = json_encode($post['jobs_list']);
+            if ($setting) {
+                $save = Setting::where('key', 'jobs_list')->update(['value_text' => $postedJobs]);
+            } else {
+                $save = Setting::create(['key' => 'jobs_list','value_text' => $postedJobs]);
             }
-            if($save){
-                return ['status'=>'success','result'=>json_decode($postedJobs)];
-            }else{
-                return ['status'=>'fail','messages'=>'Something went wrong'];
+            if ($save) {
+                return ['status' => 'success','result' => json_decode($postedJobs)];
+            } else {
+                return ['status' => 'fail','messages' => 'Something went wrong'];
             }
-        }else{
+        } else {
             return MyHelper::checkGet($data);
         }
     }
 
-    public function celebrateList(Request $request){
-        $post=$request->json()->all();
-        $setting=Setting::where('key','celebrate_list')->first();
-        $data=[];
-        if($setting&&$setting->value_text){
-            try{
-                $data=json_decode($setting->value_text);
-            }catch(\Exception $e){
-                $data=[];
+    public function celebrateList(Request $request)
+    {
+        $post = $request->json()->all();
+        $setting = Setting::where('key', 'celebrate_list')->first();
+        $data = [];
+        if ($setting && $setting->value_text) {
+            try {
+                $data = json_decode($setting->value_text);
+            } catch (\Exception $e) {
+                $data = [];
             }
         }
-        if($post['celebrate_list']??false){
-            $postedCelebrate=json_encode($post['celebrate_list']);
-            if($setting){
-                $save=Setting::where('key','celebrate_list')->update(['value_text'=>$postedCelebrate]);
-            }else{
-                $save=Setting::create(['key'=>'celebrate_list','value_text'=>$postedCelebrate]);
+        if ($post['celebrate_list'] ?? false) {
+            $postedCelebrate = json_encode($post['celebrate_list']);
+            if ($setting) {
+                $save = Setting::where('key', 'celebrate_list')->update(['value_text' => $postedCelebrate]);
+            } else {
+                $save = Setting::create(['key' => 'celebrate_list','value_text' => $postedCelebrate]);
             }
-            if($save){
-                return ['status'=>'success','result'=>json_decode($postedCelebrate)];
-            }else{
-                return ['status'=>'fail','messages'=>'Something went wrong'];
+            if ($save) {
+                return ['status' => 'success','result' => json_decode($postedCelebrate)];
+            } else {
+                return ['status' => 'fail','messages' => 'Something went wrong'];
             }
-        }else{
+        } else {
             return MyHelper::checkGet($data);
         }
     }
 
     /* ============== Start Text Menu Setting ============== */
-    public function configsMenu(){
+    public function configsMenu()
+    {
 
-        try{
+        try {
             $mainMenu = Configs::where('config_name', 'icon main menu')->first();
             $otherMenu = Configs::where('config_name', 'icon other menu')->first();
 
@@ -1375,17 +1395,16 @@ class ApiSetting extends Controller
             ];
 
             return response()->json($result);
-
-        }catch(Exception $e){
-
+        } catch (Exception $e) {
             return response()->json(['status' => 'fail', 'messages' => []]);
         }
     }
 
-    public function textMenuList(Request $request){
+    public function textMenuList(Request $request)
+    {
         $post = $request->json()->all();
 
-        try{
+        try {
             $textMenuMain = Setting::where('key', 'text_menu_main')->first()->value_text;
             $textMenuOther = Setting::where('key', 'text_menu_other')->first()->value_text;
             $textMenuHome = Setting::where('key', 'text_menu_home')->first()->value_text;
@@ -1393,31 +1412,31 @@ class ApiSetting extends Controller
             $menuMain = (array)json_decode($textMenuMain);
             $menuHome = (array)json_decode($textMenuHome);
 
-            foreach ($menuOther as $key=>$value){
+            foreach ($menuOther as $key => $value) {
                 $val = (array)$value;
-                if($val['icon'] != ''){
-                    $menuOther[$key]->icon = config('url.storage_url_api').$val['icon'];
+                if ($val['icon'] != '') {
+                    $menuOther[$key]->icon = config('url.storage_url_api') . $val['icon'];
                 }
             }
 
-            foreach ($menuMain as $key=>$value){
+            foreach ($menuMain as $key => $value) {
                 $val = (array)$value;
-                if($val['icon1'] != ''){
-                    $menuMain[$key]->icon1 = config('url.storage_url_api').$val['icon1'];
+                if ($val['icon1'] != '') {
+                    $menuMain[$key]->icon1 = config('url.storage_url_api') . $val['icon1'];
                 }
-                if($val['icon2'] != ''){
-                    $menuMain[$key]->icon2 = config('url.storage_url_api').$val['icon2'];
+                if ($val['icon2'] != '') {
+                    $menuMain[$key]->icon2 = config('url.storage_url_api') . $val['icon2'];
                 }
             }
 
-            foreach ($menuHome as $key=>$value){
+            foreach ($menuHome as $key => $value) {
                 $val = (array)$value;
-                if($val['icon'] != ''){
-                    $menuHome[$key]->icon = config('url.storage_url_api').$val['icon'];
+                if ($val['icon'] != '') {
+                    $menuHome[$key]->icon = config('url.storage_url_api') . $val['icon'];
                 }
             }
 
-            if(!isset($post['webview'])){
+            if (!isset($post['webview'])) {
                 $result = [
                     'status' => 'success',
                     'result' => [
@@ -1426,7 +1445,7 @@ class ApiSetting extends Controller
                         'home_menu' => array_values($menuHome)
                     ]
                 ];
-            }else{
+            } else {
                 $result = [
                     'status' => 'success',
                     'result' => [
@@ -1438,38 +1457,38 @@ class ApiSetting extends Controller
             }
 
             return response()->json($result);
-
-        }catch(Exception $e){
-
+        } catch (Exception $e) {
             return response()->json(['status' => 'fail', 'messages' => []]);
         }
     }
 
-    public function updateTextMenu(Request $request){
+    public function updateTextMenu(Request $request)
+    {
         $post = $request->json()->all();
 
-        if(isset($post['category']) && !empty($post['category']) &&
-            isset($post['data_menu']) && !empty($post['data_menu'])){
-
-            try{
+        if (
+            isset($post['category']) && !empty($post['category']) &&
+            isset($post['data_menu']) && !empty($post['data_menu'])
+        ) {
+            try {
                 $category = $post['category'];
                 $menu = $post['data_menu'];
                 $arrFailedUploadImage = [];
 
-                if($category == 'main-menu'){
+                if ($category == 'main-menu') {
                     $getmainMenu = Setting::where('key', 'text_menu_main')->first()->value_text;
                     $mainMenu = (array)json_decode($getmainMenu);
 
-                    foreach ($mainMenu as $key=>$value){
-                        $nameIcon1 = 'icon1_'.$key;
-                        $nameIcon2 = 'icon2_'.$key;
+                    foreach ($mainMenu as $key => $value) {
+                        $nameIcon1 = 'icon1_' . $key;
+                        $nameIcon2 = 'icon2_' . $key;
                         $val = (array)$value;
 
-                        $mainMenu[$key]->text_menu = $menu[$key.'_text_menu'];
-                        $mainMenu[$key]->text_header = $menu[$key.'_text_header'];
-                        $mainMenu[$key]->text_color = $menu[$key.'_text_color'];
-                        if(isset($menu['images'][$nameIcon1])){
-                            if($val['icon1'] != ''){
+                        $mainMenu[$key]->text_menu = $menu[$key . '_text_menu'];
+                        $mainMenu[$key]->text_header = $menu[$key . '_text_header'];
+                        $mainMenu[$key]->text_color = $menu[$key . '_text_color'];
+                        if (isset($menu['images'][$nameIcon1])) {
+                            if ($val['icon1'] != '') {
                                 //Delete old icon
                                 MyHelper::deletePhoto($val['icon1']);
                             }
@@ -1480,7 +1499,7 @@ class ApiSetting extends Controller
                             $width  = $img->width();
                             $height = $img->height();
 
-                            if($width == $height){
+                            if ($width == $height) {
                                 $upload = MyHelper::uploadPhotoStrict($imgEncode, $path = 'img/icon/', $width, $height);
 
                                 if ($upload['status'] == "success") {
@@ -1488,13 +1507,13 @@ class ApiSetting extends Controller
                                 } else {
                                     array_push($arrFailedUploadImage, $key);
                                 }
-                            }else{
-                                array_push($arrFailedUploadImage, $key.'[dimensions not allowed]');
+                            } else {
+                                array_push($arrFailedUploadImage, $key . '[dimensions not allowed]');
                             }
                         }
 
-                        if(isset($menu['images'][$nameIcon2])){
-                            if($val['icon2'] != ''){
+                        if (isset($menu['images'][$nameIcon2])) {
+                            if ($val['icon2'] != '') {
                                 //Delete old icon
                                 MyHelper::deletePhoto($val['icon2']);
                             }
@@ -1505,7 +1524,7 @@ class ApiSetting extends Controller
                             $width  = $img->width();
                             $height = $img->height();
 
-                            if($width == $height){
+                            if ($width == $height) {
                                 $upload = MyHelper::uploadPhotoStrict($imgEncode, $path = 'img/icon/', $width, $height);
 
                                 if ($upload['status'] == "success") {
@@ -1513,34 +1532,33 @@ class ApiSetting extends Controller
                                 } else {
                                     array_push($arrFailedUploadImage, $key);
                                 }
-                            }else{
-                                array_push($arrFailedUploadImage, $key.'[dimensions not allowed]');
+                            } else {
+                                array_push($arrFailedUploadImage, $key . '[dimensions not allowed]');
                             }
                         }
                     }
 
-                    $update = Setting::where('key','text_menu_main')->update(['value_text' => json_encode($mainMenu), 'updated_at' => date('Y-m-d H:i:s')]);
+                    $update = Setting::where('key', 'text_menu_main')->update(['value_text' => json_encode($mainMenu), 'updated_at' => date('Y-m-d H:i:s')]);
 
-                    if(!$update){
+                    if (!$update) {
                         return response()->json(['status' => 'fail', 'messages' => ['There is an error']]);
                     }
-
-                }elseif($category == 'home-menu'){
+                } elseif ($category == 'home-menu') {
                     $gethomeMenu = Setting::where('key', 'text_menu_home')->first()->value_text;
                     $homeMenu = (array)json_decode($gethomeMenu);
 
-                    foreach ($homeMenu as $key=>$value){
-                        $nameIcon = 'icon_home'.$key;
+                    foreach ($homeMenu as $key => $value) {
+                        $nameIcon = 'icon_home' . $key;
                         $val = (array)$value;
 
-                        $homeMenu[$key]->text_menu = $menu[$key.'_text_menu'];
-                        $homeMenu[$key]->text_color = $menu[$key.'_text_color'];
-                        $homeMenu[$key]->container_type = $menu[$key.'_container_type'];
-                        $homeMenu[$key]->container_color = $menu[$key.'_container_color'];
-                        $homeMenu[$key]->visible = (isset($menu[$key.'_visible']) ? true : false);
+                        $homeMenu[$key]->text_menu = $menu[$key . '_text_menu'];
+                        $homeMenu[$key]->text_color = $menu[$key . '_text_color'];
+                        $homeMenu[$key]->container_type = $menu[$key . '_container_type'];
+                        $homeMenu[$key]->container_color = $menu[$key . '_container_color'];
+                        $homeMenu[$key]->visible = (isset($menu[$key . '_visible']) ? true : false);
 
-                        if(isset($menu['images'][$nameIcon])){
-                            if($val['icon'] != ''){
+                        if (isset($menu['images'][$nameIcon])) {
+                            if ($val['icon'] != '') {
                                 //Delete old icon
                                 MyHelper::deletePhoto($val['icon']);
                             }
@@ -1551,7 +1569,7 @@ class ApiSetting extends Controller
                             $width  = $img->width();
                             $height = $img->height();
 
-                            if($width == $height){
+                            if ($width == $height) {
                                 $upload = MyHelper::uploadPhotoStrict($imgEncode, $path = 'img/icon/', $width, $height);
 
                                 if ($upload['status'] == "success") {
@@ -1559,30 +1577,29 @@ class ApiSetting extends Controller
                                 } else {
                                     array_push($arrFailedUploadImage, $key);
                                 }
-                            }else{
-                                array_push($arrFailedUploadImage, $key.'[dimensions not allowed]');
+                            } else {
+                                array_push($arrFailedUploadImage, $key . '[dimensions not allowed]');
                             }
                         }
                     }
-                    $update = Setting::where('key','text_menu_home')->update(['value_text' => json_encode($homeMenu), 'updated_at' => date('Y-m-d H:i:s')]);
+                    $update = Setting::where('key', 'text_menu_home')->update(['value_text' => json_encode($homeMenu), 'updated_at' => date('Y-m-d H:i:s')]);
 
-                    if(!$update){
+                    if (!$update) {
                         return response()->json(['status' => 'fail', 'messages' => ['There is an error']]);
                     }
-
-                }elseif($category == 'other-menu'){
+                } elseif ($category == 'other-menu') {
                     $textOtherMenu = Setting::where('key', 'text_menu_other')->first()->value_text;
                     $otherMenu = (array)json_decode($textOtherMenu);
 
-                    foreach ($otherMenu as $key=>$value){
-                        $nameIcon = 'icon_'.$key;
+                    foreach ($otherMenu as $key => $value) {
+                        $nameIcon = 'icon_' . $key;
                         $val = (array)$value;
 
-                        $otherMenu[$key]->text_menu = $menu[$key.'_text_menu'];
-                        $otherMenu[$key]->text_header = $menu[$key.'_text_header'];
-                        $otherMenu[$key]->text_color = $menu[$key.'_text_color'];
-                        if(isset($menu['images'][$nameIcon])){
-                            if($val['icon'] != ''){
+                        $otherMenu[$key]->text_menu = $menu[$key . '_text_menu'];
+                        $otherMenu[$key]->text_header = $menu[$key . '_text_header'];
+                        $otherMenu[$key]->text_color = $menu[$key . '_text_color'];
+                        if (isset($menu['images'][$nameIcon])) {
+                            if ($val['icon'] != '') {
                                 //Delete old icon
                                 MyHelper::deletePhoto($val['icon']);
                             }
@@ -1593,26 +1610,26 @@ class ApiSetting extends Controller
                             $width  = $img->width();
                             $height = $img->height();
 
-                            if($width == $height){
+                            if ($width == $height) {
                                 $upload = MyHelper::uploadPhotoStrict($imgEncode, $path = 'img/icon/', $width, $height);
 
                                 if ($upload['status'] == "success") {
-                                    $otherMenu[$key]->icon= $upload['path'];
+                                    $otherMenu[$key]->icon = $upload['path'];
                                 } else {
                                     array_push($arrFailedUploadImage, $key);
                                 }
-                            }else{
-                                array_push($arrFailedUploadImage, $key.'[dimensions not allowed]');
+                            } else {
+                                array_push($arrFailedUploadImage, $key . '[dimensions not allowed]');
                             }
                         }
                     }
 
-                    $update = Setting::where('key','text_menu_other')->update(['value_text' => json_encode($otherMenu), 'updated_at' => date('Y-m-d H:i:s')]);
+                    $update = Setting::where('key', 'text_menu_other')->update(['value_text' => json_encode($otherMenu), 'updated_at' => date('Y-m-d H:i:s')]);
 
-                    if(!$update){
+                    if (!$update) {
                         return response()->json(['status' => 'fail', 'messages' => ['There is an error']]);
                     }
-                }else{
+                } else {
                     return response()->json(['status' => 'fail', 'messages' => ['No data for update']]);
                 }
 
@@ -1623,123 +1640,128 @@ class ApiSetting extends Controller
                 ];
 
                 return response()->json($result);
-
-            }catch(Exception $e){
+            } catch (Exception $e) {
                 return response()->json(['status' => 'fail', 'messages' => ['There is an error']]);
             }
-        }else{
+        } else {
             return response()->json(['status' => 'fail', 'messages' => ['Incomplated Input']]);
         }
     }
 
     /* ============== End Text Menu Setting ============== */
 
-    public function update(Request $request){
-        if(($updates = $request->json('update'))&&is_array($updates)){
+    public function update(Request $request)
+    {
+        if (($updates = $request->json('update')) && is_array($updates)) {
             DB::beginTransaction();
             foreach ($updates as $key => $value) {
-                $up=Setting::updateOrCreate(['key'=>$key],[$value[0]=>$value[1]]);
-                if(!$up){
+                $up = Setting::updateOrCreate(['key' => $key], [$value[0] => $value[1]]);
+                if (!$up) {
                     DB::rollback();
                     return [
-                        'status'=>'fail',
-                        'messages'=>['Something went wrong']
+                        'status' => 'fail',
+                        'messages' => ['Something went wrong']
                     ];
                 }
             }
             DB::commit();
             return [
-                'status'=>'success'
+                'status' => 'success'
             ];
         }
         return [
-            'status'=>'fail',
-            'messages'=>['No setting updated']
+            'status' => 'fail',
+            'messages' => ['No setting updated']
         ];
     }
-    public function get($key){
-        $allowed=['inactive_logo_brand','inactive_image_brand'];
-        if(in_array($key, $allowed)){
-            $val=Setting::where('key',$key)->first();
+    public function get($key)
+    {
+        $allowed = ['inactive_logo_brand','inactive_image_brand'];
+        if (in_array($key, $allowed)) {
+            $val = Setting::where('key', $key)->first();
             return MyHelper::checkGet($val);
         }
         return [
-            'status'=>'fail',
-            'messages'=>['No setting updated']
-        ];        
+            'status' => 'fail',
+            'messages' => ['No setting updated']
+        ];
     }
 
     /* ============== Start Phone Setting ============== */
-    public function phoneSetting(Request $request){
+    public function phoneSetting(Request $request)
+    {
         $phoneSetting = Setting::where('key', 'phone_setting')->first()->value_text;
 
-        if($phoneSetting){
+        if ($phoneSetting) {
             $result = [
                 'status' => 'success',
                 'result' => [
                     'data' => json_decode($phoneSetting),
-                    'phone_code' => $codePhone = config('countrycode.country_code.'.env('COUNTRY_CODE').'.code'),
+                    'phone_code' => $codePhone = config('countrycode.country_code.' . env('COUNTRY_CODE') . '.code'),
                     'example_phone' => env('EXAMPLE_PHONE')
                 ]
             ];
 
             return response()->json($result);
-        }else{
+        } else {
             return response()->json([
-                'status'=>'fail',
-                'messages'=>['Failed get phone setting']
+                'status' => 'fail',
+                'messages' => ['Failed get phone setting']
             ]);
         }
     }
 
-    public function updatePhoneSetting(Request $request){
+    public function updatePhoneSetting(Request $request)
+    {
         $data = $request->json()->all();
-        if($data['max_length_number'] < $data['min_length_number']){
-            return response()->json(['status'=>'fail','message' => "Please input maximum above the minimum"]);
+        if ($data['max_length_number'] < $data['min_length_number']) {
+            return response()->json(['status' => 'fail','message' => "Please input maximum above the minimum"]);
         }
 
-        if($data['min_length_number'] > $data['max_length_number']){
-            return response()->json(['status'=>'fail','message' => "Please input minimum below the maximum"]);
+        if ($data['min_length_number'] > $data['max_length_number']) {
+            return response()->json(['status' => 'fail','message' => "Please input minimum below the maximum"]);
         }
         $updatePhoneSetting = Setting::where('key', 'phone_setting')->update(['value_text' => json_encode($data)]);
 
-        if($updatePhoneSetting){
-            return response()->json(['status'=>'success']);
-        }else{
-            return response()->json(['status'=>'fail','message' => "Failed update"]);
+        if ($updatePhoneSetting) {
+            return response()->json(['status' => 'success']);
+        } else {
+            return response()->json(['status' => 'fail','message' => "Failed update"]);
         }
     }
     /* ============== End Phone Setting ============== */
 
     /* ============== Start Maintenance Mode Setting ============== */
-    function maintenanceMode(){
+    public function maintenanceMode()
+    {
         $data = Setting::where('key', 'maintenance_mode')->first();
-        if($data){
+        if ($data) {
             $dt = (array)json_decode($data['value_text']);
             $newDt['status'] = $data['value'];
             $newDt['message'] = $dt['message'];
-            if($dt['image'] != ""){
-                $newDt['image'] = config('url.storage_url_api').$dt['image'];
-            }else{
+            if ($dt['image'] != "") {
+                $newDt['image'] = config('url.storage_url_api') . $dt['image'];
+            } else {
                 $newDt['image'] = "";
             }
             $data = $newDt;
         }
         return response()->json(MyHelper::checkGet($data));
     }
-    function updateMaintenanceMode(Request $request){
+    public function updateMaintenanceMode(Request $request)
+    {
         $post = $request->json()->all();
-        if(isset($post['status']) && $post['status'] == 'on'){
+        if (isset($post['status']) && $post['status'] == 'on') {
             $status = 1;
-        }else{
+        } else {
             $status = 0;
         }
         $getData = Setting::where('key', 'maintenance_mode')->first();
         $decode = (array)json_decode($getData['value_text']);
         $valueText = ['message' => $post['message'], 'image' => $decode['image']];
         $imageToUpload = "";
-        if(isset($post['image']) && !empty($post['image'])){
-            if($decode['image'] != ''){
+        if (isset($post['image']) && !empty($post['image'])) {
+            if ($decode['image'] != '') {
                 //Delete old icon
                 MyHelper::deletePhoto($decode['image']);
             }
@@ -1747,12 +1769,12 @@ class ApiSetting extends Controller
             $img    = Image::make($decoded);
             $width  = $img->width();
             $height = $img->height();
-            if($width == $height){
+            if ($width == $height) {
                 $upload = MyHelper::uploadPhoto($post['image'], $path = 'img/maintenance/');
                 if ($upload['status'] == "success") {
                     $valueText['image'] = $upload['path'];
                 }
-            }else{
+            } else {
                 return response()->json(['status' => 'fail', 'messages' => ['Dimensions not allowed']]);
             }
         }
@@ -1765,49 +1787,52 @@ class ApiSetting extends Controller
     }
     /* ============== End Maintenance Mode Setting ============== */
 
-    public function settingPhoneNumber() {
+    public function settingPhoneNumber()
+    {
         $phoneSetting = Setting::where('key', 'phone_setting')->first();
 
-        if($phoneSetting){
+        if ($phoneSetting) {
             $result = [
                 'status' => 'success',
                 'result' => json_decode($phoneSetting['value_text'])
             ];
 
             return response()->json($result);
-        }else{
+        } else {
             return response()->json([
-                'status'=>'fail',
-                'messages'=>['Failed get phone setting']
+                'status' => 'fail',
+                'messages' => ['Failed get phone setting']
             ]);
         }
     }
 
     /* ============== Start Time Expired Setting ============== */
-    function timeExpired(){
+    public function timeExpired()
+    {
         $timeOtp = Setting::where('key', 'setting_expired_otp')->first();
         $timeEmail = Setting::where('key', 'setting_expired_time_email_verify')->first();
 
         $data = [];
-        if($timeOtp){
+        if ($timeOtp) {
             $data['expired_otp'] = $timeOtp['value'];
         }
 
-        if($timeEmail){
+        if ($timeEmail) {
             $data['expired_time_email'] = $timeEmail['value'];
         }
 
         return response()->json(MyHelper::checkGet($data));
     }
 
-    function updateTimeExpired(Request $request){
+    public function updateTimeExpired(Request $request)
+    {
         $post = $request->json()->all();
 
-        if(isset($post['expired_otp'])){
+        if (isset($post['expired_otp'])) {
             $update = Setting::where('key', 'setting_expired_otp')->update(['value' => $post['expired_otp']]);
         }
 
-        if(isset($post['expired_time_email'])){
+        if (isset($post['expired_time_email'])) {
             $update = Setting::where('key', 'setting_expired_time_email_verify')->update(['value' => $post['expired_time_email']]);
         }
 
@@ -1815,40 +1840,40 @@ class ApiSetting extends Controller
     }
     /* ============== End Time Expired Setting ============== */
 
-    function splashScreenOutletApps(Request $request){
+    public function splashScreenOutletApps(Request $request)
+    {
         $post = $request->json()->all();
 
-        if(empty($post)){
+        if (empty($post)) {
             $image = Setting::where('key', 'default_splash_screen_outlet_apps')->first();
             $duration = Setting::where('key', 'default_splash_screen_outlet_apps_duration')->first();
 
             $data = [
-                'default_splash_screen_outlet_apps' => NULL,
-                'default_splash_screen_outlet_apps_duration' => NULL
+                'default_splash_screen_outlet_apps' => null,
+                'default_splash_screen_outlet_apps_duration' => null
             ];
-            if(isset($image['value'])){
-                $data['default_splash_screen_outlet_apps'] = $this->endPoint.$image['value'];
+            if (isset($image['value'])) {
+                $data['default_splash_screen_outlet_apps'] = $this->endPoint . $image['value'];
             }
 
-            if(isset($duration['value'])){
+            if (isset($duration['value'])) {
                 $data['default_splash_screen_outlet_apps_duration'] = $duration['value'];
             }
 
             return response()->json(MyHelper::checkGet($data));
-        }else{
+        } else {
             if (isset($post['default_splash_screen_outlet_apps'])) {
                 $image = Setting::where('key', 'default_splash_screen_outlet_apps')->first();
 
-                if(isset($image['value']) && file_exists($image['value'])){
+                if (isset($image['value']) && file_exists($image['value'])) {
                     unlink($image['value']);
                 }
                 // base64 image,path,h,w,name,ext
-                $upload = MyHelper::uploadPhotoStrict($post['default_splash_screen_outlet_apps'], $this->saveImage, 1080, 1920,'splash_outletapp');
+                $upload = MyHelper::uploadPhotoStrict($post['default_splash_screen_outlet_apps'], $this->saveImage, 1080, 1920, 'splash_outletapp');
 
                 if (isset($upload['status']) && $upload['status'] == "success") {
-                    $save = Setting::where('key', 'default_splash_screen_outlet_apps')->update(['value'=>$upload['path']]);
-                }
-                else {
+                    $save = Setting::where('key', 'default_splash_screen_outlet_apps')->update(['value' => $upload['path']]);
+                } else {
                     $result = [
                         'error'    => 1,
                         'status'   => 'fail',
@@ -1859,15 +1884,16 @@ class ApiSetting extends Controller
                 }
             }
 
-            if(isset($post['default_splash_screen_outlet_apps_duration'])){
-                $save = Setting::where('key', 'default_splash_screen_outlet_apps_duration')->update(['value'=>$post['default_splash_screen_outlet_apps_duration']]);
+            if (isset($post['default_splash_screen_outlet_apps_duration'])) {
+                $save = Setting::where('key', 'default_splash_screen_outlet_apps_duration')->update(['value' => $post['default_splash_screen_outlet_apps_duration']]);
             }
 
             return response()->json(MyHelper::checkUpdate($save));
         }
     }
 
-    public function faqCreateDoctorApps(Request $request) {
+    public function faqCreateDoctorApps(Request $request)
+    {
         $post = $request->json()->all();
 
         $faq = FaqDoctor::create($post);
@@ -1875,13 +1901,15 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkCreate($faq));
     }
 
-    public function faqListDoctorApps(Request $request) {
+    public function faqListDoctorApps(Request $request)
+    {
         $faqList = FaqDoctor::orderBy('faq_number_list', 'ASC')->get()->toArray();
 
         return response()->json(MyHelper::checkGet($faqList));
     }
 
-    public function faqEditDoctorApps(Request $request) {
+    public function faqEditDoctorApps(Request $request)
+    {
         $id = $request->json('id_faq_doctor');
 
         $faq = FaqDoctor::where('id_faq_doctor', $id)->first();
@@ -1889,7 +1917,8 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkGet($faq));
     }
 
-    public function faqUpdateDoctorApps(Request $request) {
+    public function faqUpdateDoctorApps(Request $request)
+    {
         $post = $request->json()->all();
 
         $update = FaqDoctor::where('id_faq_doctor', $post['id_faq_doctor'])->update($post);
@@ -1897,7 +1926,8 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
 
-    public function faqDeleteDoctorApps(Request $request) {
+    public function faqDeleteDoctorApps(Request $request)
+    {
         $id = $request->json('id_faq_doctor');
 
         $delete = FaqDoctor::where('id_faq_doctor', $id)->delete();
@@ -1905,13 +1935,14 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkDelete($delete));
     }
 
-    public function faqSortUpdateDoctorApps(Request $request) {
+    public function faqSortUpdateDoctorApps(Request $request)
+    {
         $id_faq_doctor = $request->json('id_faq_doctor');
         $number_list = 0;
 
-        foreach ($id_faq_doctor as $dt){
+        foreach ($id_faq_doctor as $dt) {
             $status = FaqDoctor::where('id_faq_doctor', $dt)->update(['faq_number_list' => $number_list + 1]);
-            if(!$status){
+            if (!$status) {
                 $result = [
                     'status' => 'fail'
                 ];
@@ -1920,7 +1951,7 @@ class ApiSetting extends Controller
             $number_list++;
         }
 
-        if($status){
+        if ($status) {
             $result = [
                 'status' => 'success'
             ];
@@ -1930,11 +1961,12 @@ class ApiSetting extends Controller
     }
 
 
-    public function maxConsultationQuota(Request $request) {
+    public function maxConsultationQuota(Request $request)
+    {
         $post = $request->json()->all();
 
-        $update = Setting::where('key','max_consultation_quota')->update($post);
+        $update = Setting::where('key', 'max_consultation_quota')->update($post);
 
         return response()->json(MyHelper::checkUpdate($update));
-	}
+    }
 }

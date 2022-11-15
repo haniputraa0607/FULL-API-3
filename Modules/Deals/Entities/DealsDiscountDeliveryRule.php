@@ -11,7 +11,7 @@ use Reliese\Database\Eloquent\Model as Eloquent;
 
 /**
  * Class DealsDiscountDeliveryRule
- * 
+ *
  * @property int $id_deals_discount_delivery_rule
  * @property int $id_deals
  * @property string $discount_type
@@ -19,30 +19,30 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  * @property int $max_percent_discount
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
- * 
+ *
  * @property \Modules\Deals\Entities\Deal $deal
  *
  * @package Modules\Deals\Entities
  */
 class DealsDiscountDeliveryRule extends Eloquent
 {
-	protected $primaryKey = 'id_deals_discount_delivery_rule';
+    protected $primaryKey = 'id_deals_discount_delivery_rule';
 
-	protected $casts = [
-		'id_deals' => 'int',
-		'discount_value' => 'int',
-		'max_percent_discount' => 'int'
-	];
+    protected $casts = [
+        'id_deals' => 'int',
+        'discount_value' => 'int',
+        'max_percent_discount' => 'int'
+    ];
 
-	protected $fillable = [
-		'id_deals',
-		'discount_type',
-		'discount_value',
-		'max_percent_discount'
-	];
+    protected $fillable = [
+        'id_deals',
+        'discount_type',
+        'discount_value',
+        'max_percent_discount'
+    ];
 
-	public function deal()
-	{
-		return $this->belongsTo(\App\Http\Models\Deal::class, 'id_deals');
-	}
+    public function deal()
+    {
+        return $this->belongsTo(\App\Http\Models\Deal::class, 'id_deals');
+    }
 }

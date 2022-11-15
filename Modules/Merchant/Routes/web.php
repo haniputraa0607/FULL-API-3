@@ -11,6 +11,6 @@
 |
 */
 
-Route::prefix('merchant')->group(function() {
+Route::prefix('merchant')->group(function () {
     Route::get('/', 'ApiMerchantController@index');
 });

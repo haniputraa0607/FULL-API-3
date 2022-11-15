@@ -16,9 +16,9 @@ class CreateRequest extends FormRequest
     public function rules()
     {
         return [
-            'id_subscription'	=>'required|exists:subscriptions,id_subscription',
-            'date_start'		=>'required|date|after_or_equal:'.date('Y-m-d H:i:s'),
-            'date_end'			=>'required|date|after_or_equal:date_start'
+            'id_subscription'   => 'required|exists:subscriptions,id_subscription',
+            'date_start'        => 'required|date|after_or_equal:' . date('Y-m-d H:i:s'),
+            'date_end'          => 'required|date|after_or_equal:date_start'
         ];
     }
 

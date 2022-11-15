@@ -15,7 +15,8 @@ class OutletGroup extends Model
         'is_all_outlet'
     ];
 
-    public function outlet_group_filter_outlet(){
+    public function outlet_group_filter_outlet()
+    {
         return $this->hasMany(OutletGroupFilterOutlet::class, 'id_outlet_group', 'id_outlet_group');
     }
 }

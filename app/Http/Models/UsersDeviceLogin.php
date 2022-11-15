@@ -17,8 +17,8 @@ class UsersDeviceLogin extends Model
         'updated_at'
     ];
 
-    function user() {
+    public function user()
+    {
         return $this->belongsTo(User::class, 'id_user', 'id');
     }
-
 }

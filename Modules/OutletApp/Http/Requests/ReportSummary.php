@@ -11,10 +11,10 @@ class ReportSummary extends FormRequest
     public function rules()
     {
         return [
-            'date'		=> 'required|date',
+            'date'      => 'required|date',
             'is_all'    => 'nullable',
-            'product'	=> 'nullable',
-            'modifier'	=> 'nullable'
+            'product'   => 'nullable',
+            'modifier'  => 'nullable'
         ];
     }
 

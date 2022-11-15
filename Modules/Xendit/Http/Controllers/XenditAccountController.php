@@ -38,7 +38,7 @@ class XenditAccountController extends Controller
 
     public function index(Request $request)
     {
-        $xenditAccounts = (new XenditAccount)->newQuery();
+        $xenditAccounts = (new XenditAccount())->newQuery();
 
         if ($request->for_datatable) {
             $pagination = $xenditAccounts->paginate()->toArray();

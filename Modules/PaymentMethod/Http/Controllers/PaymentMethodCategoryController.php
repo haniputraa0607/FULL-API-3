@@ -68,7 +68,7 @@ class PaymentMethodCategoryController extends Controller
     {
         $category = PaymentMethodCategory::find($id);
 
-        if($category){
+        if ($category) {
             return MyHelper::checkDelete($category->delete());
         }
 

@@ -5,7 +5,7 @@ namespace Modules\Consultation\Entities;
 use Illuminate\Database\Eloquent\Model;
 
 class TransactionConsultationReschedule extends Model
-{ 
+{
     protected $table = 'transaction_consultation_reschedules';
     protected $primaryKey = 'id_transaction_consultation_reschedules';
 
@@ -22,5 +22,4 @@ class TransactionConsultationReschedule extends Model
         'id_user_modifier',
         'user_modifier_type',
     ];
-
 }

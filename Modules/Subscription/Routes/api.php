@@ -66,11 +66,10 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     /* Transaction report*/
     Route::post('transaction-report', ['middleware' => 'feature_control:174', 'uses' => 'ApiSubscriptionReport@transactionReport']);
     Route::any('be/list-started', ['middleware' => 'feature_control:173', 'uses' => 'ApiSubscriptionReport@liststartedSubscription']);
-
 });
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'welcome-subscription'], function () {
-	Route::any('setting', ['middleware' => 'feature_control:265', 'uses' => 'ApiWelcomeSubscription@setting']);
+    Route::any('setting', ['middleware' => 'feature_control:265', 'uses' => 'ApiWelcomeSubscription@setting']);
     Route::post('setting/update', ['middleware' => 'feature_control:267', 'uses' => 'ApiWelcomeSubscription@settingUpdate']);
     Route::post('setting/update/status', ['middleware' => 'feature_control:267', 'uses' => 'ApiWelcomeSubscription@settingUpdateStatus']);
     Route::any('list', ['middleware' => 'feature_control:264', 'uses' => 'ApiWelcomeSubscription@list']);

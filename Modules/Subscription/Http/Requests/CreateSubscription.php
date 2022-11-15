@@ -19,7 +19,7 @@ class CreateSubscription extends FormRequest
             'subscription_title'                => 'required',
             'subscription_sub_title'            => '',
             'subscription_image'                => '',
-            'subscription_start'                => 'sometimes|nullable|date|date_format:"Y-m-d H:i:s"|after_or_equal:'.date('Y-m-d').'',
+            'subscription_start'                => 'sometimes|nullable|date|date_format:"Y-m-d H:i:s"|after_or_equal:' . date('Y-m-d') . '',
             'subscription_end'                  => 'sometimes|nullable|date|date_format:"Y-m-d H:i:s"|after_or_equal:subscription_start',
             'subscription_publish_start'        => 'sometimes|nullable|date|date_format:"Y-m-d H:i:s"',
             'subscription_publish_end'          => 'sometimes|nullable|date|date_format:"Y-m-d H:i:s"|after_or_equal:subscription_publish_start',

@@ -46,10 +46,11 @@ class SettingFraudServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('settingfraud.php'),
+            __DIR__ . '/../Config/config.php' => config_path('settingfraud.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'settingfraud'
+            __DIR__ . '/../Config/config.php',
+            'settingfraud'
         );
     }
 
@@ -62,11 +63,11 @@ class SettingFraudServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/settingfraud');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/settingfraud';
@@ -85,7 +86,7 @@ class SettingFraudServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'settingfraud');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'settingfraud');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'settingfraud');
         }
     }
 

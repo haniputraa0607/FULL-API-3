@@ -42,7 +42,6 @@ class ApiCronDealsController extends Controller
             }
             $count = 0;
             foreach ($getTrx as $key => $singleTrx) {
-
                 $user = User::where('id', $singleTrx->id_user)->first();
                 if (empty($user)) {
                     continue;
@@ -105,8 +104,8 @@ class ApiCronDealsController extends Controller
                     continue;
                 }
                 //reversal balance
-                if($singleTrx->balance_nominal) {
-                    $reversal = app($this->balance)->addLogBalance( $singleTrx->id_user, $singleTrx->balance_nominal, $singleTrx->id_deals_user, 'Claim Deals Failed', $singleTrx->voucher_price_point?:$singleTrx->voucher_price_cash);
+                if ($singleTrx->balance_nominal) {
+                    $reversal = app($this->balance)->addLogBalance($singleTrx->id_user, $singleTrx->balance_nominal, $singleTrx->id_deals_user, 'Claim Deals Failed', $singleTrx->voucher_price_point ?: $singleTrx->voucher_price_cash);
                     if (!$reversal) {
                         DB::rollBack();
                         continue;
@@ -115,7 +114,6 @@ class ApiCronDealsController extends Controller
 
                 $count++;
                 DB::commit();
-
             }
             $log->success($count);
             return [$count];

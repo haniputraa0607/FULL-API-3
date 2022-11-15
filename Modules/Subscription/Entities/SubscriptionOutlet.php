@@ -11,13 +11,13 @@ use Reliese\Database\Eloquent\Model as Eloquent;
 
 /**
  * Class SubscriptionOutlet
- * 
+ *
  * @property int $id_subscription_outlets
  * @property int $id_subscription
  * @property int $id_outlet
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
- * 
+ *
  * @property \Modules\Subscription\Entities\Outlet $outlet
  * @property \Modules\Subscription\Entities\Subscription $subscription
  *
@@ -25,25 +25,25 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  */
 class SubscriptionOutlet extends Eloquent
 {
-	protected $primaryKey = 'id_subscription_outlets';
+    protected $primaryKey = 'id_subscription_outlets';
 
-	protected $casts = [
-		'id_subscription' => 'int',
-		'id_outlet' => 'int'
-	];
+    protected $casts = [
+        'id_subscription' => 'int',
+        'id_outlet' => 'int'
+    ];
 
-	protected $fillable = [
-		'id_subscription',
-		'id_outlet'
-	];
+    protected $fillable = [
+        'id_subscription',
+        'id_outlet'
+    ];
 
-	public function outlet()
-	{
-		return $this->belongsTo(\App\Http\Models\Outlet::class, 'id_outlet');
-	}
+    public function outlet()
+    {
+        return $this->belongsTo(\App\Http\Models\Outlet::class, 'id_outlet');
+    }
 
-	public function subscription()
-	{
-		return $this->belongsTo(\Modules\Subscription\Entities\Subscription::class, 'id_subscription');
-	}
+    public function subscription()
+    {
+        return $this->belongsTo(\Modules\Subscription\Entities\Subscription::class, 'id_subscription');
+    }
 }

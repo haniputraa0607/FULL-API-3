@@ -51,16 +51,16 @@ class DailyReportMenuGenerate extends Command
             $outlet = Outlet::pluck('id_outlet')->toArray();
         } else {
             $outlet = explode(',', $outlet);
-            $this->info('=> Outlet dengan id_outlet ['.implode(', ',$outlet).'] akan di re-generate');
+            $this->info('=> Outlet dengan id_outlet [' . implode(', ', $outlet) . '] akan di re-generate');
         }
         if ($date_start) {
             $date_start = date('Y-m-d', strtotime($date_start));
             $date_end = date('Y-m-d', strtotime($date_end));
-            $this->info('=> Transaksi dari tanggal '.date('d-m-Y', strtotime($date_start)).' s/d '.date('d-m-Y', strtotime($date_end)).' akan di re-generate');
+            $this->info('=> Transaksi dari tanggal ' . date('d-m-Y', strtotime($date_start)) . ' s/d ' . date('d-m-Y', strtotime($date_end)) . ' akan di re-generate');
         } else {
             $date_start = '2000-01-01';
             $date_end = date('Y-m-d', strtotime($date_end));
-            $this->info('=> Seluruh transaksi sampai tanggal '.date('d-m-Y', strtotime($date_end)).' akan di re-generate');
+            $this->info('=> Seluruh transaksi sampai tanggal ' . date('d-m-Y', strtotime($date_end)) . ' akan di re-generate');
         }
         if ($reset) {
             $this->info('=> Data yang ada pada rentang tanggal tersebut akan di dihapus dan ditulis ulang');

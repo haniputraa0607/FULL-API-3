@@ -11,7 +11,7 @@ use Reliese\Database\Eloquent\Model as Eloquent;
 
 /**
  * Class MonthlyReportTrxModifier
- * 
+ *
  * @property int $id_monthly_report_trx_modifier
  * @property int $trx_month
  * @property \Carbon\Carbon $trx_year
@@ -43,37 +43,37 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  */
 class MonthlyReportTrxModifier extends Eloquent
 {
-	protected $table = 'monthly_report_trx_modifier';
-	protected $primaryKey = 'id_monthly_report_trx_modifier';
+    protected $table = 'monthly_report_trx_modifier';
+    protected $primaryKey = 'id_monthly_report_trx_modifier';
 
-	protected $fillable = [
-		'trx_month',
-		'trx_year',
-		'id_outlet',
-		'id_brand',
-		'id_product_modifier',
-		'text',
-		'total_rec',
-		'total_qty',
-		'total_nominal',
-		'cust_male',
-		'cust_female',
-		'cust_android',
-		'cust_ios',
-		'cust_telkomsel',
-		'cust_xl',
-		'cust_indosat',
-		'cust_tri',
-		'cust_axis',
-		'cust_smart',
-		'cust_teens',
-		'cust_young_adult',
-		'cust_adult',
-		'cust_old'
-	];
+    protected $fillable = [
+        'trx_month',
+        'trx_year',
+        'id_outlet',
+        'id_brand',
+        'id_product_modifier',
+        'text',
+        'total_rec',
+        'total_qty',
+        'total_nominal',
+        'cust_male',
+        'cust_female',
+        'cust_android',
+        'cust_ios',
+        'cust_telkomsel',
+        'cust_xl',
+        'cust_indosat',
+        'cust_tri',
+        'cust_axis',
+        'cust_smart',
+        'cust_teens',
+        'cust_young_adult',
+        'cust_adult',
+        'cust_old'
+    ];
 
-	public function brand()
+    public function brand()
     {
-		return $this->belongsTo(\Modules\Brand\Entities\Brand::class,'id_brand');
-	}
+        return $this->belongsTo(\Modules\Brand\Entities\Brand::class, 'id_brand');
+    }
 }

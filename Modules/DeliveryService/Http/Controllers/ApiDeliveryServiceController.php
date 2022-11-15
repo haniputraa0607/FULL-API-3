@@ -5,7 +5,6 @@ namespace Modules\DeliveryService\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Http\Models\Setting;
 use Modules\DeliveryService\Entities\DeliveryServiceArea;
 use App\Lib\MyHelper;

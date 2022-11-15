@@ -10,7 +10,11 @@ use Illuminate\Foundation\Bus\Dispatchable;
 
 class UpdateQuestProgressJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
+
     public $id_transaction;
     /**
      * Create a new job instance.

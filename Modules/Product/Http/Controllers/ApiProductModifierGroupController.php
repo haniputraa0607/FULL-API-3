@@ -30,41 +30,41 @@ class ApiProductModifierGroupController extends Controller
         $post   = $request->json()->all();
         $modifier_group = ProductModifierGroup::orderBy('product_modifier_group_order', 'asc');
 
-        if(!isset($post['order_position'])){
+        if (!isset($post['order_position'])) {
             $modifier_group = $modifier_group->with(['product_modifier_group_pivots', 'product_modifier']);
         }
 
-        if(isset($post['id_product_modifier_group']) && !empty($post['id_product_modifier_group'])){
+        if (isset($post['id_product_modifier_group']) && !empty($post['id_product_modifier_group'])) {
             $modifier_group = $modifier_group->where('id_product_modifier_group', $post['id_product_modifier_group'])->first();
             return MyHelper::checkGet($modifier_group);
         }
 
-        if(isset($post['rule']) && !empty($post['rule'])){
+        if (isset($post['rule']) && !empty($post['rule'])) {
             $rule = 'and';
-            if(isset($post['operator'])){
+            if (isset($post['operator'])) {
                 $rule = $post['operator'];
             }
 
-            if($rule == 'and'){
-                foreach ($post['rule'] as $row){
-                    if(isset($row['subject'])){
-                        if($row['subject'] == 'text'){
-                            if($row['operator'] == '='){
+            if ($rule == 'and') {
+                foreach ($post['rule'] as $row) {
+                    if (isset($row['subject'])) {
+                        if ($row['subject'] == 'text') {
+                            if ($row['operator'] == '=') {
                                 $modifier_group->where('product_modifier_group_name', $row['parameter']);
-                            }else{
-                                $modifier_group->where('product_modifier_group_name', 'like', '%'.$row['parameter'].'%');
+                            } else {
+                                $modifier_group->where('product_modifier_group_name', 'like', '%' . $row['parameter'] . '%');
                             }
                         }
                     }
                 }
-            }else{
-                $modifier_group->where(function ($subquery) use ($post){
-                    foreach ($post['rule'] as $row){
-                        if(isset($row['subject'])){
-                            if($row['operator'] == '='){
+            } else {
+                $modifier_group->where(function ($subquery) use ($post) {
+                    foreach ($post['rule'] as $row) {
+                        if (isset($row['subject'])) {
+                            if ($row['operator'] == '=') {
                                 $subquery->orWhere('product_modifier_group_name', $row['parameter']);
-                            }else{
-                                $subquery->orWhere('product_modifier_group_name', 'like', '%'.$row['parameter'].'%');
+                            } else {
+                                $subquery->orWhere('product_modifier_group_name', 'like', '%' . $row['parameter'] . '%');
                             }
                         }
                     }
@@ -72,9 +72,9 @@ class ApiProductModifierGroupController extends Controller
             }
         }
 
-        if(isset($post['page'])){
+        if (isset($post['page'])) {
             $modifier_group = $modifier_group->paginate(25);
-        }else{
+        } else {
             $modifier_group = $modifier_group->get()->toArray();
         }
 
@@ -90,12 +90,12 @@ class ApiProductModifierGroupController extends Controller
     {
         $post = $request->json()->all();
 
-        if(isset($post['text']) && isset($post['data_modifier']) && !empty($post['data_modifier'])){
+        if (isset($post['text']) && isset($post['data_modifier']) && !empty($post['data_modifier'])) {
             DB::beginTransaction();
             $create = ProductModifierGroup::create([
                 'product_modifier_group_name' => $post['text']
             ]);
-            if(!$create){
+            if (!$create) {
                 DB::rollback();
                 return [
                     'status'   => 'fail',
@@ -104,13 +104,13 @@ class ApiProductModifierGroupController extends Controller
             }
             $id_product_modifier_group = $create['id_product_modifier_group'];
             $dataInsertModifierGroupPivot = [];
-            if(isset($post['id_product_variant'])){
+            if (isset($post['id_product_variant'])) {
                 $dataInsertModifierGroupPivot['id_product_modifier_group'] = $id_product_modifier_group;
                 $dataInsertModifierGroupPivot['id_product_variant'] = $post['id_product_variant'];
             }
 
-            if(isset($post['id_product'])){
-                foreach ($post['id_product'] as $p){
+            if (isset($post['id_product'])) {
+                foreach ($post['id_product'] as $p) {
                     $dataInsertModifierGroupPivot[] = [
                         'id_product_modifier_group' => $id_product_modifier_group,
                         'id_product' => $p
@@ -118,9 +118,9 @@ class ApiProductModifierGroupController extends Controller
                 }
             }
 
-            if($dataInsertModifierGroupPivot){
+            if ($dataInsertModifierGroupPivot) {
                 $create = ProductModifierGroupPivot::insert($dataInsertModifierGroupPivot);
-                if(!$create){
+                if (!$create) {
                     DB::rollback();
                     return [
                         'status'   => 'fail',
@@ -129,28 +129,28 @@ class ApiProductModifierGroupController extends Controller
                 }
             }
 
-            if(!empty($post['data_modifier'])){
+            if (!empty($post['data_modifier'])) {
                 $dataModifier = array_values($post['data_modifier']);
                 $insertModifier = [];
-                foreach ($dataModifier as $keyMod=> $modifier){
+                foreach ($dataModifier as $keyMod => $modifier) {
                     $insertModifier[] = [
                         'product_modifier_order' => $keyMod,
                         'id_product_modifier_group' => $id_product_modifier_group,
                         'modifier_type' => 'Modifier Group',
                         'type' => 'Modifier Group',
-                        'code' => MyHelper::createrandom(5).strtotime(date('Y-m-d H:i:s')),
+                        'code' => MyHelper::createrandom(5) . strtotime(date('Y-m-d H:i:s')),
                         'text' => $modifier['name'],
                         'text_detail_trx' => $modifier['name_detail_trx'],
-                        'product_modifier_visibility' => (isset($modifier['visibility']) ? 'Visible': 'Hidden'),
+                        'product_modifier_visibility' => (isset($modifier['visibility']) ? 'Visible' : 'Hidden'),
                         'created_at' => date('Y-m-d H:i:s'),
                         'updated_at' => date('Y-m-d H:i:s')
                     ];
                 }
 
-                if($insertModifier){
+                if ($insertModifier) {
                     $create = ProductModifier::insert($insertModifier);
 
-                    if(!$create){
+                    if (!$create) {
                         DB::rollback();
                         return [
                             'status'   => 'fail',
@@ -162,20 +162,21 @@ class ApiProductModifierGroupController extends Controller
             DB::commit();
             RefreshVariantTree::dispatch(['type' => 'refresh_product'])->allOnConnection('database');
             return response()->json(MyHelper::checkCreate($create));
-        }else{
+        } else {
             return response()->json([ 'status'   => 'fail', 'messages' => ['Incompleted Data']]);
         }
     }
 
-    public function update(Request $request){
+    public function update(Request $request)
+    {
         $post = $request->json()->all();
 
-        if(isset($post['id_product_modifier_group']) && !empty($post['id_product_modifier_group'])){
+        if (isset($post['id_product_modifier_group']) && !empty($post['id_product_modifier_group'])) {
             DB::beginTransaction();
             $update = ProductModifierGroup::where('id_product_modifier_group', $post['id_product_modifier_group'])->update([
                 'product_modifier_group_name' => $post['text']
             ]);
-            if(!$update){
+            if (!$update) {
                 DB::rollback();
                 return [
                     'status'   => 'fail',
@@ -187,13 +188,13 @@ class ApiProductModifierGroupController extends Controller
 
             $id_product_modifier_group = $post['id_product_modifier_group'];
             $dataInsertModifierGroupPivot = [];
-            if(isset($post['id_product_variant'])){
+            if (isset($post['id_product_variant'])) {
                 $dataInsertModifierGroupPivot['id_product_modifier_group'] = $id_product_modifier_group;
                 $dataInsertModifierGroupPivot['id_product_variant'] = $post['id_product_variant'];
             }
 
-            if(isset($post['id_product'])){
-                foreach ($post['id_product'] as $p){
+            if (isset($post['id_product'])) {
+                foreach ($post['id_product'] as $p) {
                     $dataInsertModifierGroupPivot[] = [
                         'id_product_modifier_group' => $id_product_modifier_group,
                         'id_product' => $p
@@ -201,9 +202,9 @@ class ApiProductModifierGroupController extends Controller
                 }
             }
 
-            if($dataInsertModifierGroupPivot){
+            if ($dataInsertModifierGroupPivot) {
                 $create = ProductModifierGroupPivot::insert($dataInsertModifierGroupPivot);
-                if(!$create){
+                if (!$create) {
                     DB::rollback();
                     return [
                         'status'   => 'fail',
@@ -212,53 +213,53 @@ class ApiProductModifierGroupController extends Controller
                 }
             }
 
-            if(!empty($post['data_modifier'])){
+            if (!empty($post['data_modifier'])) {
                 $dataModifier = array_values($post['data_modifier']);
                 $insertModifier = [];
-                foreach ($dataModifier as $keyMod => $modifier){
-                    if(!isset($modifier['name']) && isset($modifier['code']) && !empty($modifier['code'])){
+                foreach ($dataModifier as $keyMod => $modifier) {
+                    if (!isset($modifier['name']) && isset($modifier['code']) && !empty($modifier['code'])) {
                         $delete = ProductModifier::where('code', $modifier['code'])->delete();
-                        if(!$delete){
+                        if (!$delete) {
                             DB::rollback();
                             return [
                                 'status'   => 'fail',
                                 'messages' => ['Failed delete product modifier'],
                             ];
                         }
-                    }elseif (isset($modifier['name']) && !empty($modifier['name']) && isset($modifier['code']) && !empty($modifier['code'])){
+                    } elseif (isset($modifier['name']) && !empty($modifier['name']) && isset($modifier['code']) && !empty($modifier['code'])) {
                         $dtUpdate = [
                             'product_modifier_order' => $keyMod,
                             'text' => $modifier['name'],
                             'text_detail_trx' => $modifier['name_detail_trx'],
-                            'product_modifier_visibility' => (isset($modifier['visibility']) ? 'Visible': 'Hidden'),
+                            'product_modifier_visibility' => (isset($modifier['visibility']) ? 'Visible' : 'Hidden'),
                             'updated_at' => date('Y-m-d H:i:s')
                         ];
-                        if(!empty($modifier['new_code'])){
+                        if (!empty($modifier['new_code'])) {
                             $dtUpdate['code'] = $modifier['new_code'];
                         }
                         $update = ProductModifier::where('code', $modifier['code'])->update($dtUpdate);
-                        if(!$update){
+                        if (!$update) {
                             DB::rollback();
                             return [
                                 'status'   => 'fail',
                                 'messages' => ['Failed update product modifier'],
                             ];
                         }
-                    }else{
+                    } else {
                         $update = ProductModifier::create([
                             'product_modifier_order' => $keyMod,
                             'id_product_modifier_group' => $id_product_modifier_group,
                             'modifier_type' => 'Modifier Group',
                             'type' => 'Modifier Group',
-                            'code' => MyHelper::createrandom(5).strtotime(date('Y-m-d H:i:s')),
+                            'code' => MyHelper::createrandom(5) . strtotime(date('Y-m-d H:i:s')),
                             'text' => $modifier['name'],
                             'text_detail_trx' => $modifier['name_detail_trx'],
-                            'product_modifier_visibility' => (isset($modifier['visibility']) ? 'Visible': 'Hidden'),
+                            'product_modifier_visibility' => (isset($modifier['visibility']) ? 'Visible' : 'Hidden'),
                             'created_at' => date('Y-m-d H:i:s'),
                             'updated_at' => date('Y-m-d H:i:s')
                         ]);
 
-                        if(!$update){
+                        if (!$update) {
                             DB::rollback();
                             return [
                                 'status'   => 'fail',
@@ -271,18 +272,19 @@ class ApiProductModifierGroupController extends Controller
             DB::commit();
             RefreshVariantTree::dispatch(['type' => 'refresh_product'])->allOnConnection('database');
             return response()->json(MyHelper::checkUpdate($create));
-        }else{
+        } else {
             return response()->json([ 'status'   => 'fail', 'messages' => ['Incompleted Data ID']]);
         }
     }
 
-    function destroy(Request $request){
+    public function destroy(Request $request)
+    {
         $post = $request->json()->all();
 
-        if(isset($post['id_product_modifier_group']) && !empty($post['id_product_modifier_group'])){
+        if (isset($post['id_product_modifier_group']) && !empty($post['id_product_modifier_group'])) {
             DB::beginTransaction();
             $delete = ProductModifier::where('id_product_modifier_group', $post['id_product_modifier_group'])->delete();
-            if(!$delete){
+            if (!$delete) {
                 DB::rollback();
                 return [
                     'status'   => 'fail',
@@ -291,7 +293,7 @@ class ApiProductModifierGroupController extends Controller
             }
 
             $delete = ProductModifierGroup::where('id_product_modifier_group', $post['id_product_modifier_group'])->delete();
-            if(!$delete){
+            if (!$delete) {
                 DB::rollback();
                 return [
                     'status'   => 'fail',
@@ -302,7 +304,7 @@ class ApiProductModifierGroupController extends Controller
             DB::commit();
             RefreshVariantTree::dispatch(['type' => 'refresh_product'])->allOnConnection('database');
             return response()->json(MyHelper::checkDelete($delete));
-        }else{
+        } else {
             return response()->json([ 'status'   => 'fail', 'messages' => ['Incompleted Data ID']]);
         }
     }
@@ -325,7 +327,7 @@ class ApiProductModifierGroupController extends Controller
         } else {
             $data = ProductModifier::join('product_modifier_groups', 'product_modifier_groups.id_product_modifier_group', 'product_modifiers.id_product_modifier_group')
                 ->where('type', 'Modifier Group')
-                ->select('product_modifier_groups.product_modifier_group_name',  'product_modifiers.id_product_modifier', 'product_modifiers.code', 'product_modifiers.text', 'product_modifier_global_prices.product_modifier_price')->leftJoin('product_modifier_global_prices', function ($join) use ($id_outlet) {
+                ->select('product_modifier_groups.product_modifier_group_name', 'product_modifiers.id_product_modifier', 'product_modifiers.code', 'product_modifiers.text', 'product_modifier_global_prices.product_modifier_price')->leftJoin('product_modifier_global_prices', function ($join) use ($id_outlet) {
                     $join->on('product_modifiers.id_product_modifier', '=', 'product_modifier_global_prices.id_product_modifier');
                 })->groupBy('product_modifiers.id_product_modifier');
         }
@@ -396,41 +398,43 @@ class ApiProductModifierGroupController extends Controller
         return ['total' => $total, 'filtered' => $filtered];
     }
 
-    public function export(Request $request){
+    public function export(Request $request)
+    {
         $arr = [];
         $data = ProductModifierGroup::with(['product_modifier_group_pivots', 'product_modifier'])->get()->toArray();
 
-        foreach ($data as $dt){
+        foreach ($data as $dt) {
             $prod = [];
             $var = [];
-            foreach($dt['product_modifier_group_pivots'] as $pmgp) {
-                if(!empty($pmgp['id_product'])){
+            foreach ($dt['product_modifier_group_pivots'] as $pmgp) {
+                if (!empty($pmgp['id_product'])) {
                     $prod[] = $pmgp['product_code'];
                 }
-                if(!empty($pmgp['product_variant_name'])){
+                if (!empty($pmgp['product_variant_name'])) {
                     $var[] = $pmgp['product_variant_name'];
                 }
             }
 
             $mod = [];
-            if(!empty($dt['product_modifier'])){
-                foreach ($dt['product_modifier'] as $m){
-                    $mod[] = $m['text'].'-'.$m['text_detail_trx'].'('.$m['code'].')';
+            if (!empty($dt['product_modifier'])) {
+                foreach ($dt['product_modifier'] as $m) {
+                    $mod[] = $m['text'] . '-' . $m['text_detail_trx'] . '(' . $m['code'] . ')';
                 }
             }
 
             $arr[] = [
                 'product_variant_non_price_name' => $dt['product_modifier_group_name'],
-                'product' => implode(',',$prod),
-                'variant' => implode(',',$var),
-                'product_variant_non_price_child' => implode(',',$mod)
+                'product' => implode(',', $prod),
+                'variant' => implode(',', $var),
+                'product_variant_non_price_child' => implode(',', $mod)
             ];
         }
 
         return response()->json(MyHelper::checkGet($arr));
     }
 
-    public function import(Request $request){
+    public function import(Request $request)
+    {
         $post = $request->json()->all();
         $result = [
             'updated' => 0,
@@ -441,55 +445,55 @@ class ApiProductModifierGroupController extends Controller
             'more_msg' => [],
             'more_msg_extended' => []
         ];
-        $data = $post['data'][0]??[];
+        $data = $post['data'][0] ?? [];
 
         foreach ($data as $key => $value) {
-            if(empty($value['product_variant_non_price_name'])){
+            if (empty($value['product_variant_non_price_name'])) {
                 $result['invalid']++;
                 continue;
             }
 
-            if(empty($value['product_variant_non_price_child'])){
+            if (empty($value['product_variant_non_price_child'])) {
                 $result['invalid']++;
                 continue;
             }
 
             DB::beginTransaction();
             $modifierGroup = ProductModifierGroup::where(['product_modifier_group_name' => $value['product_variant_non_price_name']])->first();
-            if($modifierGroup){
+            if ($modifierGroup) {
                 $update = ProductModifierGroup::where(['product_modifier_group_name' => $value['product_variant_non_price_name']])->update(['product_modifier_group_name' => $value['product_variant_non_price_name']]);
-                if(!$update){
+                if (!$update) {
                     $result['no_update']++;
                     DB::rollback();
-                }else{
+                } else {
                     $result['updated']++;
                 }
                 $id_product_modifier_group = $modifierGroup['id_product_modifier_group'];
-            }else{
+            } else {
                 $create = ProductModifierGroup::create(['product_modifier_group_name' => $value['product_variant_non_price_name']]);
-                if(!$create){
+                if (!$create) {
                     DB::rollback();
-                }else{
+                } else {
                     $result['create']++;
                 }
                 $id_product_modifier_group = $create['id_product_modifier_group'];
             }
 
-            if($id_product_modifier_group){
+            if ($id_product_modifier_group) {
                 $dataInsertModifierGroupPivot = [];
-                if(!empty($value['product'])){
+                if (!empty($value['product'])) {
                     $code = explode(",", $value['product']);
                     $getProduct = Product::whereIn('product_code', $code)->pluck('id_product')->toArray();
-                    foreach ($getProduct as $p){
+                    foreach ($getProduct as $p) {
                         $dataInsertModifierGroupPivot[] = [
                             'id_product_modifier_group' => $id_product_modifier_group,
                             'id_product' => $p
                         ];
                     }
-                }elseif(!empty($value['variant'])){
+                } elseif (!empty($value['variant'])) {
                     $variant = explode(",", $value['variant']);
                     $getVariant = ProductVariant::whereIn('product_variant_name', $variant)->pluck('id_product_variant')->toArray();
-                    foreach ($getVariant as $v){
+                    foreach ($getVariant as $v) {
                         $dataInsertModifierGroupPivot[] = [
                             'id_product_modifier_group' => $id_product_modifier_group,
                             'id_product_variant' => $v
@@ -498,24 +502,24 @@ class ApiProductModifierGroupController extends Controller
                 }
 
                 $del = ProductModifierGroupPivot::where('id_product_modifier_group', $id_product_modifier_group)->delete();
-                if($dataInsertModifierGroupPivot){
+                if ($dataInsertModifierGroupPivot) {
                     $create = ProductModifierGroupPivot::insert($dataInsertModifierGroupPivot);
-                    if(!$create){
+                    if (!$create) {
                         DB::rollback();
-                        if($modifierGroup){
+                        if ($modifierGroup) {
                             $result['updated']--;
-                        }else{
+                        } else {
                             $result['create']--;
                         }
                         $result['failed']++;
                         $result['more_msg_extended'][] = "Failed insert group pivot";
                         continue;
                     }
-                }else{
+                } else {
                     DB::rollback();
-                    if($modifierGroup){
+                    if ($modifierGroup) {
                         $result['updated']--;
-                    }else{
+                    } else {
                         $result['create']--;
                     }
                     $result['failed']++;
@@ -523,61 +527,61 @@ class ApiProductModifierGroupController extends Controller
                     continue;
                 }
 
-                if(!empty($value['product_variant_non_price_child'])){
+                if (!empty($value['product_variant_non_price_child'])) {
                     $insertModifier = [];
                     $modifiers = explode(",", $value['product_variant_non_price_child']);
-                    foreach ($modifiers as $modifier){
-                        $check = strpos($modifier,"(");
-                        if($check !== false){
-                            $codeMod = substr($modifier,$check+1,strlen($modifier));
-                            $codeMod = str_replace(')',"", $codeMod);
-                            $name = substr($modifier,0,$check);
+                    foreach ($modifiers as $modifier) {
+                        $check = strpos($modifier, "(");
+                        if ($check !== false) {
+                            $codeMod = substr($modifier, $check + 1, strlen($modifier));
+                            $codeMod = str_replace(')', "", $codeMod);
+                            $name = substr($modifier, 0, $check);
                             $getModifier = ProductModifier::where('code', $codeMod)->first();
-                            $explodename = explode('-',$name);
+                            $explodename = explode('-', $name);
                             $dataMod = [
                                 'id_product_modifier_group' => $id_product_modifier_group,
                                 'modifier_type' => 'Modifier Group',
                                 'type' => 'Modifier Group',
-                                'text' => $explodename[0]??$name??'',
-                                'text_detail_trx' => $explodename[1]??'',
+                                'text' => $explodename[0] ?? $name ?? '',
+                                'text_detail_trx' => $explodename[1] ?? '',
                                 'product_modifier_visibility' => 'Visible',
                                 'created_at' => date('Y-m-d H:i:s'),
                                 'updated_at' => date('Y-m-d H:i:s')
                             ];
-                            if($getModifier){
+                            if ($getModifier) {
                                 $update = ProductModifier::where('code', $codeMod)->update($dataMod);
-                                if(!$create){
+                                if (!$create) {
                                     DB::rollback();
                                     $result['failed']++;
-                                    $result['more_msg_extended'][] = "Failed update modifier with code ".$code;
+                                    $result['more_msg_extended'][] = "Failed update modifier with code " . $code;
                                 }
-                            }else{
-                                $dataMod['code'] = (empty($codeMod) ? MyHelper::createrandom(5).strtotime(date('Y-m-d H:i:s')) : $codeMod);
+                            } else {
+                                $dataMod['code'] = (empty($codeMod) ? MyHelper::createrandom(5) . strtotime(date('Y-m-d H:i:s')) : $codeMod);
                                 $create = ProductModifier::create($dataMod);
-                                if(!$create){
+                                if (!$create) {
                                     DB::rollback();
                                     $result['failed']++;
-                                    $result['more_msg_extended'][] = "Failed create modifier ".$dataMod['text'];
+                                    $result['more_msg_extended'][] = "Failed create modifier " . $dataMod['text'];
                                 }
                             }
-                        }else{
-                            $explodename = explode('-',$modifier);
+                        } else {
+                            $explodename = explode('-', $modifier);
                             $create = ProductModifier::create([
                                 'id_product_modifier_group' => $id_product_modifier_group,
                                 'modifier_type' => 'Modifier Group',
                                 'type' => 'Modifier Group',
-                                'code' => MyHelper::createrandom(5).strtotime(date('Y-m-d H:i:s')),
-                                'text' => $explodename[0]??$modifier??'',
-                                'text_detail_trx' => $explodename[1]??'',
+                                'code' => MyHelper::createrandom(5) . strtotime(date('Y-m-d H:i:s')),
+                                'text' => $explodename[0] ?? $modifier ?? '',
+                                'text_detail_trx' => $explodename[1] ?? '',
                                 'product_modifier_visibility' => 'Visible',
                                 'created_at' => date('Y-m-d H:i:s'),
                                 'updated_at' => date('Y-m-d H:i:s')
                             ]);
 
-                            if(!$create){
+                            if (!$create) {
                                 DB::rollback();
                                 $result['failed']++;
-                                $result['more_msg_extended'][] = "Failed create modifier ".$modifier;
+                                $result['more_msg_extended'][] = "Failed create modifier " . $modifier;
                             }
                         }
                     }
@@ -588,36 +592,37 @@ class ApiProductModifierGroupController extends Controller
         RefreshVariantTree::dispatch(['type' => 'refresh_product'])->allOnConnection('database');
         $response = [];
 
-        if($result['updated']){
-            $response[] = 'Update '.$result['updated'].' product variant NON PRICE (NO SKU)';
+        if ($result['updated']) {
+            $response[] = 'Update ' . $result['updated'] . ' product variant NON PRICE (NO SKU)';
         }
-        if($result['create']){
-            $response[] = 'Create '.$result['create'].' new product variant NON PRICE (NO SKU)';
+        if ($result['create']) {
+            $response[] = 'Create ' . $result['create'] . ' new product variant NON PRICE (NO SKU)';
         }
-        if($result['no_update']){
-            $response[] = $result['no_update'].' product variant NON PRICE (NO SKU) not updated';
+        if ($result['no_update']) {
+            $response[] = $result['no_update'] . ' product variant NON PRICE (NO SKU) not updated';
         }
-        if($result['failed']){
-            $response[] = 'Failed create '.$result['failed'].' product variant NON PRICE (NO SKU)';
+        if ($result['failed']) {
+            $response[] = 'Failed create ' . $result['failed'] . ' product variant NON PRICE (NO SKU)';
         }
-        $response = array_merge($response,$result['more_msg_extended']);
+        $response = array_merge($response, $result['more_msg_extended']);
         return MyHelper::checkGet($response);
     }
 
-    public function exportPrice(){
-        $subquery = str_replace('?','0',ProductModifierGlobalPrice::select(\DB::raw('id_product_modifier,product_modifier_price as global_price'))
+    public function exportPrice()
+    {
+        $subquery = str_replace('?', '0', ProductModifierGlobalPrice::select(\DB::raw('id_product_modifier,product_modifier_price as global_price'))
             ->groupBy('id_product_modifier')
             ->toSql());
-        $different_outlet = Outlet::select('outlet_code','id_product_modifier','product_modifier_price')
-            ->leftJoin('product_modifier_prices','outlets.id_outlet','=','product_modifier_prices.id_outlet')
-            ->where('outlet_different_price',1)->get();
-        $do = MyHelper::groupIt($different_outlet,'outlet_code',null,function($key,&$val){
-            $val = MyHelper::groupIt($val,'id_product_modifier');
+        $different_outlet = Outlet::select('outlet_code', 'id_product_modifier', 'product_modifier_price')
+            ->leftJoin('product_modifier_prices', 'outlets.id_outlet', '=', 'product_modifier_prices.id_outlet')
+            ->where('outlet_different_price', 1)->get();
+        $do = MyHelper::groupIt($different_outlet, 'outlet_code', null, function ($key, &$val) {
+            $val = MyHelper::groupIt($val, 'id_product_modifier');
             return $key;
         });
-        $data = ProductModifier::select('product_modifiers.id_product_modifier','code as product_variant_non_price_code','text as name','global_prices.global_price')
-            ->leftJoin('product_modifier_brands','product_modifier_brands.id_product_modifier','=','product_modifiers.id_product_modifier')
-            ->leftJoin(DB::raw('('.$subquery.') as global_prices'),'product_modifiers.id_product_modifier','=','global_prices.id_product_modifier')
+        $data = ProductModifier::select('product_modifiers.id_product_modifier', 'code as product_variant_non_price_code', 'text as name', 'global_prices.global_price')
+            ->leftJoin('product_modifier_brands', 'product_modifier_brands.id_product_modifier', '=', 'product_modifiers.id_product_modifier')
+            ->leftJoin(DB::raw('(' . $subquery . ') as global_prices'), 'product_modifiers.id_product_modifier', '=', 'global_prices.id_product_modifier')
             ->whereIn('type', ['Modifier Group'])
             ->orderBy('type')
             ->orderBy('text')
@@ -628,7 +633,7 @@ class ApiProductModifierGroupController extends Controller
             $inc = 0;
             foreach ($do as $outlet_code => $x) {
                 $inc++;
-                $product['price_'.$outlet_code] = $x[$product['id_product_modifier']][0]['product_modifier_price']??'';
+                $product['price_' . $outlet_code] = $x[$product['id_product_modifier']][0]['product_modifier_price'] ?? '';
             }
             unset($product['id_product_modifier']);
         }
@@ -636,7 +641,8 @@ class ApiProductModifierGroupController extends Controller
         return MyHelper::checkGet($data);
     }
 
-    public function importPrice(Request $request){
+    public function importPrice(Request $request)
+    {
         $post = $request->json()->all();
         $result = [
             'updated' => 0,
@@ -648,71 +654,71 @@ class ApiProductModifierGroupController extends Controller
             'more_msg' => [],
             'more_msg_extended' => []
         ];
-        $data = $post['data'][0]??[];
+        $data = $post['data'][0] ?? [];
 
-        $global_outlets = Outlet::select('id_outlet','outlet_code')->where([
+        $global_outlets = Outlet::select('id_outlet', 'outlet_code')->where([
             'outlet_different_price' => 0
         ])->get();
         foreach ($data as $key => $value) {
-            if(empty($value['product_variant_non_price_code'])){
+            if (empty($value['product_variant_non_price_code'])) {
                 $result['invalid']++;
                 continue;
             }
 
-            if(empty($value['name'])){
+            if (empty($value['name'])) {
                 unset($value['name']);
-            }else{
+            } else {
                 $value['text'] = $value['name'];
                 unset($value['name']);
             }
-            if(empty($value['type'])){
+            if (empty($value['type'])) {
                 unset($value['type']);
             }
-            if(empty($value['global_price'])){
+            if (empty($value['global_price'])) {
                 unset($value['global_price']);
             }
-            $product = ProductModifier::select('product_modifiers.*')->where('code',$value['product_variant_non_price_code'])->first();
-            if(!$product){
+            $product = ProductModifier::select('product_modifiers.*')->where('code', $value['product_variant_non_price_code'])->first();
+            if (!$product) {
                 $result['not_found']++;
                 $result['more_msg_extended'][] = "Modifier group with code {$value['product_variant_non_price_code']} not found";
                 continue;
             }
             $update1 = $product->update($value);
-            if($update1){
+            if ($update1) {
                 $result['updated']++;
-            }else{
+            } else {
                 $result['no_update']++;
             }
-            if($value['global_price']??false){
+            if ($value['global_price'] ?? false) {
                 $update = ProductModifierGlobalPrice::updateOrCreate([
-                    'id_product_modifier' => $product->id_product_modifier],[
-                    'product_modifier_price'=>$value['global_price']
-                ]);
-                if($update){
+                    'id_product_modifier' => $product->id_product_modifier], [
+                    'product_modifier_price' => $value['global_price']
+                    ]);
+                if ($update) {
                     $result['updated']++;
-                }else{
-                    if($update !== 0){
+                } else {
+                    if ($update !== 0) {
                         $result['fail']++;
                         $result['more_msg_extended'][] = "Failed set global price for product modifier {$value['code']}";
                     }
                 }
             }
             foreach ($value as $col_name => $col_value) {
-                if(!$col_value){
+                if (!$col_value) {
                     continue;
                 }
-                if(strpos($col_name, 'price_') !== false){
+                if (strpos($col_name, 'price_') !== false) {
                     $outlet_code = str_replace('price_', '', $col_name);
-                    $pp = ProductModifierPrice::join('outlets','outlets.id_outlet','=','product_modifier_prices.id_outlet')
+                    $pp = ProductModifierPrice::join('outlets', 'outlets.id_outlet', '=', 'product_modifier_prices.id_outlet')
                         ->where([
                             'outlet_code' => $outlet_code,
                             'id_product_modifier' => $product->id_product_modifier
                         ])->first();
-                    if($pp){
-                        $update = $pp->update(['product_modifier_price'=>$col_value]);
-                    }else{
-                        $id_outlet = Outlet::select('id_outlet')->where('outlet_code',$outlet_code)->pluck('id_outlet')->first();
-                        if(!$id_outlet){
+                    if ($pp) {
+                        $update = $pp->update(['product_modifier_price' => $col_value]);
+                    } else {
+                        $id_outlet = Outlet::select('id_outlet')->where('outlet_code', $outlet_code)->pluck('id_outlet')->first();
+                        if (!$id_outlet) {
                             $result['fail']++;
                             $result['more_msg_extended'][] = "Failed create new price for product modifier {$value['code']} at outlet $outlet_code failed";
                             continue;
@@ -720,12 +726,12 @@ class ApiProductModifierGroupController extends Controller
                         $update = ProductModifierPrice::create([
                             'id_outlet' => $id_outlet,
                             'id_product_modifier' => $product->id_product_modifier,
-                            'product_modifier_price'=>$col_value
+                            'product_modifier_price' => $col_value
                         ]);
                     }
-                    if($update){
+                    if ($update) {
                         $result['updated']++;
-                    }else{
+                    } else {
                         $result['fail']++;
                         $result['more_msg_extended'][] = "Failed set price for product modifier {$value['code']} at outlet $outlet_code failed";
                     }
@@ -735,23 +741,24 @@ class ApiProductModifierGroupController extends Controller
         RefreshVariantTree::dispatch(['type' => 'refresh_product'])->allOnConnection('database');
         $response = [];
 
-        if($result['updated']){
-            $response[] = 'Update '.$result['updated'].' product variant NON PRICE (NO SKU)';
+        if ($result['updated']) {
+            $response[] = 'Update ' . $result['updated'] . ' product variant NON PRICE (NO SKU)';
         }
-        if($result['create']){
-            $response[] = 'Create '.$result['create'].' new product variant NON PRICE (NO SKU)';
+        if ($result['create']) {
+            $response[] = 'Create ' . $result['create'] . ' new product variant NON PRICE (NO SKU)';
         }
-        if($result['no_update']){
-            $response[] = $result['no_update'].' product variant NON PRICE (NO SKU) not updated';
+        if ($result['no_update']) {
+            $response[] = $result['no_update'] . ' product variant NON PRICE (NO SKU) not updated';
         }
-        if($result['failed']){
-            $response[] = 'Failed create '.$result['failed'].' product variant NON PRICE (NO SKU)';
+        if ($result['failed']) {
+            $response[] = 'Failed create ' . $result['failed'] . ' product variant NON PRICE (NO SKU)';
         }
-        $response = array_merge($response,$result['more_msg_extended']);
+        $response = array_merge($response, $result['more_msg_extended']);
         return MyHelper::checkGet($response);
     }
 
-    public function positionAssign(Request $request){
+    public function positionAssign(Request $request)
+    {
         $post = $request->json()->all();
 
         if (!isset($post['modifier_group_ids'])) {
@@ -762,7 +769,7 @@ class ApiProductModifierGroupController extends Controller
         }
         // update position
         foreach ($post['modifier_group_ids'] as $key => $id) {
-            $update = ProductModifierGroup::find($id)->update(['product_modifier_group_order'=>$key+1]);
+            $update = ProductModifierGroup::find($id)->update(['product_modifier_group_order' => $key + 1]);
         }
 
         return ['status' => 'success'];
@@ -771,8 +778,8 @@ class ApiProductModifierGroupController extends Controller
     public function inventoryBrand(Request $request)
     {
         $modifier_group = ProductModifierGroup::select('id_product_modifier_group', 'product_modifier_group_name as name')
-        			->with('inventory_brand', 'product_modifier')
-        			->get();
+                    ->with('inventory_brand', 'product_modifier')
+                    ->get();
 
         return MyHelper::checkGet($modifier_group);
     }
@@ -781,7 +788,7 @@ class ApiProductModifierGroupController extends Controller
     {
         foreach ($request->product_modifier_groups ?: [] as $id_product_modifier_group => $id_brands) {
             ProductModifierGroupInventoryBrand::where('id_product_modifier_group', $id_product_modifier_group)->delete();
-            $toInsert = array_map(function($id_brand) use ($id_product_modifier_group) {
+            $toInsert = array_map(function ($id_brand) use ($id_product_modifier_group) {
                 return ['id_brand' => $id_brand, 'id_product_modifier_group' => $id_product_modifier_group];
             }, $id_brands);
             ProductModifierGroupInventoryBrand::insert($toInsert);

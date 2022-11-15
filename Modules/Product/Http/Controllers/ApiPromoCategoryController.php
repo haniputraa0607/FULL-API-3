@@ -114,7 +114,7 @@ class ApiPromoCategoryController extends Controller
         $up                        = 0;
         ProductProductPromoCategory::where('id_product_promo_category', $id_product_promo_category)->delete();
         foreach ($post['id_product'] as $key => $id_product) {
-            $update = ProductProductPromoCategory::updateOrCreate(['id_product' => $id_product, 'id_product_promo_category' => $id_product_promo_category, 'position' => ($key+1)]);
+            $update = ProductProductPromoCategory::updateOrCreate(['id_product' => $id_product, 'id_product_promo_category' => $id_product_promo_category, 'position' => ($key + 1)]);
         }
         return MyHelper::checkUpdate(true);
     }

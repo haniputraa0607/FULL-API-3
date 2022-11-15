@@ -22,7 +22,7 @@ class QuestUserDetail extends Model
     ];
 
     public function user()
-	{
-		return $this->belongsTo(\App\Http\Models\User::class, 'id_user');
-	}
+    {
+        return $this->belongsTo(\App\Http\Models\User::class, 'id_user');
+    }
 }

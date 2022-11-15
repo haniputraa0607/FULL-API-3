@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class FaqDoctor
- * 
+ *
  * @property int $id_faq_doctor
  * @property string $question
  * @property string $answer
@@ -22,11 +22,11 @@ use Illuminate\Database\Eloquent\Model;
  */
 class FaqDoctor extends Model
 {
-	protected $primaryKey = 'id_faq_doctor';
+    protected $primaryKey = 'id_faq_doctor';
 
-	protected $fillable = [
-	    'faq_number_list',
-		'question',
-		'answer'
-	];
+    protected $fillable = [
+        'faq_number_list',
+        'question',
+        'answer'
+    ];
 }

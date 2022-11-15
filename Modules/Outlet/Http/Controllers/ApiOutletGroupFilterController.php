@@ -6,7 +6,6 @@ use App\Jobs\SyncronPlasticTypeOutlet;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Http\Models\Outlet;
 use App\Http\Models\OutletDoctor;
 use App\Http\Models\OutletDoctorSchedule;
@@ -34,10 +33,8 @@ use Modules\Product\Entities\ProductSpecialPrice;
 use  Modules\UserFranchise\Entities\UserFranchise;
 use  Modules\Franchise\Entities\UserFranchiseOultet;
 use Modules\Outlet\Entities\OutletScheduleUpdate;
-
 use App\Imports\ExcelImport;
 use App\Imports\FirstSheetOnlyImport;
-
 use App\Lib\MyHelper;
 use Validator;
 use Hash;
@@ -45,10 +42,8 @@ use DB;
 use Mail;
 use Excel;
 use Storage;
-
 use Modules\Brand\Entities\BrandOutlet;
 use Modules\Brand\Entities\Brand;
-
 use Modules\Outlet\Http\Requests\outlet\Upload;
 use Modules\Outlet\Http\Requests\outlet\Update;
 use Modules\Outlet\Http\Requests\outlet\UpdateStatus;
@@ -61,41 +56,40 @@ use Modules\Outlet\Http\Requests\outlet\Nearme;
 use Modules\Outlet\Http\Requests\outlet\Filter;
 use Modules\Outlet\Http\Requests\outlet\OutletList;
 use Modules\Outlet\Http\Requests\outlet\OutletListOrderNow;
-
 use Modules\Outlet\Http\Requests\UserOutlet\Create as CreateUserOutlet;
 use Modules\Outlet\Http\Requests\UserOutlet\Update as UpdateUserOutlet;
-
 use Modules\Outlet\Http\Requests\Holiday\HolidayStore;
 use Modules\Outlet\Http\Requests\Holiday\HolidayEdit;
 use Modules\Outlet\Http\Requests\Holiday\HolidayUpdate;
 use Modules\Outlet\Http\Requests\Holiday\HolidayDelete;
-
 use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
 use Modules\PromoCampaign\Lib\PromoCampaignTools;
 use App\Http\Models\Transaction;
-
 use App\Jobs\SendOutletJob;
 
 class ApiOutletGroupFilterController extends Controller
 {
-    function __construct() {
+    public function __construct()
+    {
         date_default_timezone_set('Asia/Jakarta');
     }
 
-    function list(){
+    public function list()
+    {
         $data = OutletGroup::orderBy('updated_at', 'desc')->get()->toArray();
         return response()->json(MyHelper::checkGet($data));
     }
 
-    function store(Request $request){
+    public function store(Request $request)
+    {
         $post = $request->json()->all();
 
-        if(!isset($post['outlets']) && !isset($post['conditions'])){
+        if (!isset($post['outlets']) && !isset($post['conditions'])) {
             return response()->json(['status' => 'fail', 'messages' => ['Data outlets or conditions can not be empty']]);
-        }else{
+        } else {
             $isAllOutlet = 0;
 
-            if(isset($post['outlets']) && in_array("all", $post['outlets'])){
+            if (isset($post['outlets']) && in_array("all", $post['outlets'])) {
                 $isAllOutlet = 1;
             }
 
@@ -108,13 +102,13 @@ class ApiOutletGroupFilterController extends Controller
             DB::beginTransaction();
             $outletGroup = OutletGroup::create($dataOutletGroup);
 
-            if(!$outletGroup){
+            if (!$outletGroup) {
                 DB::rollback();
                 return response()->json(['status' => 'fail', 'messages' => ['Failed Create outlet group']]);
             }
 
-            if($post['outlet_group_type'] == 'Conditions'){
-                foreach ($post['conditions'] as $con){
+            if ($post['outlet_group_type'] == 'Conditions') {
+                foreach ($post['conditions'] as $con) {
                     $rule = $con['rule'];
                     $ruleNext = $con['rule_next'];
                     unset($con['rule']);
@@ -128,13 +122,13 @@ class ApiOutletGroupFilterController extends Controller
 
                     $createConditionParent = OutletGroupFilterConditionParent::create($dataRuleParent);
 
-                    if(!$createConditionParent){
+                    if (!$createConditionParent) {
                         DB::rollback();
                         return response()->json(['status' => 'fail', 'messages' => ['Failed Create parent condition']]);
                     }
 
                     $dataFilter = [];
-                    foreach ($con as $con_child){
+                    foreach ($con as $con_child) {
                         $dataFilter[] = [
                             'id_outlet_group_filter_condition_parent' => $createConditionParent['id_outlet_group_filter_condition_parent'],
                             'id_outlet_group' => $outletGroup['id_outlet_group'],
@@ -146,14 +140,14 @@ class ApiOutletGroupFilterController extends Controller
                         ];
                     }
                     $insertFilter = OutletGroupFilterCondition::insert($dataFilter);
-                    if(!$insertFilter){
+                    if (!$insertFilter) {
                         DB::rollback();
                         return response()->json(['status' => 'fail', 'messages' => ['Failed save outlet group filter conditions']]);
                     }
                 }
-            }elseif($isAllOutlet == 0){
+            } elseif ($isAllOutlet == 0) {
                 $dataOutlet = [];
-                foreach ($post['outlets'] as $outlet){
+                foreach ($post['outlets'] as $outlet) {
                     $dataOutlet[] = [
                         'id_outlet_group' => $outletGroup['id_outlet_group'],
                         'id_outlet' => $outlet,
@@ -163,7 +157,7 @@ class ApiOutletGroupFilterController extends Controller
                 }
 
                 $insertOutlet = OutletGroupFilterOutlet::insert($dataOutlet);
-                if(!$insertOutlet){
+                if (!$insertOutlet) {
                     DB::rollback();
                     return response()->json(['status' => 'fail', 'messages' => ['Failed save outlet group filter outlets']]);
                 }
@@ -174,16 +168,17 @@ class ApiOutletGroupFilterController extends Controller
         }
     }
 
-    function detail(Request $request){
+    public function detail(Request $request)
+    {
         $post = $request->json()->all();
 
-        if(isset($post['id_outlet_group']) && !empty($post['id_outlet_group'])){
+        if (isset($post['id_outlet_group']) && !empty($post['id_outlet_group'])) {
             $detail = OutletGroup::where('id_outlet_group', $post['id_outlet_group'])
                         ->with(['outlet_group_filter_outlet'])
                         ->first();
-            if(!empty($detail)){
+            if (!empty($detail)) {
                 $parents = OutletGroupFilterConditionParent::where('id_outlet_group', $post['id_outlet_group'])->get()->toArray();
-                foreach ($parents as $key=>$p){
+                foreach ($parents as $key => $p) {
                     $parents[$key]['condition_child'] = OutletGroupFilterCondition::where('id_outlet_group_filter_condition_parent', $p['id_outlet_group_filter_condition_parent'])
                         ->select('outlet_group_filter_subject', 'outlet_group_filter_operator', 'outlet_group_filter_parameter')->get()->toArray();
                 }
@@ -192,20 +187,21 @@ class ApiOutletGroupFilterController extends Controller
             }
 
             return response()->json(MyHelper::checkGet($detail));
-        }else{
+        } else {
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
         }
     }
 
-    function update(Request $request){
+    public function update(Request $request)
+    {
         $post = $request->json()->all();
 
-        if(!isset($post['outlets']) && !isset($post['conditions'])){
+        if (!isset($post['outlets']) && !isset($post['conditions'])) {
             return response()->json(['status' => 'fail', 'messages' => ['Data outlets or conditions can not be empty']]);
-        }elseif(isset($post['id_outlet_group']) && !empty($post['id_outlet_group'])){
+        } elseif (isset($post['id_outlet_group']) && !empty($post['id_outlet_group'])) {
             $isAllOutlet = 0;
 
-            if(isset($post['outlets']) && in_array("all", $post['outlets'])){
+            if (isset($post['outlets']) && in_array("all", $post['outlets'])) {
                 $isAllOutlet = 1;
             }
 
@@ -218,7 +214,7 @@ class ApiOutletGroupFilterController extends Controller
             DB::beginTransaction();
             $outletGroup = OutletGroup::where('id_outlet_group', $post['id_outlet_group'])->update($dataOutletGroup);
 
-            if(!$outletGroup){
+            if (!$outletGroup) {
                 DB::rollback();
                 return response()->json(['status' => 'fail', 'messages' => ['Failed Update outlet group']]);
             }
@@ -227,8 +223,8 @@ class ApiOutletGroupFilterController extends Controller
             OutletGroupFilterConditionParent::where('id_outlet_group', $post['id_outlet_group'])->delete();
             OutletGroupFilterCondition::where('id_outlet_group', $post['id_outlet_group'])->delete();
 
-            if($post['outlet_group_type'] == 'Conditions'){
-                foreach ($post['conditions'] as $con){
+            if ($post['outlet_group_type'] == 'Conditions') {
+                foreach ($post['conditions'] as $con) {
                     $rule = $con['rule'];
                     $ruleNext = $con['rule_next'];
                     unset($con['rule']);
@@ -242,13 +238,13 @@ class ApiOutletGroupFilterController extends Controller
 
                     $createConditionParent = OutletGroupFilterConditionParent::create($dataRuleParent);
 
-                    if(!$createConditionParent){
+                    if (!$createConditionParent) {
                         DB::rollback();
                         return response()->json(['status' => 'fail', 'messages' => ['Failed Create parent condition']]);
                     }
 
                     $dataFilter = [];
-                    foreach ($con as $con_child){
+                    foreach ($con as $con_child) {
                         $dataFilter[] = [
                             'id_outlet_group_filter_condition_parent' => $createConditionParent['id_outlet_group_filter_condition_parent'],
                             'id_outlet_group' => $post['id_outlet_group'],
@@ -260,14 +256,14 @@ class ApiOutletGroupFilterController extends Controller
                         ];
                     }
                     $insertFilter = OutletGroupFilterCondition::insert($dataFilter);
-                    if(!$insertFilter){
+                    if (!$insertFilter) {
                         DB::rollback();
                         return response()->json(['status' => 'fail', 'messages' => ['Failed save outlet group filter conditions']]);
                     }
                 }
-            }elseif($isAllOutlet == 0){
+            } elseif ($isAllOutlet == 0) {
                 $dataOutlet = [];
-                foreach ($post['outlets'] as $outlet){
+                foreach ($post['outlets'] as $outlet) {
                     $dataOutlet[] = [
                         'id_outlet_group' => $post['id_outlet_group'],
                         'id_outlet' => $outlet,
@@ -277,7 +273,7 @@ class ApiOutletGroupFilterController extends Controller
                 }
 
                 $insertOutlet = OutletGroupFilterOutlet::insert($dataOutlet);
-                if(!$insertOutlet){
+                if (!$insertOutlet) {
                     DB::rollback();
                     return response()->json(['status' => 'fail', 'messages' => ['Failed save outlet group filter outlets']]);
                 }
@@ -285,40 +281,42 @@ class ApiOutletGroupFilterController extends Controller
 
             DB::commit();
             return response()->json(['status' => 'success']);
-        }else{
+        } else {
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
         }
     }
 
-    function destroy(Request $request){
+    public function destroy(Request $request)
+    {
         $post = $request->json()->all();
 
-        if(isset($post['id_outlet_group']) && !empty($post['id_outlet_group'])){
+        if (isset($post['id_outlet_group']) && !empty($post['id_outlet_group'])) {
             $delete = OutletGroup::where('id_outlet_group', $post['id_outlet_group'])->delete();
             OutletGroupFilterOutlet::where('id_outlet_group', $post['id_outlet_group'])->delete();
             OutletGroupFilterConditionParent::where('id_outlet_group', $post['id_outlet_group'])->delete();
             OutletGroupFilterCondition::where('id_outlet_group', $post['id_outlet_group'])->delete();
 
             return response()->json(MyHelper::checkDelete($delete));
-        }else{
+        } else {
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
         }
     }
 
-    public function outletGroupFilter($id_outlet_group){
-        if(!empty($id_outlet_group)){
+    public function outletGroupFilter($id_outlet_group)
+    {
+        if (!empty($id_outlet_group)) {
             $getOutletGroup = OutletGroup::where('id_outlet_group', $id_outlet_group)->first();
-            if(empty($getOutletGroup)){
+            if (empty($getOutletGroup)) {
                 return [];
             }
 
-            if($getOutletGroup['outlet_group_type'] == 'Outlets'){
-                if($getOutletGroup['is_all_outlet'] == 1){
+            if ($getOutletGroup['outlet_group_type'] == 'Outlets') {
+                if ($getOutletGroup['is_all_outlet'] == 1) {
                     $outlets = Outlet::join('cities', 'cities.id_city', '=', 'outlets.id_city')
                         ->join('provinces', 'provinces.id_province', '=', 'cities.id_province')
                         ->where('outlet_status', 'Active')
                         ->select('id_outlet', 'outlet_code', 'outlet_name')->get()->toArray();
-                }else{
+                } else {
                     $arrIdOutlet = OutletGroupFilterOutlet::where('id_outlet_group', $id_outlet_group)->pluck('id_outlet')->toArray();
                     $outlets = Outlet::join('cities', 'cities.id_city', '=', 'outlets.id_city')
                         ->join('provinces', 'provinces.id_province', '=', 'cities.id_province')
@@ -327,7 +325,7 @@ class ApiOutletGroupFilterController extends Controller
                 }
 
                 return $outlets;
-            }else{
+            } else {
                 $outlets = Outlet::select('id_outlet', 'outlet_code', 'outlet_name')
                     ->join('cities', 'cities.id_city', '=', 'outlets.id_city')
                     ->join('provinces', 'provinces.id_province', '=', 'cities.id_province')
@@ -335,51 +333,51 @@ class ApiOutletGroupFilterController extends Controller
 
                 $conditionParents = OutletGroupFilterConditionParent::where('id_outlet_group', $id_outlet_group)->orderBy('id_outlet_group_filter_condition_parent', 'desc')->get()->toArray();
 
-                $outlets->where(function ($subMaster) use($conditionParents){
-                    foreach ($conditionParents as $conditionParent){
+                $outlets->where(function ($subMaster) use ($conditionParents) {
+                    foreach ($conditionParents as $conditionParent) {
                         $ruleNext = 'and';
-                        if(isset($conditionParent['condition_parent_rule_next'])){
+                        if (isset($conditionParent['condition_parent_rule_next'])) {
                             $ruleNext = $conditionParent['condition_parent_rule_next'];
                         }
 
-                        if($ruleNext == 'and'){
-                            $subMaster->where(function ($sub) use ($conditionParent){
+                        if ($ruleNext == 'and') {
+                            $subMaster->where(function ($sub) use ($conditionParent) {
                                 $conditions = OutletGroupFilterCondition::where('id_outlet_group_filter_condition_parent', $conditionParent['id_outlet_group_filter_condition_parent'])->get()->toArray();
 
                                 $rule = 'and';
-                                if(isset($conditionParent['condition_parent_rule'])){
+                                if (isset($conditionParent['condition_parent_rule'])) {
                                     $rule = $conditionParent['condition_parent_rule'];
                                 }
 
-                                if($rule == 'and'){
-                                    foreach ($conditions as $row){
-                                        if(isset($row['outlet_group_filter_subject'])){
-                                            if($row['outlet_group_filter_subject'] == 'province'){
+                                if ($rule == 'and') {
+                                    foreach ($conditions as $row) {
+                                        if (isset($row['outlet_group_filter_subject'])) {
+                                            if ($row['outlet_group_filter_subject'] == 'province') {
                                                 $sub->where('provinces.id_province', $row['outlet_group_filter_operator']);
                                             }
 
-                                            if($row['outlet_group_filter_subject'] == 'city'){
+                                            if ($row['outlet_group_filter_subject'] == 'city') {
                                                 $sub->where('cities.id_city', $row['outlet_group_filter_operator']);
                                             }
 
-                                            if($row['outlet_group_filter_subject'] == 'status_franchise'){
+                                            if ($row['outlet_group_filter_subject'] == 'status_franchise') {
                                                 $sub->where('status_franchise', $row['outlet_group_filter_operator']);
                                             }
 
-                                            if($row['outlet_group_filter_subject'] == 'delivery_order'){
+                                            if ($row['outlet_group_filter_subject'] == 'delivery_order') {
                                                 $sub->where('delivery_order', $row['outlet_group_filter_operator']);
                                             }
 
-                                            if($row['outlet_group_filter_subject'] == 'outlet_code' || $row['outlet_group_filter_subject'] == 'outlet_name'){
-                                                if($row['outlet_group_filter_operator'] == '='){
+                                            if ($row['outlet_group_filter_subject'] == 'outlet_code' || $row['outlet_group_filter_subject'] == 'outlet_name') {
+                                                if ($row['outlet_group_filter_operator'] == '=') {
                                                     $sub->where($row['outlet_group_filter_subject'], $row['outlet_group_filter_parameter']);
-                                                }else{
-                                                    $sub->where($row['outlet_group_filter_subject'], 'like', '%'.$row['outlet_group_filter_parameter'].'%');
+                                                } else {
+                                                    $sub->where($row['outlet_group_filter_subject'], 'like', '%' . $row['outlet_group_filter_parameter'] . '%');
                                                 }
                                             }
 
-                                            if($row['outlet_group_filter_subject'] == 'brand'){
-                                                $sub->whereIn('outlets.id_outlet', function($query) use($row) {
+                                            if ($row['outlet_group_filter_subject'] == 'brand') {
+                                                $sub->whereIn('outlets.id_outlet', function ($query) use ($row) {
                                                     $query->select('id_outlet')
                                                         ->from('brand_outlet')
                                                         ->where('id_brand', $row['outlet_group_filter_operator']);
@@ -387,36 +385,36 @@ class ApiOutletGroupFilterController extends Controller
                                             }
                                         }
                                     }
-                                }else{
-                                    $sub->where(function ($subquery) use ($conditions){
-                                        foreach ($conditions as $row){
-                                            if(isset($row['outlet_group_filter_subject'])){
-                                                if($row['outlet_group_filter_subject'] == 'province'){
+                                } else {
+                                    $sub->where(function ($subquery) use ($conditions) {
+                                        foreach ($conditions as $row) {
+                                            if (isset($row['outlet_group_filter_subject'])) {
+                                                if ($row['outlet_group_filter_subject'] == 'province') {
                                                     $subquery->orWhere('provinces.id_province', $row['outlet_group_filter_operator']);
                                                 }
 
-                                                if($row['outlet_group_filter_subject'] == 'city'){
+                                                if ($row['outlet_group_filter_subject'] == 'city') {
                                                     $subquery->orWhere('cities.id_city', $row['outlet_group_filter_operator']);
                                                 }
 
-                                                if($row['outlet_group_filter_subject'] == 'status_franchise'){
+                                                if ($row['outlet_group_filter_subject'] == 'status_franchise') {
                                                     $subquery->orWhere('status_franchise', $row['outlet_group_filter_operator']);
                                                 }
 
-                                                if($row['outlet_group_filter_subject'] == 'delivery_order'){
+                                                if ($row['outlet_group_filter_subject'] == 'delivery_order') {
                                                     $subquery->orWhere('delivery_order', $row['outlet_group_filter_operator']);
                                                 }
 
-                                                if($row['outlet_group_filter_subject'] == 'outlet_code' || $row['outlet_group_filter_subject'] == 'outlet_name'){
-                                                    if($row['outlet_group_filter_operator'] == '='){
+                                                if ($row['outlet_group_filter_subject'] == 'outlet_code' || $row['outlet_group_filter_subject'] == 'outlet_name') {
+                                                    if ($row['outlet_group_filter_operator'] == '=') {
                                                         $subquery->orWhere($row['outlet_group_filter_subject'], $row['outlet_group_filter_parameter']);
-                                                    }else{
-                                                        $subquery->orWhere($row['outlet_group_filter_subject'], 'like', '%'.$row['outlet_group_filter_parameter'].'%');
+                                                    } else {
+                                                        $subquery->orWhere($row['outlet_group_filter_subject'], 'like', '%' . $row['outlet_group_filter_parameter'] . '%');
                                                     }
                                                 }
 
-                                                if($row['outlet_group_filter_subject'] == 'brand'){
-                                                    $subquery->orWhereIn('outlets.id_outlet', function($query) use($row) {
+                                                if ($row['outlet_group_filter_subject'] == 'brand') {
+                                                    $subquery->orWhereIn('outlets.id_outlet', function ($query) use ($row) {
                                                         $query->select('id_outlet')
                                                             ->from('brand_outlet')
                                                             ->where('id_brand', $row['outlet_group_filter_operator']);
@@ -427,44 +425,44 @@ class ApiOutletGroupFilterController extends Controller
                                     });
                                 }
                             });
-                        }else{
-                            $subMaster->orWhere(function ($sub) use ($conditionParent){
+                        } else {
+                            $subMaster->orWhere(function ($sub) use ($conditionParent) {
                                 $conditions = OutletGroupFilterCondition::where('id_outlet_group_filter_condition_parent', $conditionParent['id_outlet_group_filter_condition_parent'])->get()->toArray();
 
                                 $rule = 'and';
-                                if(isset($conditionParent['condition_parent_rule'])){
+                                if (isset($conditionParent['condition_parent_rule'])) {
                                     $rule = $conditionParent['condition_parent_rule'];
                                 }
 
-                                if($rule == 'and'){
-                                    foreach ($conditions as $row){
-                                        if(isset($row['outlet_group_filter_subject'])){
-                                            if($row['outlet_group_filter_subject'] == 'province'){
+                                if ($rule == 'and') {
+                                    foreach ($conditions as $row) {
+                                        if (isset($row['outlet_group_filter_subject'])) {
+                                            if ($row['outlet_group_filter_subject'] == 'province') {
                                                 $sub->where('provinces.id_province', $row['outlet_group_filter_operator']);
                                             }
 
-                                            if($row['outlet_group_filter_subject'] == 'city'){
+                                            if ($row['outlet_group_filter_subject'] == 'city') {
                                                 $sub->where('cities.id_city', $row['outlet_group_filter_operator']);
                                             }
 
-                                            if($row['outlet_group_filter_subject'] == 'status_franchise'){
+                                            if ($row['outlet_group_filter_subject'] == 'status_franchise') {
                                                 $sub->where('status_franchise', $row['outlet_group_filter_operator']);
                                             }
 
-                                            if($row['outlet_group_filter_subject'] == 'delivery_order'){
+                                            if ($row['outlet_group_filter_subject'] == 'delivery_order') {
                                                 $sub->where('delivery_order', $row['outlet_group_filter_operator']);
                                             }
 
-                                            if($row['outlet_group_filter_subject'] == 'outlet_code' || $row['outlet_group_filter_subject'] == 'outlet_name'){
-                                                if($row['outlet_group_filter_operator'] == '='){
+                                            if ($row['outlet_group_filter_subject'] == 'outlet_code' || $row['outlet_group_filter_subject'] == 'outlet_name') {
+                                                if ($row['outlet_group_filter_operator'] == '=') {
                                                     $sub->where($row['outlet_group_filter_subject'], $row['outlet_group_filter_parameter']);
-                                                }else{
-                                                    $sub->where($row['outlet_group_filter_subject'], 'like', '%'.$row['outlet_group_filter_parameter'].'%');
+                                                } else {
+                                                    $sub->where($row['outlet_group_filter_subject'], 'like', '%' . $row['outlet_group_filter_parameter'] . '%');
                                                 }
                                             }
 
-                                            if($row['outlet_group_filter_subject'] == 'brand'){
-                                                $sub->whereIn('outlets.id_outlet', function($query) use($row) {
+                                            if ($row['outlet_group_filter_subject'] == 'brand') {
+                                                $sub->whereIn('outlets.id_outlet', function ($query) use ($row) {
                                                     $query->select('id_outlet')
                                                         ->from('brand_outlet')
                                                         ->where('id_brand', $row['outlet_group_filter_operator']);
@@ -472,36 +470,36 @@ class ApiOutletGroupFilterController extends Controller
                                             }
                                         }
                                     }
-                                }else{
-                                    $sub->where(function ($subquery) use ($conditions){
-                                        foreach ($conditions as $row){
-                                            if(isset($row['outlet_group_filter_subject'])){
-                                                if($row['outlet_group_filter_subject'] == 'province'){
+                                } else {
+                                    $sub->where(function ($subquery) use ($conditions) {
+                                        foreach ($conditions as $row) {
+                                            if (isset($row['outlet_group_filter_subject'])) {
+                                                if ($row['outlet_group_filter_subject'] == 'province') {
                                                     $subquery->orWhere('provinces.id_province', $row['outlet_group_filter_operator']);
                                                 }
 
-                                                if($row['outlet_group_filter_subject'] == 'city'){
+                                                if ($row['outlet_group_filter_subject'] == 'city') {
                                                     $subquery->orWhere('cities.id_city', $row['outlet_group_filter_operator']);
                                                 }
 
-                                                if($row['outlet_group_filter_subject'] == 'status_franchise'){
+                                                if ($row['outlet_group_filter_subject'] == 'status_franchise') {
                                                     $subquery->orWhere('status_franchise', $row['outlet_group_filter_operator']);
                                                 }
 
-                                                if($row['outlet_group_filter_subject'] == 'delivery_order'){
+                                                if ($row['outlet_group_filter_subject'] == 'delivery_order') {
                                                     $subquery->orWhere('delivery_order', $row['outlet_group_filter_operator']);
                                                 }
 
-                                                if($row['outlet_group_filter_subject'] == 'outlet_code' || $row['outlet_group_filter_subject'] == 'outlet_name'){
-                                                    if($row['outlet_group_filter_operator'] == '='){
+                                                if ($row['outlet_group_filter_subject'] == 'outlet_code' || $row['outlet_group_filter_subject'] == 'outlet_name') {
+                                                    if ($row['outlet_group_filter_operator'] == '=') {
                                                         $subquery->orWhere($row['outlet_group_filter_subject'], $row['outlet_group_filter_parameter']);
-                                                    }else{
-                                                        $subquery->orWhere($row['outlet_group_filter_subject'], 'like', '%'.$row['outlet_group_filter_parameter'].'%');
+                                                    } else {
+                                                        $subquery->orWhere($row['outlet_group_filter_subject'], 'like', '%' . $row['outlet_group_filter_parameter'] . '%');
                                                     }
                                                 }
 
-                                                if($row['outlet_group_filter_subject'] == 'brand'){
-                                                    $subquery->orWhereIn('outlets.id_outlet', function($query) use($row) {
+                                                if ($row['outlet_group_filter_subject'] == 'brand') {
+                                                    $subquery->orWhereIn('outlets.id_outlet', function ($query) use ($row) {
                                                         $query->select('id_outlet')
                                                             ->from('brand_outlet')
                                                             ->where('id_brand', $row['outlet_group_filter_operator']);
@@ -518,7 +516,7 @@ class ApiOutletGroupFilterController extends Controller
 
                 return $outlets->get()->toArray();
             }
-        }else{
+        } else {
             return [];
         }
     }

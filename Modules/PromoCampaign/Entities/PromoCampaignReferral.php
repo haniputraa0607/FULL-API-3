@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class PromoCampaignReferral extends Model
 {
-	protected $primaryKey = 'id_promo_campaign_referrals';
+    protected $primaryKey = 'id_promo_campaign_referrals';
     protected $fillable = [
             'referred_promo_type',
             'referred_promo_unit',
@@ -17,7 +17,8 @@ class PromoCampaignReferral extends Model
             'referrer_promo_value',
             'referrer_promo_value_max'
     ];
-    public function promo_campaign() {
-    	return $this->belongsTo(PromoCampaign::class,'id_promo_campaign','id_promo_campaign');
+    public function promo_campaign()
+    {
+        return $this->belongsTo(PromoCampaign::class, 'id_promo_campaign', 'id_promo_campaign');
     }
 }

@@ -48,12 +48,12 @@ class TransactionPaymentXendit extends Model
             return true;
         }
 
-        $transactionType = Transaction::where('id_transaction_group', $this->id_transaction_group)->first()['trasaction_type']??'trx';
+        $transactionType = Transaction::where('id_transaction_group', $this->id_transaction_group)->first()['trasaction_type'] ?? 'trx';
         $transactionType = ($transactionType == 'Delivery' ? 'trx' : $transactionType);
 
-        if (\Cache::has('xendit_confirm_'.$this->id_transaction_group)) {
-            $create = \Cache::get('xendit_confirm_'.$this->id_transaction_group);
-        }else{
+        if (\Cache::has('xendit_confirm_' . $this->id_transaction_group)) {
+            $create = \Cache::get('xendit_confirm_' . $this->id_transaction_group);
+        } else {
             $xenditController = app('Modules\Xendit\Http\Controllers\XenditController');
             $create = $xenditController->create($this->type, $this->external_id, $this->amount, [
                 'phone' => $this->phone,
@@ -63,7 +63,7 @@ class TransactionPaymentXendit extends Model
         }
 
         if ($create) {
-            \Cache::put('xendit_confirm_'.$this->id_transaction_group, $create, now()->addMinutes(10));
+            \Cache::put('xendit_confirm_' . $this->id_transaction_group, $create, now()->addMinutes(10));
 
             $this->xendit_id = $create['id'] ?? null;
             $this->business_id = $create['business_id'] ?? null;

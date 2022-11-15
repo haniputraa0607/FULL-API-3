@@ -22,7 +22,7 @@ class Brand extends Model
 
     public function getLogoBrandAttribute($value)
     {
-        if(empty($value)){
+        if (empty($value)) {
             return '';
         }
         return config('url.storage_url_api') . $value;
@@ -30,17 +30,19 @@ class Brand extends Model
 
     public function getImageBrandAttribute($value)
     {
-        if(empty($value)){
+        if (empty($value)) {
             return '';
         }
         return config('url.storage_url_api') . $value;
     }
 
-    public function brand_product(){
+    public function brand_product()
+    {
         return $this->hasMany(BrandProduct::class, 'id_brand', 'id_brand');
     }
 
-    public function brand_outlet(){
+    public function brand_outlet()
+    {
         return $this->hasMany(BrandOutlet::class, 'id_brand', 'id_brand');
     }
 
@@ -66,6 +68,6 @@ class Brand extends Model
 
     public function transaction_products()
     {
-		return $this->hasMany(\App\Http\Models\TransactionProduct::class, 'id_brand');
+        return $this->hasMany(\App\Http\Models\TransactionProduct::class, 'id_brand');
     }
 }

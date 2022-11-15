@@ -5,13 +5,10 @@ namespace Modules\Advert\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Lib\MyHelper;
-
 use App\Http\Models\Advert;
 use Modules\Advert\Http\Requests\Create;
 use Modules\Advert\Http\Requests\Iklan;
-
 use DB;
 
 class AdvertController extends Controller
@@ -19,8 +16,9 @@ class AdvertController extends Controller
     public $saveImage = "img/advert/";
 
     /* INDEX */
-    public function index(Iklan $request) {
-        
+    public function index(Iklan $request)
+    {
+
         $advert = Advert::with('news')->select('*');
 
         if ($request->json('id_advert')) {
@@ -40,8 +38,6 @@ class AdvertController extends Controller
         $newAdv['text_bottom'] = [];
 
         if (!empty($advert)) {
-            
-
             foreach ($advert as $key => $value) {
                 if ($value['type'] == "img_top") {
                     array_push($newAdv['img_top'], ['id_advert' => $value['id_advert'], 'value' => $value['value'], 'news' => $value['news']]);
@@ -60,14 +56,15 @@ class AdvertController extends Controller
                 }
             }
         }
-        
+
         $advert = $newAdv;
         // dd(MyHelper::encrypt2019($advert));
         return response()->json(MyHelper::checkGet($advert));
     }
 
     /* CHECK POST */
-    function checkInput($post=[]) {
+    public function checkInput($post = [])
+    {
         $data = [];
 
         if (isset($post['type'])) {
@@ -82,9 +79,9 @@ class AdvertController extends Controller
             $data['order'] = $post['order'];
         }
 
-        if (isset($post['id_news']) && $post['id_news'] != null ){
+        if (isset($post['id_news']) && $post['id_news'] != null) {
             $data['id_news'] = $post['id_news'];
-        }else{
+        } else {
             $data['id_news'] = null;
         }
 
@@ -94,9 +91,8 @@ class AdvertController extends Controller
 
             $upload = MyHelper::uploadPhotoStrict($post['img_top'], $this->saveImage, 1080, 360);
             if (isset($upload['status']) && $upload['status'] == "success") {
-                $data['value'] = config('url.storage_url_api').$upload['path'];
-            }
-            else {
+                $data['value'] = config('url.storage_url_api') . $upload['path'];
+            } else {
                 $result = [
                     'error'    => 1,
                     'status'   => 'fail',
@@ -112,9 +108,8 @@ class AdvertController extends Controller
 
             $upload = MyHelper::uploadPhotoStrict($post['img_bottom'], $this->saveImage, 1080, 360);
             if (isset($upload['status']) && $upload['status'] == "success") {
-                $data['value'] = config('url.storage_url_api').$upload['path'];
-            }
-            else {
+                $data['value'] = config('url.storage_url_api') . $upload['path'];
+            } else {
                 $result = [
                     'error'    => 1,
                     'status'   => 'fail',
@@ -133,7 +128,8 @@ class AdvertController extends Controller
     }
 
     /* CREATE */
-    function create(Create $request) {
+    public function create(Create $request)
+    {
         $data = $this->checkInput($request->json()->all());
 
         if (isset($data['error'])) {
@@ -144,11 +140,9 @@ class AdvertController extends Controller
         if ($request->json('add')) {
                         // UPDATE OR CREATE
             $save = Advert::create($data);
-        }
-        elseif ($request->json('id_advert')) {
+        } elseif ($request->json('id_advert')) {
             $save = Advert::where('id_advert', $request->json('id_advert'))->update($data);
-        }
-        else {
+        } else {
             // UPDATE OR CREATE
             $save = Advert::updateOrCreate(['page' => $request->json('page'), 'type' => $request->json('type')], $data);
         }
@@ -158,7 +152,8 @@ class AdvertController extends Controller
     }
 
     /* DELETE IMAGE */
-    function deleteImage($page, $type) {
+    public function deleteImage($page, $type)
+    {
         $img = Advert::where('page', $page)->first();
 
         if ($img) {
@@ -178,7 +173,8 @@ class AdvertController extends Controller
     }
 
     /* DESTROY */
-    function destroy(Request $request) {
+    public function destroy(Request $request)
+    {
 
         $delete = Advert::select('*');
 
@@ -200,11 +196,9 @@ class AdvertController extends Controller
                 $img         = explode(config('url.storage_url_api'), $get->value);
                 $deletePhoto = MyHelper::deletePhoto($img[1]);
             }
-            
-            $delete = $delete->delete();
 
-        }
-        else {
+            $delete = $delete->delete();
+        } else {
             $delete = 1;
         }
 

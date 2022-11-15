@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use App\Lib\MyHelper;
-
 use Modules\Doctor\Entities\DoctorSpecialistCategory;
 use Modules\Doctor\Http\Requests\DoctorSpecialistCategoryCreate;
 use Validator;
@@ -91,7 +90,7 @@ class ApiDoctorSpecialistCategoryController extends Controller
             $id_doctor_specialist_category = $request->json('id_doctor_specialist_category');
             $specialist_exists = DoctorSpecialistCategory::join('doctors_specialists', 'doctors_specialists.id_doctor_specialist_category', '=', 'doctors_specialists_categories.id_doctor_specialist_category')
             ->where('doctors_specialists_categories.id_doctor_specialist_category', $id_doctor_specialist_category)->exists();
-            
+
             if ($specialist_exists) {
                 return response()->json([
                     'status' => 'fail',

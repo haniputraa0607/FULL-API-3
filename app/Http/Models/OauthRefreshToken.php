@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class OauthRefreshToken
- * 
+ *
  * @property string $id
  * @property string $access_token_id
  * @property bool $revoked
@@ -21,20 +21,20 @@ use Illuminate\Database\Eloquent\Model;
  */
 class OauthRefreshToken extends Model
 {
-	public $incrementing = false;
-	public $timestamps = false;
+    public $incrementing = false;
+    public $timestamps = false;
 
-	protected $casts = [
-		'revoked' => 'bool'
-	];
+    protected $casts = [
+        'revoked' => 'bool'
+    ];
 
-	protected $dates = [
-		'expires_at'
-	];
+    protected $dates = [
+        'expires_at'
+    ];
 
-	protected $fillable = [
-		'access_token_id',
-		'revoked',
-		'expires_at'
-	];
+    protected $fillable = [
+        'access_token_id',
+        'revoked',
+        'expires_at'
+    ];
 }

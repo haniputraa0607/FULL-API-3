@@ -28,7 +28,7 @@ class AuthServiceProvider extends ServiceProvider
         $this->registerPolicies();
 
         Passport::routes();
-        
+
         Route::group(['middleware' => ['custom_auth', 'decrypt_pin:password,username']], function () {
             Passport::tokensCan([
                 'be' => 'Manage admin panel scope',

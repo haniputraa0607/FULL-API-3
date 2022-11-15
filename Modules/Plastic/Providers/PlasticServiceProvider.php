@@ -39,10 +39,11 @@ class PlasticServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('plastic.php'),
+            __DIR__ . '/../Config/config.php' => config_path('plastic.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'plastic'
+            __DIR__ . '/../Config/config.php',
+            'plastic'
         );
     }
 
@@ -55,11 +56,11 @@ class PlasticServiceProvider extends ServiceProvider
     {
         $viewPath = resource_path('views/modules/plastic');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ],'views');
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
             return $path . '/modules/plastic';
@@ -78,7 +79,7 @@ class PlasticServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'plastic');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'plastic');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'plastic');
         }
     }
 

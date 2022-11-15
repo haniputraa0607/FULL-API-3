@@ -5,25 +5,21 @@ namespace Modules\Transaction\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use Modules\Transaction\Entities\LogInvalidTransaction;
 use Modules\Transaction\Entities\TransactionGroup;
 use Modules\Xendit\Entities\TransactionPaymentXendit;
 use Queue;
 use App\Lib\Midtrans;
-
 use App\Lib\MyHelper;
 use App\Lib\PushNotificationHelper;
-use App\Lib\classTexterSMS;
+use App\Lib\ClassTexterSMS;
 use App\Lib\classMaskingJson;
-use App\Lib\apiwha;
+use App\Lib\Apiwha;
 use Validator;
 use Hash;
 use DB;
 use Mail;
-
 use App\Jobs\CronBalance;
-
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\TransactionPaymentBalance;
@@ -70,7 +66,7 @@ class ApiCronTrxController extends Controller
             $crossLine = date('Y-m-d H:i:s', strtotime('- 3days'));
             $dateLine  = date('Y-m-d H:i:s', strtotime('- 1days'));
             $now       = date('Y-m-d H:i:s');
-            $expired   = date('Y-m-d H:i:s',strtotime('- 5minutes'));
+            $expired   = date('Y-m-d H:i:s', strtotime('- 5minutes'));
 
             $getTrx = TransactionGroup::where('transaction_payment_status', 'Pending')
                 ->whereNotNull('transaction_payment_type')
@@ -98,62 +94,65 @@ class ApiCronTrxController extends Controller
                 if (empty($user)) {
                     continue;
                 }
-                if($payment_type == 'Midtrans') {
+                if ($payment_type == 'Midtrans') {
                     $dtMidtrans = TransactionPaymentMidtran::where('id_transaction_group', $singleTrx->id_transaction_group)->first();
 
-                    if(empty($dtMidtrans)){
+                    if (empty($dtMidtrans)) {
                         continue;
                     }
 
-                    $paymentMethod = str_replace(" ","_",$dtMidtrans['payment_type']);
-                    $configTime = config('payment_method.midtrans_'.strtolower($paymentMethod).'.refund_time');
-                    $configTime = (int)$configTime;;
+                    $paymentMethod = str_replace(" ", "_", $dtMidtrans['payment_type']);
+                    $configTime = config('payment_method.midtrans_' . strtolower($paymentMethod) . '.refund_time');
+                    $configTime = (int)$configTime;
+                    ;
                     $trxDate = strtotime($singleTrx->transaction_group_date);
                     $currentDate = strtotime(date('Y-m-d H:i:s'));
                     $mins = ($currentDate - $trxDate) / 60;
-                    if($mins < $configTime){
+                    if ($mins < $configTime) {
                         continue;
                     }
 
                     $midtransStatus = Midtrans::status($singleTrx->id_transaction_group);
-                    if(!empty($midtransStatus['status_code']) && $midtransStatus['status_code'] == 200){
+                    if (!empty($midtransStatus['status_code']) && $midtransStatus['status_code'] == 200) {
                         $singleTrx->triggerPaymentCompleted();
                         continue;
-                    }elseif ((($midtransStatus['status'] ?? false) == 'fail' && ($midtransStatus['messages'][0] ?? false) == 'Midtrans payment not found') || in_array(($midtransStatus['response']['transaction_status'] ?? $midtransStatus['transaction_status'] ?? false), ['deny', 'cancel', 'expire', 'failure']) || ($midtransStatus['status_code'] ?? false) == '404' ||
-                        (!empty($midtransStatus['payment_type']) && $midtransStatus['payment_type'] == 'gopay' && $midtransStatus['transaction_status'] == 'pending')) {
+                    } elseif (
+                        (($midtransStatus['status'] ?? false) == 'fail' && ($midtransStatus['messages'][0] ?? false) == 'Midtrans payment not found') || in_array(($midtransStatus['response']['transaction_status'] ?? $midtransStatus['transaction_status'] ?? false), ['deny', 'cancel', 'expire', 'failure']) || ($midtransStatus['status_code'] ?? false) == '404' ||
+                        (!empty($midtransStatus['payment_type']) && $midtransStatus['payment_type'] == 'gopay' && $midtransStatus['transaction_status'] == 'pending')
+                    ) {
                         $connectMidtrans = Midtrans::expire($singleTrx->transaction_receipt_number);
 
-                        if(!$connectMidtrans){
+                        if (!$connectMidtrans) {
                             continue;
                         }
                     }
-                }elseif ($payment_type == 'Xendit'){
+                } elseif ($payment_type == 'Xendit') {
                     $dtXendit = TransactionPaymentXendit::where('id_transaction_group', $singleTrx->id_transaction_group)->first();
-                    if(empty($dtXendit['xendit_id'])){
+                    if (empty($dtXendit['xendit_id'])) {
                         continue;
                     }
 
-                    $paymentMethod = str_replace(" ","_",$dtXendit['type']);
-                    $configTime = config('payment_method.xendit_'.strtolower($paymentMethod).'.refund_time');
+                    $paymentMethod = str_replace(" ", "_", $dtXendit['type']);
+                    $configTime = config('payment_method.xendit_' . strtolower($paymentMethod) . '.refund_time');
                     $configTime = (int)$configTime;
                     $trxDate = strtotime($singleTrx->transaction_group_date);
                     $currentDate = strtotime(date('Y-m-d H:i:s'));
                     $mins = ($currentDate - $trxDate) / 60;
-                    if($mins < $configTime){
+                    if ($mins < $configTime) {
                         continue;
                     }
 
-                    if(!empty($dtXendit->xendit_id)){
+                    if (!empty($dtXendit->xendit_id)) {
                         $status = app('Modules\Xendit\Http\Controllers\XenditController')->checkStatus($dtXendit->xendit_id, $dtXendit->type);
                         if ($status && $status['status'] == 'PENDING') {
                             $cancel = app('Modules\Xendit\Http\Controllers\XenditController')->expireInvoice($dtXendit['xendit_id']);
-                            if(!$cancel){
+                            if (!$cancel) {
                                 continue;
                             }
-                        }elseif($status && ($status['status'] == 'COMPLETED' || $status['status'] == 'PAID')){
+                        } elseif ($status && ($status['status'] == 'COMPLETED' || $status['status'] == 'PAID')) {
                             $singleTrx->triggerPaymentCompleted();
                             continue;
-                        }else{
+                        } else {
                             continue;
                         }
                     }
@@ -201,12 +200,12 @@ class ApiCronTrxController extends Controller
             }
 
             if (!empty($result)) {
-                $crm = Autocrm::where('autocrm_title','=','Cron Transaction')->with('whatsapp_content')->first();
+                $crm = Autocrm::where('autocrm_title', '=', 'Cron Transaction')->with('whatsapp_content')->first();
                 if (!empty($crm)) {
-                    if(!empty($crm['autocrm_forward_email'])){
-                        $exparr = explode(';',str_replace(',',';',$crm['autocrm_forward_email']));
-                        foreach($exparr as $email){
-                            $n   = explode('@',$email);
+                    if (!empty($crm['autocrm_forward_email'])) {
+                        $exparr = explode(';', str_replace(',', ';', $crm['autocrm_forward_email']));
+                        foreach ($exparr as $email) {
+                            $n   = explode('@', $email);
                             $name = $n[0];
 
                             $to      = $email;
@@ -230,26 +229,25 @@ class ApiCronTrxController extends Controller
                                 'setting'      => $setting
                             );
 
-                            Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
-                            {
+                            Mail::send('emails.test', $data, function ($message) use ($to, $subject, $name, $setting) {
                                 $message->to($to, $name)->subject($subject);
-                                if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+                                if (!empty($setting['email_from']) && !empty($setting['email_sender'])) {
                                     $message->from($setting['email_sender'], $setting['email_from']);
-                                }else if(!empty($setting['email_sender'])){
+                                } elseif (!empty($setting['email_sender'])) {
                                     $message->from($setting['email_sender']);
                                 }
 
-                                if(!empty($setting['email_reply_to']) && !empty($setting['email_reply_to_name'])){
+                                if (!empty($setting['email_reply_to']) && !empty($setting['email_reply_to_name'])) {
                                     $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
-                                }else if(!empty($setting['email_reply_to'])){
+                                } elseif (!empty($setting['email_reply_to'])) {
                                     $message->replyTo($setting['email_reply_to']);
                                 }
 
-                                if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
+                                if (!empty($setting['email_cc']) && !empty($setting['email_cc_name'])) {
                                     $message->cc($setting['email_cc'], $setting['email_cc_name']);
                                 }
 
-                                if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
+                                if (!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])) {
                                     $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
                                 }
                             });
@@ -290,63 +288,63 @@ class ApiCronTrxController extends Controller
                 $detail = Transaction::with('outlet', 'transaction_pickup')->where('id_transaction', $value['id_reference'])->first();
 
                 $label .= '<tr>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.($key+1).'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . ($key + 1) . '</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">Real</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$user['name'].'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$real->source.'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.date('Y-m-d', strtotime($detail['created_at'])).'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$detail['transaction_receipt_number'].'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$detail['transaction_pickup']['order_id'].'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$real->balance.'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$real->balance_before.'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$real->balance_after.'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$real->grand_total.'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$real->membership_level.'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $user['name'] . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $real->source . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . date('Y-m-d', strtotime($detail['created_at'])) . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $detail['transaction_receipt_number'] . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $detail['transaction_pickup']['order_id'] . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $real->balance . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $real->balance_before . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $real->balance_after . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $real->grand_total . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $real->membership_level . '</td>
   </tr>
   <tr>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">-</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">Change</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$user['name'].'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['source'].'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.date('Y-m-d', strtotime($detail['created_at'])).'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$detail['transaction_receipt_number'].'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$detail['transaction_pickup']['order_id'].'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['balance'].'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['balance_before'].'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['balance_after'].'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['grand_total'].'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['membership_level'].'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $user['name'] . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $value['source'] . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . date('Y-m-d', strtotime($detail['created_at'])) . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $detail['transaction_receipt_number'] . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $detail['transaction_pickup']['order_id'] . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $value['balance'] . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $value['balance_before'] . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $value['balance_after'] . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $value['grand_total'] . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $value['membership_level'] . '</td>
   </tr>';
             } else {
                 $label .= '<tr>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.($key+1).'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . ($key + 1) . '</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">Real</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$user['name'].'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['source'].'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.date('Y-m-d', strtotime($value['created_at'])).'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $user['name'] . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $value['source'] . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . date('Y-m-d', strtotime($value['created_at'])) . '</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">-</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">-</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">-</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$real->balance.'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$real->balance_before.'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$real->balance_after.'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$real->grand_total.'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$real->membership_level.'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $real->balance . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $real->balance_before . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $real->balance_after . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $real->grand_total . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $real->membership_level . '</td>
   </tr>
   <tr>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">-</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">Change</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$user['name'].'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['source'].'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.date('Y-m-d', strtotime($value['created_at'])).'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $user['name'] . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $value['source'] . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . date('Y-m-d', strtotime($value['created_at'])) . '</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">-</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">-</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">-</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['balance'].'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['balance_before'].'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['balance_after'].'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['grand_total'].'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['membership_level'].'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $value['balance'] . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $value['balance_before'] . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $value['balance_after'] . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $value['grand_total'] . '</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">' . $value['membership_level'] . '</td>
   </tr>';
             }
         }
@@ -365,16 +363,17 @@ class ApiCronTrxController extends Controller
     <th style="border: 1px solid #dddddd;text-align: left;padding: 8px;">Grand Total</th>
     <th style="border: 1px solid #dddddd;text-align: left;padding: 8px;">Membership Level</th>
   </tr>
-  '.$label.'
+  ' . $label . '
 </table>';
     }
 
-    public function completeTransactionPickup(){
+    public function completeTransactionPickup()
+    {
         $log = MyHelper::logCron('Complete Transaction Pickup');
         try {
             $trxs = Transaction::whereDate('transaction_date', '>=', date('Y-m-d', strtotime('yesterday')))
                 ->where('trasaction_type', 'Pickup Order')
-                ->join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
+                ->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
                 ->where('transaction_payment_status', 'Completed')
                 ->whereNotNull('receive_at')
                 ->whereNull('taken_at')
@@ -394,13 +393,13 @@ class ApiCronTrxController extends Controller
             $shared = \App\Lib\TemporaryDataManager::create('reject_order');
             $shared['reject_batch'] = true;
             $shared['void_failed'] = collect([]);
-            
+
             foreach ($trxs as $newTrx) {
                 $idTrx[] = $newTrx->id_transaction;
-                if(
-                    !empty($newTrx->ready_at) || //   has been marked ready   or 
+                if (
+                    !empty($newTrx->ready_at) || //   has been marked ready   or
                     $newTrx->transaction_payment_status != 'Completed'// payment status not complete  or
-                ){
+                ) {
                     // continue without reject
                     continue;
                 }
@@ -452,7 +451,7 @@ class ApiCronTrxController extends Controller
             // foreach ($trxs as $newTrx) {
             //     $idTrx[] = $newTrx->id_transaction;
             //     if(
-            //         !empty($newTrx->ready_at) || //   has been marked ready   or 
+            //         !empty($newTrx->ready_at) || //   has been marked ready   or
             //         $newTrx->transaction_payment_status != 'Completed' || // payment status not complete  or
             //         $newTrx->cashback_insert_status || // cashback has been given   or
             //         $newTrx->pickup_by != 'Customer' // not pickup by the customer
@@ -471,7 +470,7 @@ class ApiCronTrxController extends Controller
             //     if ((!in_array('Balance', $column) || $use_referral) && $newTrx->user) {
 
             //         $promo_source = null;
-            //         if ( $newTrx->id_promo_campaign_promo_code || $newTrx->transaction_vouchers || $use_referral) 
+            //         if ( $newTrx->id_promo_campaign_promo_code || $newTrx->transaction_vouchers || $use_referral)
             //         {
             //             if ( $newTrx->id_promo_campaign_promo_code ) {
             //                 $promo_source = 'promo_code';
@@ -493,7 +492,7 @@ class ApiCronTrxController extends Controller
             //         //check achievement
             //         AchievementCheck::dispatch(['id_transaction' => $newTrx->id_transaction, 'phone' => $newTrx->user->phone])->onConnection('achievement');
             //     }
-            
+
             // }
             //update taken_by_sistem_at
             $dataTrx = TransactionPickup::whereIn('id_transaction', $idTrx)
@@ -506,14 +505,14 @@ class ApiCronTrxController extends Controller
 
             //change status transaction to invalid transaction
             $dataTrx = Transaction::join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
-                ->join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
+                ->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
                 ->leftJoin('disburse_outlet_transactions as dot', 'dot.id_transaction', 'transactions.id_transaction')
                 ->whereDate('transaction_date', '<', date('Y-m-d'))
                 ->where('trasaction_type', 'Pickup Order')
                 ->where('transactions.transaction_payment_status', 'Completed')
                 ->whereNull('receive_at')
                 ->whereNull('reject_at')
-                ->where(function ($q){
+                ->where(function ($q) {
                     $q->whereNotNull('transaction_pickups.taken_at')
                         ->orWhereNotNull('transaction_pickups.taken_by_system_at');
                 })
@@ -521,12 +520,12 @@ class ApiCronTrxController extends Controller
                 ->whereNull('dot.id_disburse_outlet')
                 ->pluck('transactions.id_transaction')->toArray();
 
-            if(!empty($dataTrx)){
+            if (!empty($dataTrx)) {
                 $updateTrx = Transaction::whereIn('id_transaction', $dataTrx)
                     ->update(['transaction_flag_invalid' => 'Invalid']);
-                if($updateTrx){
+                if ($updateTrx) {
                     $dtLog = [];
-                    foreach ($dataTrx as $idTransaction){
+                    foreach ($dataTrx as $idTransaction) {
                         $dtLog[] = [
                             'id_transaction' => $idTransaction,
                             'reason' => 'failed reject [by system]',
@@ -550,18 +549,18 @@ class ApiCronTrxController extends Controller
     public function cancelTransactionIPay()
     {
         // 15 minutes before
-        $max_time = date('Y-m-d H:i:s',time()-900);
+        $max_time = date('Y-m-d H:i:s', time() - 900);
         $trxs = Transaction::select('id_transaction')->where([
             'trasaction_payment_type' => 'Ipay88',
             'transaction_payment_status' => 'Pending'
-        ])->where('transaction_date','<',$max_time)->take(50)->pluck('id_transaction');
+        ])->where('transaction_date', '<', $max_time)->take(50)->pluck('id_transaction');
         foreach ($trxs as $id_trx) {
-            $trx_ipay = TransactionPaymentIpay88::where('id_transaction',$id_trx)->first();
-            $update = \Modules\IPay88\Lib\IPay88::create()->update($trx_ipay?:$id_trx,[
-                'type' =>'trx',
+            $trx_ipay = TransactionPaymentIpay88::where('id_transaction', $id_trx)->first();
+            $update = \Modules\IPay88\Lib\IPay88::create()->update($trx_ipay ?: $id_trx, [
+                'type' => 'trx',
                 'Status' => '0',
                 'requery_response' => 'Cancelled by cron'
-            ],false,false);
+            ], false, false);
         }
     }
 
@@ -569,21 +568,21 @@ class ApiCronTrxController extends Controller
     {
         $log = MyHelper::logCron('Auto Reject Order');
         try {
-            $minutes = (int) MyHelper::setting('auto_reject_time','value', 15)*60;
-            $max_time = date('Y-m-d H:i:s',time()-$minutes);
+            $minutes = (int) MyHelper::setting('auto_reject_time', 'value', 15) * 60;
+            $max_time = date('Y-m-d H:i:s', time() - $minutes);
 
             $trxs = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
-                ->where('transactions.transaction_payment_status','Completed')
+                ->where('transactions.transaction_payment_status', 'Completed')
                 ->whereNull('receive_at')
                 ->whereNull('reject_at')
                 ->whereNull('taken_by_system_at')
                 ->with('outlet')
                 ->whereDate('transactions.transaction_date', '>=', date('Y-m-d', strtotime('yesterday')))
-                ->where(function($query) use ($max_time) {
-                    $query->where(function($query2) use ($max_time) {
+                ->where(function ($query) use ($max_time) {
+                    $query->where(function ($query2) use ($max_time) {
                         $query2->whereNotNull('completed_at')->where('completed_at', '<', $max_time);
                     })
-                    ->orWhere(function($query2) use ($max_time) {
+                    ->orWhere(function ($query2) use ($max_time) {
                         $query2->whereNull('completed_at')->where('transaction_date', '<', $max_time);
                     });
                 })
@@ -598,7 +597,7 @@ class ApiCronTrxController extends Controller
             $shared = \App\Lib\TemporaryDataManager::create('reject_order');
             $shared['reject_batch'] = true;
             $shared['void_failed'] = collect([]);
-            
+
             foreach ($trxs as $transaction) {
                 $params = [
                     'order_id' => $transaction['order_id'],
@@ -700,9 +699,9 @@ class ApiCronTrxController extends Controller
                             'subject' => 'Order ditolak oleh sistem',
                             'string_body' => 'Outlet tidak merespon order JIWA+',
                             'type' => 'trx',
-                            'id_reference'=> $transaction['id_transaction']
+                            'id_reference' => $transaction['id_transaction']
                         ];
-                        app('Modules\OutletApp\Http\Controllers\ApiOutletApp')->outletNotif($dataNotif,$transaction->id_outlet);
+                        app('Modules\OutletApp\Http\Controllers\ApiOutletApp')->outletNotif($dataNotif, $transaction->id_outlet);
                         $processed['rejected']++;
                     } else {
                         $processed['failed_reject']++;

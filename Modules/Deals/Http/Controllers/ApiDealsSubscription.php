@@ -5,20 +5,16 @@ namespace Modules\Deals\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use Modules\Deals\Http\Requests\Deals\Create;
 use Modules\Deals\Http\Controllers\ApiDeals;
-
 use App\Http\Models\Deal;
 use App\Http\Models\DealsOutlet;
 use App\Http\Models\DealsSubscription;
-
 use App\Lib\MyHelper;
 use DB;
 
 class ApiDealsSubscription extends Controller
 {
-    
     /**
      * Show the form for creating a new resource.
      * @return Response
@@ -26,7 +22,7 @@ class ApiDealsSubscription extends Controller
     public function create(Create $request)
     {
         $post = $request->json()->all();
-        if (isset($post['voucher_subscriptions'])) { 
+        if (isset($post['voucher_subscriptions'])) {
             $voucher_subs = $post['voucher_subscriptions'];
             unset($post['voucher_subscriptions']);
         }
@@ -87,8 +83,7 @@ class ApiDealsSubscription extends Controller
             if ($save_subscription) {
                 DB::commit();
             }
-        }
-        else {
+        } else {
             DB::rollback();
         }
 
@@ -98,14 +93,13 @@ class ApiDealsSubscription extends Controller
     private function checkInput($post)
     {
         $data = $post;
-        if (isset($post['deals_image'])) { 
+        if (isset($post['deals_image'])) {
             $path = "img/deals/";
             $upload = MyHelper::uploadPhotoStrict($post['deals_image'], $path, 300, 300);
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $data['deals_image'] = $upload['path'];
-            }
-            else {
+            } else {
                 $result = [
                     'error'    => 1,
                     'status'   => 'fail',
@@ -115,19 +109,19 @@ class ApiDealsSubscription extends Controller
                 return $result;
             }
         }
-        if (!isset($post['deals_total_voucher'])) { 
+        if (!isset($post['deals_total_voucher'])) {
             $data['deals_total_voucher'] = 0;
         }
-        if (isset($post['deals_start'])) { 
+        if (isset($post['deals_start'])) {
             $data['deals_start'] = date('Y-m-d H:i:s', strtotime($post['deals_start']));
         }
-        if (isset($post['deals_end'])) { 
+        if (isset($post['deals_end'])) {
             $data['deals_end'] = date('Y-m-d H:i:s', strtotime($post['deals_end']));
         }
-        if (isset($post['deals_publish_start'])) { 
+        if (isset($post['deals_publish_start'])) {
             $data['deals_publish_start'] = date('Y-m-d H:i:s', strtotime($post['deals_publish_start']));
         }
-        if (isset($post['deals_publish_end'])) { 
+        if (isset($post['deals_publish_end'])) {
             $data['deals_publish_end'] = date('Y-m-d H:i:s', strtotime($post['deals_publish_end']));
         }
 
@@ -161,14 +155,14 @@ class ApiDealsSubscription extends Controller
     {
         $post = $request->json()->all();
         $id_deals = $post['id_deals'];
-        
+
         unset($post['prices_by']);
 
-        if (isset($post['voucher_subscriptions'])) { 
+        if (isset($post['voucher_subscriptions'])) {
             $voucher_subs = $post['voucher_subscriptions'];
             unset($post['voucher_subscriptions']);
         }
-        if (isset($post['id_outlet'])) { 
+        if (isset($post['id_outlet'])) {
             $id_outlets = $post['id_outlet'];
             unset($post['id_outlet']);
         }
@@ -227,7 +221,7 @@ class ApiDealsSubscription extends Controller
                     'voucher_end' => $subscription['voucher_end']
                 ];
 
-                $update_subs = DealsSubscription::updateOrCreate(['id_deals_subscription'=>$id], $item);
+                $update_subs = DealsSubscription::updateOrCreate(['id_deals_subscription' => $id], $item);
                 array_push($id_subscriptions, $update_subs->id_deals_subscription);
 
                 if (!$update_subs) {
@@ -254,8 +248,7 @@ class ApiDealsSubscription extends Controller
             $delete = DealsSubscription::where('id_deals', $id_deals)->whereNotIn('id_deals_subscription', $id_subscriptions)->delete();
 
             DB::commit();
-        }
-        else {
+        } else {
             DB::rollback();
         }
 
@@ -286,13 +279,13 @@ class ApiDealsSubscription extends Controller
             $delete_image = MyHelper::deletePhoto($deals->deals_image);
 
             $delete = Deal::where('id_deals', $id_deals)->delete();
-            if (!$delete) {
-                DB::rollback();
-                return response()->json([
-                    'status'   => 'fail',
-                    'messages' => ['Delete data failed']
-                ]);
-            }
+        if (!$delete) {
+            DB::rollback();
+            return response()->json([
+                'status'   => 'fail',
+                'messages' => ['Delete data failed']
+            ]);
+        }
         DB::commit();
 
         return ['status' => 'success', 'result' => $delete];

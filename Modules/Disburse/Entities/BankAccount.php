@@ -7,16 +7,16 @@ use Illuminate\Database\Eloquent\Model;
 class BankAccount extends Model
 {
     protected $table = 'bank_accounts';
-	protected $primaryKey = 'id_bank_account';
+    protected $primaryKey = 'id_bank_account';
 
-	protected $fillable = [
-	    'id_bank_name',
-		'beneficiary_name',
+    protected $fillable = [
+        'id_bank_name',
+        'beneficiary_name',
         'beneficiary_account',
         'beneficiary_alias',
         'beneficiary_email',
         'send_email_to'
-	];
+    ];
 
     public function bank_account_outlet()
     {

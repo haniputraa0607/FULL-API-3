@@ -5,22 +5,20 @@ namespace Modules\Balance\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
 use App\Http\Models\Outlet;
 use App\Http\Models\User;
 use App\Http\Models\TransactionBalance;
 use App\Http\Models\UsersMembership;
 use App\Http\Models\Setting;
 use App\Http\Models\LogBalance;
-
 use App\Lib\MyHelper;
-
 use DB;
 use Hash;
 
 class UseSaldoController extends Controller
 {
-    function __construct() {
+    public function __construct()
+    {
         date_default_timezone_set('Asia/Jakarta');
         $this->pos     = "Modules\POS\Http\Controllers\ApiPOS";
         $this->topup   = "Modules\Balance\Http\Controllers\NewTopupController";
@@ -35,9 +33,9 @@ class UseSaldoController extends Controller
         $post = $request->json()->all();
 
         $api = app($this->pos)->checkApi($post['api_key'], $post['api_secret']);
-        if ($api['status'] != 'success') { 
-            return response()->json($api); 
-        } 
+        if ($api['status'] != 'success') {
+            return response()->json($api);
+        }
 
         $checkOutlet = Outlet::where('outlet_code', $post['store_code'])->first();
         if (empty($checkOutlet)) {
@@ -47,15 +45,15 @@ class UseSaldoController extends Controller
 
         $qr = $post['uid'];
         $timestamp = substr($qr, 0, 10);
-        $phoneqr = str_replace($timestamp,'',$qr);
+        $phoneqr = str_replace($timestamp, '', $qr);
 
         $time = date('Y-m-d h:i:s', strtotime('+10 minutes', strtotime(date('Y-m-d h:i:s', $timestamp))));
         if (date('Y-m-d h:i:s') > $time) {
             DB::rollback();
-            return response()->json(['status' => 'fail', 'messages' => ['Mohon refresh qrcode dan ulangi scan member']]); 
+            return response()->json(['status' => 'fail', 'messages' => ['Mohon refresh qrcode dan ulangi scan member']]);
         }
 
-        $user = User::where('phone', $phoneqr)->first(); 
+        $user = User::where('phone', $phoneqr)->first();
         if (empty($user)) {
             DB::rollback();
             return response()->json(['status' => 'fail', 'messages' => ['User not found']]);
@@ -68,7 +66,7 @@ class UseSaldoController extends Controller
         }
 
         $data = [
-            'receipt_number' => 'USE-'.date('Ymdis').'-BL',
+            'receipt_number' => 'USE-' . date('Ymdis') . '-BL',
             'id_user'        => $user['id'],
             'id_outlet'      => $checkOutlet['id_outlet'],
             'nominal'        => $post['amount'],
@@ -112,23 +110,23 @@ class UseSaldoController extends Controller
 
         $qr = $post['uid'];
         $timestamp = substr($qr, 0, 10);
-        $phoneqr = str_replace($timestamp,'',$qr);
+        $phoneqr = str_replace($timestamp, '', $qr);
 
         $time = date('Y-m-d h:i:s', strtotime('+10 minutes', strtotime(date('Y-m-d h:i:s', $timestamp))));
         if (date('Y-m-d h:i:s') > $time) {
             // DB::rollback();
-            // return response()->json(['status' => 'fail', 'messages' => ['Mohon refresh qrcode dan ulangi scan member']]); 
+            // return response()->json(['status' => 'fail', 'messages' => ['Mohon refresh qrcode dan ulangi scan member']]);
         }
 
-        $user = User::where('phone', $phoneqr)->first(); 
+        $user = User::where('phone', $phoneqr)->first();
         if (empty($user)) {
             DB::rollback();
             return response()->json(['status' => 'fail', 'messages' => ['User not found']]);
         }
 
         $api = app($this->pos)->checkApi($post['api_key'], $post['api_secret']);
-        if ($api['status'] != 'success') { 
-            return response()->json($api); 
+        if ($api['status'] != 'success') {
+            return response()->json($api);
         }
 
         if (date('Y-m-d H:i:s') > date('Y-m-d H:i:s', strtotime($checkAp['expired_at']))) {
@@ -239,23 +237,23 @@ class UseSaldoController extends Controller
 
         $qr = $post['uid'];
         $timestamp = substr($qr, 0, 10);
-        $phoneqr = str_replace($timestamp,'',$qr);
+        $phoneqr = str_replace($timestamp, '', $qr);
 
         $time = date('Y-m-d h:i:s', strtotime('+10 minutes', strtotime(date('Y-m-d h:i:s', $timestamp))));
         if (date('Y-m-d h:i:s') > $time) {
             // DB::rollback();
-            // return response()->json(['status' => 'fail', 'messages' => ['Mohon refresh qrcode dan ulangi scan member']]); 
+            // return response()->json(['status' => 'fail', 'messages' => ['Mohon refresh qrcode dan ulangi scan member']]);
         }
 
-        $user = User::where('phone', $phoneqr)->first(); 
+        $user = User::where('phone', $phoneqr)->first();
         if (empty($user)) {
             DB::rollback();
             return response()->json(['status' => 'fail', 'messages' => ['User not found']]);
         }
 
         $api = app($this->pos)->checkApi($post['api_key'], $post['api_secret']);
-        if ($api['status'] != 'success') { 
-            return response()->json($api); 
+        if ($api['status'] != 'success') {
+            return response()->json($api);
         }
 
         $checkHashBefore = app($this->topup)->checkHash('log_balances', $user['id']);
