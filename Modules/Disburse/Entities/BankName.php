@@ -12,6 +12,7 @@ class BankName extends Model
     protected $fillable = [
         'bank_code',
         'bank_name',
-        'withdrawal_fee_formula'
+        'bank_image',
+        'withdrawal_fee_formula',
     ];
 }
