@@ -513,15 +513,27 @@ class Transaction extends Model
         // send notification
         // TODO write notification logic here
         $user = User::where('id', $this->id_user)->first();
-        $outlet = Outlet::where('id_outlet', $this->id_outlet)->first();
-        app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM('Transaction Reject', $user['phone'], [
-            "outlet_name"      => $outlet['outlet_name'],
-            "id_reference"     => $this->transaction_receipt_number . ',' . $this->id_outlet,
-            "transaction_date" => $this->transaction_date,
-            'id_transaction'   => $this->id_transaction,
-            'receipt_number'   => $this->transaction_receipt_number,
-            'reject_reason'    => $data['reject_reason'] ?? null
-        ]);
+        if ($this->trasaction_type == 'Consultation') {
+            $consultation = TransactionConsultation::where('id_transaction', $this->id_transaction)->with('doctor')->first();
+            app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM('Consultation Canceled', $user['phone'], [
+                "docter_name"      => $consultation['doctor']['doctor_name'] ?? '',
+                'id_transaction'   => $this->id_transaction,
+                'receipt_number'   => $this->transaction_receipt_number,
+                'consultation_date' => MyHelper::dateFormatInd($consultation['schedule_date'], true, false),
+                'consultation_time' => date('H:i', strtotime($consultation['schedule_start_time'])) . ' - ' . date('H:i', strtotime($consultation['schedule_end_time'])),
+                'reject_reason' => $data['reject_reason'] ?? null
+            ]);
+        } else {
+            $outlet = Outlet::where('id_outlet', $this->id_outlet)->first();
+            app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM('Transaction Reject', $user['phone'], [
+                "outlet_name"      => $outlet['outlet_name'],
+                "id_reference"     => $this->transaction_receipt_number . ',' . $this->id_outlet,
+                "transaction_date" => $this->transaction_date,
+                'id_transaction'   => $this->id_transaction,
+                'receipt_number'   => $this->transaction_receipt_number,
+                'reject_reason'    => $data['reject_reason'] ?? null
+            ]);
+        }
 
         \DB::commit();
         return true;

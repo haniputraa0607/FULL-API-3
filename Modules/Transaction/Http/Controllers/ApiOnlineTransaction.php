@@ -2700,6 +2700,7 @@ class ApiOnlineTransaction extends Controller
                         } else {
                             $checkRecipe = TransactionConsultation::join('transaction_consultation_recomendations', 'transaction_consultation_recomendations.id_transaction_consultation', 'transaction_consultations.id_transaction_consultation')
                                 ->whereNotNull('completed_at')
+                                ->whereNotIn('consultation_status', ['canceled'])
                                 ->where('id_user', $idUser)->where('product_type', 'Drug')->where('id_product', $product['id_product'])->first();
                         }
 
