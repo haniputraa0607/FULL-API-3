@@ -3029,6 +3029,36 @@ Message :
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s')
                 ),
+            86 =>
+                array (
+                    'id_autocrm' => 87,
+                    'autocrm_type' => 'Response',
+                    'autocrm_trigger' => 'Daily',
+                    'autocrm_cron_reference' => NULL,
+                    'autocrm_title' => 'Consultation Canceled',
+                    'autocrm_email_toogle' => '0',
+                    'autocrm_sms_toogle' => '0',
+                    'autocrm_push_toogle' => '0',
+                    'autocrm_inbox_toogle' => '0',
+                    'autocrm_forward_toogle' => '0',
+                    'autocrm_email_subject' => NULL,
+                    'autocrm_email_content' => NULL,
+                    'autocrm_sms_content' => NULL,
+                    'autocrm_push_subject' => NULL,
+                    'autocrm_push_content' => NULL,
+                    'autocrm_push_image' => NULL,
+                    'autocrm_push_clickto' => NULL,
+                    'autocrm_push_link' => NULL,
+                    'autocrm_push_id_reference' => NULL,
+                    'autocrm_inbox_subject' => NULL,
+                    'autocrm_inbox_content' => NULL,
+                    'autocrm_forward_email' => NULL,
+                    'autocrm_forward_email_subject' => NULL,
+                    'autocrm_forward_email_content' => NULL,
+                    'custom_text_replace'=>'%docter_name%;%consultation_date%;%consultation_time%;%reject_reason%;%receipt_number%',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s')
+                )
         );
 
         foreach ($rows as $row) {

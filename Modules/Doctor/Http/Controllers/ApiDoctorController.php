@@ -791,6 +791,7 @@ class ApiDoctorController extends Controller
 
                             //cek validation avaibility time from consultation
                             $doctor_constultation = TransactionConsultation::where('id_doctor', $id_doctor)->where('schedule_date', $post['date'])
+                            ->whereNotIn('consultation_status', ['canceled'])
                             ->where('schedule_start_time', $post['time'])->count();
                             $getSetting = Setting::where('key', 'max_consultation_quota')->first()->toArray();
                             $quota = $getSetting['value'];

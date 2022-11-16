@@ -112,6 +112,7 @@ class ApiTransactionConsultationController extends Controller
 
         //get doctor consultation
         $doctor_constultation = TransactionConsultation::where('id_doctor', $id_doctor)->where('schedule_date', $picked_date)
+                                ->whereNotIn('consultation_status', ['canceled'])
                                 ->where('schedule_start_time', $picked_time)->count();
 
         $getSetting = Setting::where('key', 'max_consultation_quota')->first()->toArray();
@@ -299,6 +300,7 @@ class ApiTransactionConsultationController extends Controller
 
         //get doctor consultation
         $doctor_constultation = TransactionConsultation::where('id_doctor', $id_doctor)->where('schedule_date', $picked_date)
+                                ->whereNotIn('consultation_status', ['canceled'])
                                 ->where('schedule_start_time', $picked_time)->count();
         $getSetting = Setting::where('key', 'max_consultation_quota')->first()->toArray();
         $quota = $getSetting['value'];
@@ -3854,6 +3856,13 @@ class ApiTransactionConsultationController extends Controller
             'id_user_modifier' => 1
         ]);
 
+        if($update && strtolower($post['consultation_status']) == 'canceled'){
+            $transaction->triggerReject([
+                'id_transaction' => $transaction['id_transaction'],
+                'reject_reason' => $post['reason_status_change']??'Konsultasi dibatalkan'
+            ]);
+        }
+
         $result = TransactionConsultation::where('id_transaction', $transaction['id_transaction'])->first();
 
         return response()->json(['status'  => 'success', 'result' => $result]);
@@ -3970,6 +3979,7 @@ class ApiTransactionConsultationController extends Controller
 
         //get doctor consultation
         $doctor_constultation = TransactionConsultation::where('id_doctor', $id_doctor)->where('schedule_date', $picked_date)
+                                ->whereNotIn('consultation_status', ['canceled'])
                                 ->where('schedule_start_time', $picked_time)->count();
 
         $getSettingQuota = Setting::where('key', 'max_consultation_quota')->first()->toArray();
