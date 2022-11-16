@@ -3856,10 +3856,10 @@ class ApiTransactionConsultationController extends Controller
             'id_user_modifier' => 1
         ]);
 
-        if($update && strtolower($post['consultation_status']) == 'canceled'){
+        if ($update && strtolower($post['consultation_status']) == 'canceled') {
             $transaction->triggerReject([
                 'id_transaction' => $transaction['id_transaction'],
-                'reject_reason' => $post['reason_status_change']??'Konsultasi dibatalkan'
+                'reject_reason' => $post['reason_status_change'] ?? 'Konsultasi dibatalkan'
             ]);
         }
 
