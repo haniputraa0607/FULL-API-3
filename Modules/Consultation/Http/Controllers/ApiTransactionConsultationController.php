@@ -4158,6 +4158,10 @@ class ApiTransactionConsultationController extends Controller
                 //get setting late
                 $getSettingLate = Setting::where('key', 'consultation_starts_late')->first();
                 $endConsultation = $consultationSoon['schedule_date'] . $consultationSoon['schedule_end_time'];
+                if (strtotime($consultationSoon['schedule_start_time']) > strtotime($consultationSoon['schedule_end_time'])) {
+                    $date = date('Y-m-d', strtotime($consultationSoon['schedule_date'] . ' +1 day'));
+                    $endConsultation = $date . $consultationSoon['schedule_end_time'];
+                }
 
                 if (!empty($getSettingLate)) {
                     $endConsultation = date('Y-m-d H:i:s', strtotime("{$consultationSoon['schedule_date']} {$consultationSoon['schedule_start_time']} +{$getSettingLate->value}minutes"));
