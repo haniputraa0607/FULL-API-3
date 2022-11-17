@@ -18,6 +18,7 @@ use Modules\Brand\Entities\BrandOutlet;
 use Modules\Brand\Entities\BrandProduct;
 use Modules\Disburse\Entities\BankAccount;
 use Modules\Merchant\Entities\Merchant;
+use Modules\Merchant\Entities\MerchantGrading;
 use Modules\Merchant\Entities\MerchantLogBalance;
 use Modules\Merchant\Http\Requests\MerchantCreateStep1;
 use Modules\Merchant\Http\Requests\MerchantCreateStep2;
@@ -305,7 +306,7 @@ class ApiMerchantManagementController extends Controller
         $post = $request->json()->all();
 
         if (!empty($post['id_merchant'])) {
-            $detail = Merchant::leftJoin('users', 'users.id', 'merchants.id_user')
+            $detail = Merchant::with(['merchant_gradings'])->leftJoin('users', 'users.id', 'merchants.id_user')
                     ->leftJoin('outlets', 'outlets.id_outlet', 'merchants.id_outlet')
                     ->leftJoin('cities', 'outlets.id_city', 'cities.id_city')
                     ->leftJoin('provinces', 'provinces.id_province', 'cities.id_province')
@@ -1626,5 +1627,63 @@ class ApiMerchantManagementController extends Controller
         $post = $request->all();
         $post['id_user'] = Merchant::where('id_merchant', $post['id_merchant'])->first()['id_user'] ?? null;
         return $this->productDetail($post);
+    }
+
+    public function updateGrading(Request $request){
+        $post = $request->all();
+
+        if(isset($post['reseller_status'])){
+            $data_update['reseller_status'] = 1;
+            $data_update['auto_grading'] = $post['auto_grading'];
+
+        }else{
+            $data_update['reseller_status'] = 0;
+            $data_update['auto_grading'] = 0;
+        }
+        
+        DB::beginTransaction();
+        $update = Merchant::where('id_merchant', $post['id_merchant'])->update($data_update);
+        if(!$update){
+            DB::rollback();
+            return response()->json(['status' => 'fail', 'messages' => ['Failed to update merchant']]);
+        }
+
+        $detail_grading = $this->updateDetailGrading($post['merchant_grading']??null,$data_update['reseller_status'], $post['id_merchant']);
+        if(!$detail_grading){
+            DB::rollback();
+            return response()->json(['status' => 'fail', 'messages' => ['Failed to update merchant']]);
+        }
+
+        DB::commit();
+        return response()->json(MyHelper::checkUpdate($update));
+    }
+
+    public function updateDetailGrading($data = null, $status, $id_merchant) {
+       
+        $grading = MerchantGrading::where('id_merchant', $id_merchant)->get()->toArray();
+      
+
+        if($grading){
+            $delete = MerchantGrading::where('id_merchant', $id_merchant)->delete();
+            if(!$delete){
+                return false;
+            }
+        }
+        
+        if($status != 0){
+            foreach($data ?? null as $key => $val){
+                $data_val = [
+                    'id_merchant' => $id_merchant,
+                    'grading_name' => $val['grading_name'],
+                    'min_qty' => $val['min_qty'],
+                    'min_nominal' => $val['min_nominal'],
+                ];
+                $add_grading = MerchantGrading::where('id_merchant', $id_merchant)->create($data_val);
+                if(!$add_grading){
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 }

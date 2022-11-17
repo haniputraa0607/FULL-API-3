@@ -18,6 +18,13 @@ class Merchant extends Model
         'merchant_pic_email',
         'merchant_pic_phone',
         'merchant_completed_step',
-        'merchant_count_transaction'
+        'merchant_count_transaction',
+        'reseller_status',
+        'auto_grading'
     ];
+
+    public function merchant_gradings()
+    {
+        return $this->hasMany(MerchantGrading::class, 'id_merchant');
+    }
 }
