@@ -67,6 +67,7 @@ use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
 use Modules\PromoCampaign\Lib\PromoCampaignTools;
 use App\Http\Models\Transaction;
 use App\Jobs\SendOutletJob;
+use Config;
 use Image;
 
 class ApiOutletController extends Controller
@@ -3781,6 +3782,8 @@ class ApiOutletController extends Controller
     public function detailOutletMerchant(Request $request)
     {
         $post = $request->json()->all();
+        $config = Configs::where('is_active', 1)->select('id_config')->get()->toArray();
+        $config = array_pluck($config, 'id_config');
 
         if (!empty($post['id_outlet'])) {
             $detail = Outlet::where('outlet_status', 'Active')->where('id_outlet', $post['id_outlet'])->first();
@@ -3789,8 +3792,9 @@ class ApiOutletController extends Controller
                 return response()->json(['status' => 'fail', 'messages' => ['Outlet not found']]);
             }
 
-            $idMerchant = Merchant::where('id_outlet', $detail['id_outlet'])->first()['id_merchant'] ?? null;
-            $detail['id_merchant'] = $idMerchant;
+            $merchant = Merchant::where('id_outlet', $detail['id_outlet'])->first() ?? null;
+            $detail['id_merchant'] = $merchant['id_merchant'] ?? null;
+            $detail['reseller_status'] = $merchant['reseller_status'] ?? null;
             $bestProduct = app($this->product)->listProductMerchantBestSeller($detail);
             if (!empty($bestProduct)) {
                 $detail['id_best'] = array_column($bestProduct, 'id_product');
@@ -3806,7 +3810,12 @@ class ApiOutletController extends Controller
                 'outlet_image_logo_portrait' => $detail['url_outlet_image_logo_portrait'],
                 'product_newest' => $newestProduct,
                 'product_best_seller' => $bestProduct
-             ];
+            ];
+
+            if (in_array('141', $config)) {
+                $result['reseller_status'] = (empty($detail['reseller_status']) ? 0 : 1);
+            }
+
 
             return response()->json(MyHelper::checkGet($result));
         } else {

@@ -87,6 +87,13 @@ Route::group(['prefix' => 'merchant'], function () {
             Route::post('delivery/update-status', 'ApiMerchantController@deliverySettingUpdate');
         });
 
+        Route::group(['prefix' => 'grading'], function () {
+            Route::any('/', 'ApiMerchantController@detailGrading');
+            Route::post('/delete', 'ApiMerchantController@deleteDetailGrading');
+            Route::post('/update', 'ApiMerchantController@updateDetailGrading');
+        });
+
+
         Route::group(['prefix' => 'transaction'], function () {
             Route::post('/', 'ApiMerchantTransactionController@listTransaction');
             Route::post('detail', 'ApiMerchantTransactionController@detailTransaction');
@@ -124,6 +131,7 @@ Route::group(['prefix' => 'merchant'], function () {
         Route::post('store', 'ApiMerchantManagementController@store');
         Route::post('detail', 'ApiMerchantManagementController@detail');
         Route::post('update', 'ApiMerchantManagementController@update');
+        Route::post('update-grading', 'ApiMerchantManagementController@updateGrading');
         Route::post('delete', 'ApiMerchantManagementController@delete');
         Route::any('candidate/list', 'ApiMerchantManagementController@canditateList');
         Route::post('candidate/update', 'ApiMerchantManagementController@canditateUpdate');
