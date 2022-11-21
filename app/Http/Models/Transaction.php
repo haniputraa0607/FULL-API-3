@@ -524,6 +524,8 @@ class Transaction extends Model
                 'reject_reason' => $data['reject_reason'] ?? null
             ]);
         } else {
+            app('\Modules\Transaction\Http\Controllers\ApiOnlineTransaction')->updateStockProduct($this->id_transaction, 'cancel');
+
             $outlet = Outlet::where('id_outlet', $this->id_outlet)->first();
             app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM('Transaction Reject', $user['phone'], [
                 "outlet_name"      => $outlet['outlet_name'],
