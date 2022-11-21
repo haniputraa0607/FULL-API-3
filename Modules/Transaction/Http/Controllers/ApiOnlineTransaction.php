@@ -3074,8 +3074,8 @@ class ApiOnlineTransaction extends Controller
                 if (!empty($getQtyDrug)) {
                     $qtyTrxProduct = $product['transaction_product_qty'];
 
-                    foreach ($getQtyDrug as $value){
-                        if($qtyTrxProduct <= 0){
+                    foreach ($getQtyDrug as $value) {
+                        if ($qtyTrxProduct <= 0) {
                             continue;
                         }
                         $maxQty = ($value['recipe_redemption_limit'] ?? 0) * ($value['qty_product'] ?? 0);
@@ -3091,7 +3091,7 @@ class ApiOnlineTransaction extends Controller
                         TransactionProductConsultationRedeem::updateOrCreate([
                                 'id_transaction_product' => $product['id_transaction_product'],
                                 'id_transaction_consultation_recomendation' => $value['id_transaction_consultation_recomendation']
-                            ],[
+                            ], [
                                 'qty' => $finalQty,
                                 'created_at' => date('Y-m-d H:i:s'),
                                 'update_at' => date('Y-m-d H:i:s'),
@@ -3103,11 +3103,11 @@ class ApiOnlineTransaction extends Controller
                         $sumOriginalQty = 0;
                         $sumAllRedeem = 0;
                         foreach ($dataRecomend as $rec) {
-                            $sumOriginalQty = $sumOriginalQty+$rec['qty_product'];
-                            $sumAllRedeem = $sumAllRedeem+$rec['qty_product_redeem'];
+                            $sumOriginalQty = $sumOriginalQty + $rec['qty_product'];
+                            $sumAllRedeem = $sumAllRedeem + $rec['qty_product_redeem'];
                         }
 
-                        $totalRedeem = (int)($sumAllRedeem/$sumOriginalQty);
+                        $totalRedeem = (int)($sumAllRedeem / $sumOriginalQty);
                         TransactionConsultation::where('id_transaction_consultation', $value['id_transaction_consultation'])->update(['recipe_redemption_counter' => $totalRedeem]);
 
                         if ($totalRedeem < $value['recipe_redemption_limit']) {
@@ -3122,7 +3122,7 @@ class ApiOnlineTransaction extends Controller
                 }
             } elseif ($action == 'cancel') {
                 $getFromProductConsultation = TransactionProductConsultationRedeem::where('id_transaction_product', $product['id_transaction_product'])->get()->toArray();
-                foreach ($getFromProductConsultation as $con){
+                foreach ($getFromProductConsultation as $con) {
                     $getQtyDrug = TransactionConsultation::join('transaction_consultation_recomendations', 'transaction_consultation_recomendations.id_transaction_consultation', 'transaction_consultations.id_transaction_consultation')
                         ->where('id_transaction_consultation_recomendation', $con['id_transaction_consultation_recomendation'])->first();
 
@@ -3130,7 +3130,7 @@ class ApiOnlineTransaction extends Controller
                         $minusQtyRedeem = $getQtyDrug['qty_product_redeem'] - $con['qty'];
                         $minusQtyRedeem = ($minusQtyRedeem < 0 ? 0 : $minusQtyRedeem);
                         $currentQtyCounter = $getQtyDrug['qty_product_counter'];
-                        $updateQtyCounter =($con['qty'] > $getQtyDrug['qty_product'] ? $getQtyDrug['qty_product'] : $currentQtyCounter + $con['qty']);
+                        $updateQtyCounter = ($con['qty'] > $getQtyDrug['qty_product'] ? $getQtyDrug['qty_product'] : $currentQtyCounter + $con['qty']);
 
                         $dtUpdate = [
                             'qty_product_redeem' => $minusQtyRedeem,
@@ -3145,11 +3145,11 @@ class ApiOnlineTransaction extends Controller
                         $sumOriginalQty = 0;
                         $sumAllRedeem = 0;
                         foreach ($dataRecomend as $rec) {
-                            $sumOriginalQty = $sumOriginalQty+$rec['qty_product'];
-                            $sumAllRedeem = $sumAllRedeem+$rec['qty_product_redeem'];
+                            $sumOriginalQty = $sumOriginalQty + $rec['qty_product'];
+                            $sumAllRedeem = $sumAllRedeem + $rec['qty_product_redeem'];
                         }
 
-                        $totalRedeem = (int)($sumAllRedeem/$sumOriginalQty);
+                        $totalRedeem = (int)($sumAllRedeem / $sumOriginalQty);
                         $minusRedeem = ($totalRedeem < 0 ? 0 : $totalRedeem);
                         TransactionConsultation::where('id_transaction_consultation', $getQtyDrug['id_transaction_consultation'])
                             ->update(['recipe_redemption_counter' => $minusRedeem]);
