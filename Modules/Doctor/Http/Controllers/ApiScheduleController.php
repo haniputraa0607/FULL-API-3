@@ -93,10 +93,12 @@ class ApiScheduleController extends Controller
                 $postSchedule = [
                     'id_doctor' => $post['id_doctor'],
                     'day' => $schedule['day'],
-                    'is_active' => $schedule['is_active']
+                    'is_active' => $schedule['is_active'],
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s')
                 ];
 
-                $saveSchedule = DoctorSchedule::create($postSchedule);
+                $saveSchedule = DoctorSchedule::updateOrCreate(['id_doctor' => $post['id_doctor'], 'day' => $schedule['day']], $postSchedule);
 
                 $getSchedule = DoctorSchedule::where('id_doctor_schedule', $saveSchedule['id_doctor_schedule'])->first();
 
@@ -243,8 +245,12 @@ class ApiScheduleController extends Controller
             if (isset($value['session_time'])) {
                 $endTime = null;
                 foreach ($posts[$key]['session_time'] as $key => $time) {
+                    if ($time['start_time'] > $time['end_time']) {
+                        return response()->json(['status'  => 'fail', 'messages' => ['End time should be greater more than start time']]);
+                    }
+
                     if ($time['start_time'] < $endTime) {
-                        return response()->json(['status'  => 'fail', 'messages' => 'Session time can not be the same in one day']);
+                        return response()->json(['status'  => 'fail', 'messages' => ['Session time can not be the same in one day']]);
                     }
                     $endTime = $time['end_time'];
                 }
@@ -285,10 +291,12 @@ class ApiScheduleController extends Controller
                     $postSchedule = [
                         'id_doctor' => $user['id_doctor'],
                         'day' => $post['day'],
-                        'is_active' => $post['is_active']
+                        'is_active' => $post['is_active'],
+                        'created_at' => date('Y-m-d H:i:s'),
+                        'updated_at' => date('Y-m-d H:i:s')
                     ];
 
-                    $saveSchedule = DoctorSchedule::create($postSchedule);
+                    $saveSchedule = DoctorSchedule::updateOrCreate(['id_doctor' => $user['id_doctor'], 'day' => $post['day']], $postSchedule);
 
                     //try create schedule time
                     if (isset($post['session_time'])) {
