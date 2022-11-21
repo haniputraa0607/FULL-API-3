@@ -1674,18 +1674,19 @@ class ApiMerchantController extends Controller
         return 'success';
     }
 
-    public function detailGrading(Request $request){
+    public function detailGrading(Request $request)
+    {
         $idUser = $request->user()->id;
         $checkMerchant = Merchant::with(['merchant_gradings'])->where('id_user', $idUser)->first();
         if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
-        if($checkMerchant['reseller_status'] == 0){
+        if ($checkMerchant['reseller_status'] == 0) {
             return response()->json(['status' => 'success', 'result' => ['reseller_status' => $checkMerchant['reseller_status']]]);
-        }else{
+        } else {
             $grads = [];
-            foreach($checkMerchant['merchant_gradings'] ?? [] as $val){
+            foreach ($checkMerchant['merchant_gradings'] ?? [] as $val) {
                 $grads[] = [
                     'id_merchant_grading' => $val['id_merchant_grading'],
                     'grading_name' => $val['grading_name'],
@@ -1699,11 +1700,11 @@ class ApiMerchantController extends Controller
                 'merchant_gradings' => $grads
             ];
             return response()->json(['status' => 'success', 'result' => $data]);
-
         }
     }
 
-    public function deleteDetailGrading(Request $request){
+    public function deleteDetailGrading(Request $request)
+    {
         $post = $request->all();
 
         if (empty($post['id_merchant_grading'])) {
@@ -1714,12 +1715,12 @@ class ApiMerchantController extends Controller
         }
 
         $get = MerchantGrading::where('id_merchant_grading', $post['id_merchant_grading'])->first();
-        if($get){
+        if ($get) {
             $delete = MerchantGrading::where('id_merchant_grading', $post['id_merchant_grading'])->delete();
             if ($delete) {
                 $check = MerchantGrading::where('id_merchant', $get['id_merchant'])->get()->toArray();
-                if(!$check){
-                    $update = Merchant::where('id_merchant', $get['id_merchant'])->update(['reseller_status'=>0,'auto_grading'=>0]);
+                if (!$check) {
+                    $update = Merchant::where('id_merchant', $get['id_merchant'])->update(['reseller_status' => 0,'auto_grading' => 0]);
                 }
             }
         }
@@ -1727,7 +1728,8 @@ class ApiMerchantController extends Controller
         return response()->json(MyHelper::checkDelete($delete));
     }
 
-    public function updateDetailGrading(Request $request){
+    public function updateDetailGrading(Request $request)
+    {
         $post = $request->all();
 
         $idUser = $request->user()->id;
@@ -1736,47 +1738,46 @@ class ApiMerchantController extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
-        if(isset($post['reseller_status']) && $post['reseller_status'] == 1){
+        if (isset($post['reseller_status']) && $post['reseller_status'] == 1) {
             $data_update['reseller_status'] = 1;
             $data_update['auto_grading'] = $post['auto_grading'] ?? 0;
-
-        }else{
+        } else {
             $data_update['reseller_status'] = 0;
             $data_update['auto_grading'] = 0;
         }
 
         DB::beginTransaction();
         $update = Merchant::where('id_merchant', $checkMerchant['id_merchant'])->update($data_update);
-        if(!$update){
+        if (!$update) {
             DB::rollback();
             return response()->json(['status' => 'fail', 'messages' => ['Failed to update merchant']]);
         }
 
-        $detail_grading = $this->updateGrading($post['merchant_grading']??null,$data_update['reseller_status'], $checkMerchant['id_merchant']);
-        if(!$detail_grading){
+        $detail_grading = $this->updateGrading($post['merchant_grading'] ?? null, $data_update['reseller_status'], $checkMerchant['id_merchant']);
+        if (!$detail_grading) {
             DB::rollback();
             return response()->json(['status' => 'fail', 'messages' => ['Failed to update merchant']]);
         }
 
         DB::commit();
         return response()->json(MyHelper::checkUpdate($update));
-
     }
 
-    public function updateGrading($data = null, $status, $id_merchant) {
-       
-        $grading = MerchantGrading::where('id_merchant', $id_merchant)->get()->toArray();
-      
+    public function updateGrading($data = null, $status, $id_merchant)
+    {
 
-        if($grading){
+        $grading = MerchantGrading::where('id_merchant', $id_merchant)->get()->toArray();
+
+
+        if ($grading) {
             $delete = MerchantGrading::where('id_merchant', $id_merchant)->delete();
-            if(!$delete){
+            if (!$delete) {
                 return false;
             }
         }
-        
-        if($status != 0){
-            foreach($data ?? null as $key => $val){
+
+        if ($status != 0) {
+            foreach ($data ?? null as $key => $val) {
                 $data_val = [
                     'id_merchant' => $id_merchant,
                     'grading_name' => $val['grading_name'],
@@ -1784,7 +1785,7 @@ class ApiMerchantController extends Controller
                     'min_nominal' => $val['min_nominal'],
                 ];
                 $add_grading = MerchantGrading::where('id_merchant', $id_merchant)->create($data_val);
-                if(!$add_grading){
+                if (!$add_grading) {
                     return false;
                 }
             }
