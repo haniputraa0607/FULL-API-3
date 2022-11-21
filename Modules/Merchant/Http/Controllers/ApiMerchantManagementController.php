@@ -1658,7 +1658,7 @@ class ApiMerchantManagementController extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
 
-    public function updateDetailGrading($data = null, $status, $id_merchant)
+    public function updateDetailGrading($data, $status, $id_merchant)
     {
 
         $grading = MerchantGrading::where('id_merchant', $id_merchant)->get()->toArray();
