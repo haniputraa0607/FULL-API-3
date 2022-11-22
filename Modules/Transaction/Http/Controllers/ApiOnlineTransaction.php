@@ -83,6 +83,7 @@ use Guzzle\Http\Message\Response as ResponseGuzzle;
 use Guzzle\Http\Exception\ServerErrorResponseException;
 use Modules\Transaction\Entities\TransactionBundlingProduct;
 use Modules\Transaction\Entities\TransactionGroup;
+use Modules\Transaction\Entities\TransactionProductConsultationRedeem;
 use Modules\UserFeedback\Entities\UserFeedbackLog;
 use DB;
 use DateTime;
@@ -2696,12 +2697,13 @@ class ApiOnlineTransaction extends Controller
                             $checkRecipe = TransactionConsultation::join('transaction_consultation_recomendations', 'transaction_consultation_recomendations.id_transaction_consultation', 'transaction_consultations.id_transaction_consultation')
                                 ->whereNotNull('completed_at')
                                 ->where('transaction_consultation_recomendations.id_transaction_consultation', $item['id_transaction_consultation'])
-                                ->where('product_type', 'Drug')->where('id_product', $product['id_product'])->first();
+                                ->where('product_type', 'Drug')->where('id_product', $product['id_product'])->get()->toArray();
                         } else {
                             $checkRecipe = TransactionConsultation::join('transaction_consultation_recomendations', 'transaction_consultation_recomendations.id_transaction_consultation', 'transaction_consultations.id_transaction_consultation')
                                 ->whereNotNull('completed_at')
                                 ->whereNotIn('consultation_status', ['canceled'])
-                                ->where('id_user', $idUser)->where('product_type', 'Drug')->where('id_product', $product['id_product'])->first();
+                                ->where('id_user', $idUser)->where('product_type', 'Drug')->where('id_product', $product['id_product'])
+                                ->get()->toArray();
                         }
 
                         if (empty($checkRecipe)) {
@@ -2718,8 +2720,12 @@ class ApiOnlineTransaction extends Controller
                                 continue;
                             }
                         } else {
-                            $maxQty = ($checkRecipe['recipe_redemption_limit'] ?? 0) * ($checkRecipe['qty_product'] ?? 0);
-                            $qtyCanBuy = $maxQty - $checkRecipe['qty_product_redeem'];
+                            $qtyCanBuy = 0;
+                            foreach ($checkRecipe as $valueRecipe) {
+                                $maxQty = ($valueRecipe['recipe_redemption_limit'] ?? 0) * ($valueRecipe['qty_product'] ?? 0);
+                                $calculate = $maxQty - $valueRecipe['qty_product_redeem'];
+                                $qtyCanBuy = $qtyCanBuy + $calculate;
+                            }
 
                             if ($item['qty'] > $qtyCanBuy) {
                                 $canBuyStatus = false;
@@ -3049,98 +3055,109 @@ class ApiOnlineTransaction extends Controller
             }
 
             $checkProduct = Product::where('id_product', $product['id_product'])->first();
-            if ($action == 'book' && $checkProduct['need_recipe_status'] == 1 && empty($transaction['id_transaction_consultation'])) {
-                $getQtyDrug = TransactionConsultation::join('transaction_consultation_recomendations', 'transaction_consultation_recomendations.id_transaction_consultation', 'transaction_consultations.id_transaction_consultation')
-                    ->where('id_user', $product['id_user'])->where('product_type', 'Drug')
-                    ->where('id_product', $checkProduct['id_product'])->first();
+            if ($action == 'book' && $checkProduct['need_recipe_status'] == 1) {
+                if (!empty($transaction['id_transaction_consultation'])) {
+                    $getQtyDrug = TransactionConsultation::join('transaction_consultation_recomendations', 'transaction_consultation_recomendations.id_transaction_consultation', 'transaction_consultations.id_transaction_consultation')
+                        ->whereNotNull('completed_at')
+                        ->where('transaction_consultation_recomendations.id_transaction_consultation', $transaction['id_transaction_consultation'])
+                        ->where('product_type', 'Drug')->where('id_product', $checkProduct['id_product'])->get()->toArray();
+                } else {
+                    $getQtyDrug = TransactionConsultation::join('transaction_consultation_recomendations', 'transaction_consultation_recomendations.id_transaction_consultation', 'transaction_consultations.id_transaction_consultation')
+                        ->whereNotNull('completed_at')
+                        ->whereNotIn('consultation_status', ['canceled'])
+                        ->where('id_user', $product['id_user'])
+                        ->where('product_type', 'Drug')->where('id_product', $checkProduct['id_product'])
+                        ->orderBy('recipe_redemption_limit', 'desc')
+                        ->get()->toArray();
+                }
 
                 if (!empty($getQtyDrug)) {
-                    $curretQtyDrug = $getQtyDrug['qty_product_redeem'];
-                    $updateReedemQty = $curretQtyDrug + $product['transaction_product_qty'];
-                    $currentQtyCounter = $getQtyDrug['qty_product_counter'];
-                    $updateQtyCounter = $currentQtyCounter - $product['transaction_product_qty'];
+                    $qtyTrxProduct = $product['transaction_product_qty'];
 
-                    TransactionConsultationRecomendation::where('id_transaction_consultation_recomendation', $getQtyDrug['id_transaction_consultation_recomendation'])
-                        ->update(['qty_product_redeem' => $updateReedemQty, 'qty_product_counter' => $updateQtyCounter]);
-                    TransactionProduct::where('id_transaction_product', $product['id_transaction_product'])->update(['id_transaction_consultation_recomendation' => $getQtyDrug['id_transaction_consultation_recomendation']]);
-
-                    //update counter redeem recipe
-                    $dataRecomend = TransactionConsultationRecomendation::where('id_transaction_consultation', $getQtyDrug['id_transaction_consultation'])
-                        ->where('product_type', 'Drug')->get()->toArray();
-                    $redeemStatus = true;
-                    foreach ($dataRecomend as $rec) {
-                        $calculate = $updateReedemQty / $rec['qty_product'];
-
-                        if (is_float($calculate)) {
-                            $redeemStatus = false;
+                    foreach ($getQtyDrug as $value) {
+                        if ($qtyTrxProduct <= 0) {
+                            continue;
                         }
-                    }
+                        $maxQty = ($value['recipe_redemption_limit'] ?? 0) * ($value['qty_product'] ?? 0);
+                        $calculateQty = $maxQty - $value['qty_product_redeem'];
+                        $finalQty = ($calculateQty >= $qtyTrxProduct ? $qtyTrxProduct : $calculateQty);
+                        $curretQtyDrug = $value['qty_product_redeem'];
+                        $updateReedemQty = $curretQtyDrug + $finalQty;
+                        $currentQtyCounter = $value['qty_product_counter'];
+                        $updateQtyCounter = ($finalQty > $currentQtyCounter ? 0 : $currentQtyCounter - $finalQty);
 
-                    if ($redeemStatus == true && !empty($dataRecomend)) {
-                        $counter = $getQtyDrug['recipe_redemption_counter'] + 1;
-                        TransactionConsultation::where('id_transaction_consultation', $getQtyDrug['id_transaction_consultation'])->update(['recipe_redemption_counter' => $counter]);
+                        TransactionConsultationRecomendation::where('id_transaction_consultation_recomendation', $value['id_transaction_consultation_recomendation'])
+                            ->update(['qty_product_redeem' => $updateReedemQty, 'qty_product_counter' => $updateQtyCounter]);
+                        TransactionProductConsultationRedeem::updateOrCreate([
+                                'id_transaction_product' => $product['id_transaction_product'],
+                                'id_transaction_consultation_recomendation' => $value['id_transaction_consultation_recomendation']
+                            ], [
+                                'qty' => $finalQty,
+                                'created_at' => date('Y-m-d H:i:s'),
+                                'update_at' => date('Y-m-d H:i:s'),
+                            ]);
 
-                        if ($counter < $getQtyDrug['recipe_redemption_limit']) {
-                            $qtyAllDrug = TransactionConsultationRecomendation::where('id_transaction_consultation', $getQtyDrug['id_transaction_consultation'])->get()->toArray();
+                        //update counter redeem recipe
+                        $dataRecomend = TransactionConsultationRecomendation::where('id_transaction_consultation', $value['id_transaction_consultation'])
+                            ->where('product_type', 'Drug')->get()->toArray();
+                        $sumOriginalQty = 0;
+                        $sumAllRedeem = 0;
+                        foreach ($dataRecomend as $rec) {
+                            $sumOriginalQty = $sumOriginalQty + $rec['qty_product'];
+                            $sumAllRedeem = $sumAllRedeem + $rec['qty_product_redeem'];
+                        }
+
+                        $totalRedeem = (int)($sumAllRedeem / $sumOriginalQty);
+                        TransactionConsultation::where('id_transaction_consultation', $value['id_transaction_consultation'])->update(['recipe_redemption_counter' => $totalRedeem]);
+
+                        if ($totalRedeem < $value['recipe_redemption_limit']) {
+                            $qtyAllDrug = TransactionConsultationRecomendation::where('id_transaction_consultation', $value['id_transaction_consultation'])->get()->toArray();
                             foreach ($qtyAllDrug as $dt) {
                                 TransactionConsultationRecomendation::where('id_transaction_consultation_recomendation', $dt['id_transaction_consultation_recomendation'])->update(['qty_product_counter' => $dt['qty_product']]);
                             }
                         }
+
+                        $qtyTrxProduct = $qtyTrxProduct - $finalQty;
                     }
                 }
-            } elseif ($action == 'cancel' && !empty($product['id_transaction_consultation_recomendation'])) {
-                $getQtyDrug = TransactionConsultation::join('transaction_consultation_recomendations', 'transaction_consultation_recomendations.id_transaction_consultation', 'transaction_consultations.id_transaction_consultation')
-                    ->where('id_transaction_consultation_recomendation', $product['id_transaction_consultation_recomendation'])->first();
+            } elseif ($action == 'cancel') {
+                $getFromProductConsultation = TransactionProductConsultationRedeem::where('id_transaction_product', $product['id_transaction_product'])->get()->toArray();
+                foreach ($getFromProductConsultation as $con) {
+                    $getQtyDrug = TransactionConsultation::join('transaction_consultation_recomendations', 'transaction_consultation_recomendations.id_transaction_consultation', 'transaction_consultations.id_transaction_consultation')
+                        ->where('id_transaction_consultation_recomendation', $con['id_transaction_consultation_recomendation'])->first();
 
-                if (!empty($getQtyDrug)) {
-                    $dataRecomend = TransactionConsultationRecomendation::where('id_transaction_consultation', $getQtyDrug['id_transaction_consultation'])
-                        ->where('product_type', 'Drug')->get()->toArray();
-                    $redeemStatus = true;
-                    foreach ($dataRecomend as $rec) {
-                        $calculate = $rec['qty_product_redeem'] / $rec['qty_product'];
+                    if (!empty($getQtyDrug)) {
+                        $minusQtyRedeem = $getQtyDrug['qty_product_redeem'] - $con['qty'];
+                        $minusQtyRedeem = ($minusQtyRedeem < 0 ? 0 : $minusQtyRedeem);
+                        $currentQtyCounter = $getQtyDrug['qty_product_counter'];
+                        $updateQtyCounter = ($con['qty'] > $getQtyDrug['qty_product'] ? $getQtyDrug['qty_product'] : $currentQtyCounter + $con['qty']);
 
-                        if (is_float($calculate)) {
-                            $redeemStatus = false;
+                        $dtUpdate = [
+                            'qty_product_redeem' => $minusQtyRedeem,
+                            'qty_product_counter' => $updateQtyCounter
+                        ];
+
+                        TransactionConsultationRecomendation::where('id_transaction_consultation_recomendation', $getQtyDrug['id_transaction_consultation_recomendation'])
+                            ->update($dtUpdate);
+
+                        $dataRecomend = TransactionConsultationRecomendation::where('id_transaction_consultation', $getQtyDrug['id_transaction_consultation'])
+                            ->where('product_type', 'Drug')->get()->toArray();
+                        $sumOriginalQty = 0;
+                        $sumAllRedeem = 0;
+                        foreach ($dataRecomend as $rec) {
+                            $sumOriginalQty = $sumOriginalQty + $rec['qty_product'];
+                            $sumAllRedeem = $sumAllRedeem + $rec['qty_product_redeem'];
                         }
-                    }
 
-                    if ($redeemStatus == true && !empty($dataRecomend)) {
-                        $minusRedeem = $getQtyDrug['recipe_redemption_counter'] - 1;
-                        $minusRedeem = ($minusRedeem < 0 ? 0 : $minusRedeem);
+                        $totalRedeem = (int)($sumAllRedeem / $sumOriginalQty);
+                        $minusRedeem = ($totalRedeem < 0 ? 0 : $totalRedeem);
                         TransactionConsultation::where('id_transaction_consultation', $getQtyDrug['id_transaction_consultation'])
                             ->update(['recipe_redemption_counter' => $minusRedeem]);
                     }
 
-                    $minusQtyRedeem = $getQtyDrug['qty_product_redeem'] - $product['transaction_product_qty'];
-                    $minusQtyRedeem = ($minusQtyRedeem < 0 ? 0 : $minusQtyRedeem);
-                    $currentQtyCounter = $getQtyDrug['qty_product_counter'];
-                    $updateQtyCounter = $currentQtyCounter + $product['transaction_product_qty'];
-
-                    $dtUpdate = [
-                        'qty_product_redeem' => $minusQtyRedeem
-                    ];
-
-                    if ($redeemStatus === false) {
-                        $dtUpdate['qty_product_counter'] = $updateQtyCounter;
-                    }
-
-                    TransactionConsultationRecomendation::where('id_transaction_consultation_recomendation', $getQtyDrug['id_transaction_consultation_recomendation'])
-                        ->update($dtUpdate);
+                    TransactionProductConsultationRedeem::where('id_transaction_product_consultation_redeem', $con['id_transaction_product_consultation_redeem'])->delete();
                 }
             }
-        }
-
-        if ($action == 'book' && !empty($transaction['id_transaction_consultation'])) {
-            $consultation = TransactionConsultation::where('id_transaction_consultation', $transaction['id_transaction_consultation'])->first();
-            TransactionConsultation::where('id_transaction_consultation', $transaction['id_transaction_consultation'])
-                ->update(['recipe_redemption_counter' => $consultation['recipe_redemption_counter'] + 1]);
-        } elseif ($action == 'cancel' && !empty($transaction['id_transaction_consultation'])) {
-            $consultation = TransactionConsultation::where('id_transaction_consultation', $transaction['id_transaction_consultation'])->first();
-
-            $minusRed = $consultation['recipe_redemption_counter'] - 1;
-            $minusRed = ($minusRed < 0 ? 0 : $minusRed);
-            TransactionConsultation::where('id_transaction_consultation', $transaction['id_transaction_consultation'])
-                ->update(['recipe_redemption_counter' => $minusRed]);
         }
 
         return true;
@@ -3237,7 +3254,7 @@ class ApiOnlineTransaction extends Controller
             'point_use' => $post['point_use'] ?? true,
         ];
 
-        if ($post['id_user_address']) {
+        if (!empty($post['id_user_address'])) {
             $dt['id_user_address'] = $post['id_user_address'];
         }
 
