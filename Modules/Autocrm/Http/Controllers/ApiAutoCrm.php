@@ -734,7 +734,7 @@ class ApiAutoCrm extends Controller
                                 $dataOptional['id_reference'] = $variables['id_transaction'];
                                 break;
                             default:
-                                $dataOptional['type'] = 'Home';
+                                $dataOptional['type'] = $crm['autocrm_push_clickto'];
                                 $dataOptional['id_reference'] = 0;
                                 break;
                         }
