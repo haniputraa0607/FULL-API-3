@@ -112,7 +112,7 @@ class ApiTransactionConsultationController extends Controller
 
         //get doctor consultation
         $doctor_constultation = TransactionConsultation::where('id_doctor', $id_doctor)->where('schedule_date', $picked_date)
-                                ->whereNotIn('consultation_status', ['canceled'])
+                                ->whereNotIn('consultation_status', ['canceled', 'done'])
                                 ->where('schedule_start_time', $picked_time)->count();
 
         $getSetting = Setting::where('key', 'max_consultation_quota')->first()->toArray();
@@ -300,7 +300,7 @@ class ApiTransactionConsultationController extends Controller
 
         //get doctor consultation
         $doctor_constultation = TransactionConsultation::where('id_doctor', $id_doctor)->where('schedule_date', $picked_date)
-                                ->whereNotIn('consultation_status', ['canceled'])
+                                ->whereNotIn('consultation_status', ['canceled', 'done'])
                                 ->where('schedule_start_time', $picked_time)->count();
         $getSetting = Setting::where('key', 'max_consultation_quota')->first()->toArray();
         $quota = $getSetting['value'];
@@ -3979,7 +3979,7 @@ class ApiTransactionConsultationController extends Controller
 
         //get doctor consultation
         $doctor_constultation = TransactionConsultation::where('id_doctor', $id_doctor)->where('schedule_date', $picked_date)
-                                ->whereNotIn('consultation_status', ['canceled'])
+                                ->whereNotIn('consultation_status', ['canceled', 'done'])
                                 ->where('schedule_start_time', $picked_time)->count();
 
         $getSettingQuota = Setting::where('key', 'max_consultation_quota')->first()->toArray();
