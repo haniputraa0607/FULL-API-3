@@ -15,6 +15,7 @@ class RemoveForeignKeyCategoryProducts extends Migration
     {
         Schema::table('products', function (Blueprint $table) {
             $table->dropForeign('fk_products_product_categories');
+            $table->foreign('id_product_category', 'fk_products_product_categories')->references('id_product_category')->on('product_categories')->onUpdate('SET NULL')->onDelete('SET NULL');
         });
     }
 
