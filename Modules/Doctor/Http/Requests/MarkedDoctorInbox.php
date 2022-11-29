@@ -17,9 +17,7 @@ class MarkedDoctorInbox extends FormRequest
     public function rules()
     {
         return [
-        'id_inbox' => 'required_without:id_inboxes|integer',
-        'id_inboxes' => 'required_without:id_inbox|array',
-        'type' => 'required|in:single,multiple',
+        'type' => 'required|in:single,multiple,all',
         ];
     }
 
