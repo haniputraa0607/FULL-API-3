@@ -168,7 +168,7 @@ class ApiDoctorInbox extends Controller
     {
         $user = $request->user();
         $post = $request->json()->all();
-        $availableInboxType = ['single','multiple'];
+        $availableInboxType = ['single','multiple','all'];
         if (!in_array($post['type'] ?? null, $availableInboxType)) {
             $result = [
                 'status'  => 'fail',
@@ -177,9 +177,9 @@ class ApiDoctorInbox extends Controller
         }
 
         if ($post['type'] == 'single') {
-            $hsInbox = DoctorInbox::where('id_doctor_inboxes', $post['id_inbox'])->first();
+            $hsInbox = DoctorInbox::where('id_doctor_inboxes', $post['id_inbox'] ?? null)->first();
             if (!empty($hsInbox)) {
-                $update = DoctorInbox::where('id_doctor_inboxes', $post['id_inbox'])->update(['read' => '1']);
+                $update = DoctorInbox::where('id_doctor_inboxes', $post['id_inbox'] ?? null)->update(['read' => '1']);
                 $countUnread = $this->listInboxUnread($user['id_doctor']);
                 $result = [
                     'status'  => 'success',
@@ -202,6 +202,14 @@ class ApiDoctorInbox extends Controller
             $result = [
                 'status'  => 'success',
                 'result'  => ['count_unread' => $countUnread]
+            ];
+        } elseif ($post['type'] == 'all') {
+            $update = DoctorInbox::where('id_doctor', $user['id_doctor'])
+                ->update(['read' => '1']);
+
+            $result = [
+                'status'  => 'success',
+                'result'  => ['count_unread' => 0]
             ];
         }
 

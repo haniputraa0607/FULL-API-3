@@ -1559,13 +1559,11 @@ class ApiTransactionConsultationController extends Controller
 
         $transaction = Transaction::with('consultation')->where('id_user', $id);
 
-        if (isset($post['filter'])) {
-            $id_doctor = Doctor::where('doctor_name', 'like', '%' . $post['filter'] . '%')->pluck('id_doctor')->toArray();
-            $transaction = $transaction->whereHas('consultation', function ($query) use ($post, $id_doctor) {
-                $query->whereIn('consultation_status', ['done', 'completed', 'missed'])->where(function ($query2) use ($post, $id_doctor) {
-                    $query2->orWhere('schedule_date', 'like', '%' . $post['filter'] . '%');
-                    $query2->orWhereIn('id_doctor', $id_doctor);
-                });
+        if (!empty($post['filter_start_date']) && !empty($post['filter_end_date'])) {
+            $transaction = $transaction->whereHas('consultation', function ($query) use ($post) {
+                $query->whereIn('consultation_status', ['done', 'completed', 'missed'])
+                    ->whereDate('schedule_date', '>=', date('Y-m-d', strtotime($post['filter_start_date'])))
+                    ->whereDate('schedule_date', '<=', date('Y-m-d', strtotime($post['filter_end_date'])));
             });
         } else {
             $transaction = $transaction->whereHas('consultation', function ($query) {

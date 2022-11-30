@@ -64,7 +64,7 @@ class ApiScheduleController extends Controller
 
         DB::beginTransaction();
         foreach ($post['schedules'] as $key => $schedule) {
-            if (isset($schedule['id_doctor_schedule'])) {
+            if (!empty($schedule['id_doctor_schedule'])) {
                 //try update schedule
                 $postSchedule = [
                     'id_doctor' => $post['id_doctor'],
