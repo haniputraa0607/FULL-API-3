@@ -1969,4 +1969,19 @@ class ApiSetting extends Controller
 
         return response()->json(MyHelper::checkUpdate($update));
     }
+
+    public function socialLogin(Request $request)
+    {
+        $request->validate([
+            'device_type' => 'required|string|in:android,ios,web'
+        ]);
+
+        return [
+            'status' => 'success',
+            'result' => [
+                'google' => !!MyHelper::setting('social_login_google_' . ($request->device_type) . '_enabled'),
+                'facebook' => !!MyHelper::setting('social_login_facebook_' . ($request->device_type) . '_enabled'),
+            ],
+        ];
+    }
 }
