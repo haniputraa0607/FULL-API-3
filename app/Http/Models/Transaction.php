@@ -436,7 +436,7 @@ class Transaction extends Model
                 break;
         }
 
-        if ($this->trasaction_type == 'Delivery' && !empty($this->transaction_payment_type)) {
+        if ($this->trasaction_type == 'Delivery' && !empty($this->trasaction_payment_type)) {
             app('\Modules\Transaction\Http\Controllers\ApiOnlineTransaction')->updateStockProduct($this->id_transaction, 'cancel');
         }
 
