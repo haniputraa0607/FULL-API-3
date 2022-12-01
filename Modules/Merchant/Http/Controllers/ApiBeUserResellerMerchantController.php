@@ -40,7 +40,6 @@ use Modules\Merchant\Entities\UserResellerMerchant;
 use Modules\Merchant\Http\Requests\UserReseller\Register;
 use Illuminate\Support\Facades\Auth;
 
-
 class ApiBeUserResellerMerchantController extends Controller
 {
     public function __construct()
@@ -51,167 +50,175 @@ class ApiBeUserResellerMerchantController extends Controller
         $this->online_trx = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
     }
 
-    public function candidate(Request $request) {
+    public function candidate(Request $request)
+    {
         $post = $request->all();
         $employee = UserResellerMerchant::where(array(
-            "user_reseller_merchants.reseller_merchant_status"=>"Pending",
-            ))->join('users','users.id','user_reseller_merchants.id_user')
-              ->join('merchants','merchants.id_merchant','user_reseller_merchants.id_merchant')
-              ->leftjoin('outlets','outlets.id_outlet','merchants.id_outlet')
-              ->leftjoin('merchant_gradings','merchant_gradings.id_merchant_grading','user_reseller_merchants.id_merchant_grading');
-        if(isset($post['conditions']) && !empty($post['conditions'])){
+            "user_reseller_merchants.reseller_merchant_status" => "Pending",
+            ))->join('users', 'users.id', 'user_reseller_merchants.id_user')
+              ->join('merchants', 'merchants.id_merchant', 'user_reseller_merchants.id_merchant')
+              ->leftjoin('outlets', 'outlets.id_outlet', 'merchants.id_outlet')
+              ->leftjoin('merchant_gradings', 'merchant_gradings.id_merchant_grading', 'user_reseller_merchants.id_merchant_grading');
+        if (isset($post['conditions']) && !empty($post['conditions'])) {
             $rule = 'and';
-            if(isset($post['rule'])){
+            if (isset($post['rule'])) {
                 $rule = $post['rule'];
             }
-            if($rule == 'and'){
-                foreach ($post['conditions'] as $condition){
-                    if(isset($condition['subject'])){               
+            if ($rule == 'and') {
+                foreach ($post['conditions'] as $condition) {
+                    if (isset($condition['subject'])) {
                         $employee = $employee->where($condition['subject'], $condition['parameter']);
                     }
                 }
-            }else{
-                $employee = $employee->where(function ($q) use ($post){
-                    foreach ($post['conditions'] as $condition){
-                        if(isset($condition['subject'])){
-                                 if($condition['operator'] == 'like'){
-                                      $q->orWhere($condition['subject'], 'like', '%'.$condition['parameter'].'%');
-                                 }else{
-                                      $q->orWhere($condition['subject'], $condition['parameter']);
-                                 }
+            } else {
+                $employee = $employee->where(function ($q) use ($post) {
+                    foreach ($post['conditions'] as $condition) {
+                        if (isset($condition['subject'])) {
+                            if ($condition['operator'] == 'like') {
+                                 $q->orWhere($condition['subject'], 'like', '%' . $condition['parameter'] . '%');
+                            } else {
+                                 $q->orWhere($condition['subject'], $condition['parameter']);
+                            }
                         }
                     }
                 });
             }
         }
             $employee = $employee->orderBy('user_reseller_merchants.created_at', 'desc')
-                        ->select('user_reseller_merchants.*','users.name as user_name','outlets.outlet_name as outlet','merchant_gradings.grading_name as grading')
+                        ->select('user_reseller_merchants.*', 'users.name as user_name', 'outlets.outlet_name as outlet', 'merchant_gradings.grading_name as grading')
                         ->paginate($request->length ?: 10);
         return MyHelper::checkGet($employee);
-   }
-   public function candidateDetail(Request $request) {
-       $post = $request->json()->all();
-        if(isset($post['id_user_reseller_merchant']) && !empty($post['id_user_reseller_merchant'])){
+    }
+    public function candidateDetail(Request $request)
+    {
+        $post = $request->json()->all();
+        if (isset($post['id_user_reseller_merchant']) && !empty($post['id_user_reseller_merchant'])) {
              $detail = UserResellerMerchant::where(array(
-            "id_user_reseller_merchant"=>$request->id_user_reseller_merchant,
-            ))->join('users','users.id','user_reseller_merchants.id_user')
-              ->join('merchants','merchants.id_merchant','user_reseller_merchants.id_merchant')
-              ->leftjoin('outlets','outlets.id_outlet','merchants.id_outlet')
-              ->leftjoin('merchant_gradings','merchant_gradings.id_merchant_grading','user_reseller_merchants.id_merchant_grading')
-              ->select('user_reseller_merchants.*','users.name as user_name','outlets.outlet_name as outlet','merchant_gradings.grading_name as grading','merchants.reseller_status','merchants.auto_grading')
+            "id_user_reseller_merchant" => $request->id_user_reseller_merchant,
+             ))->join('users', 'users.id', 'user_reseller_merchants.id_user')
+              ->join('merchants', 'merchants.id_merchant', 'user_reseller_merchants.id_merchant')
+              ->leftjoin('outlets', 'outlets.id_outlet', 'merchants.id_outlet')
+              ->leftjoin('merchant_gradings', 'merchant_gradings.id_merchant_grading', 'user_reseller_merchants.id_merchant_grading')
+              ->select('user_reseller_merchants.*', 'users.name as user_name', 'outlets.outlet_name as outlet', 'merchant_gradings.grading_name as grading', 'merchants.reseller_status', 'merchants.auto_grading')
               ->first();
-             if(!$detail){
-                 return response()->json(MyHelper::checkGet($detail));
-             }
+            if (!$detail) {
+                return response()->json(MyHelper::checkGet($detail));
+            }
              $detail['gradings'] = UserResellerMerchant::where(array(
-            "id_user_reseller_merchant"=>$request->id_user_reseller_merchant,
-            ))->leftjoin('merchant_gradings','merchant_gradings.id_merchant','user_reseller_merchants.id_merchant')
-              ->select('merchant_gradings.id_merchant_grading','merchant_gradings.grading_name')
+            "id_user_reseller_merchant" => $request->id_user_reseller_merchant,
+             ))->leftjoin('merchant_gradings', 'merchant_gradings.id_merchant', 'user_reseller_merchants.id_merchant')
+              ->select('merchant_gradings.id_merchant_grading', 'merchant_gradings.grading_name')
               ->get();
              $approved = UserResellerMerchant::where(array(
-            "id_user_reseller_merchant"=>$request->id_user_reseller_merchant,
-            ))->join('users','users.id','user_reseller_merchants.id_approved')->select('users.name')->first();
-             $detail['approved'] = $approved->name??'';
+            "id_user_reseller_merchant" => $request->id_user_reseller_merchant,
+             ))->join('users', 'users.id', 'user_reseller_merchants.id_approved')->select('users.name')->first();
+             $detail['approved'] = $approved->name ?? '';
             return response()->json(MyHelper::checkGet($detail));
-        }else{
+        } else {
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
         }
-   }
-   public function candidateUpdate(Request $request) {
-       $post = $request->json()->all();
-        if(isset($post['id_user_reseller_merchant']) && !empty($post['id_user_reseller_merchant'])){
-           $detail = UserResellerMerchant::where(array(
-            "id_user_reseller_merchant"=>$request->id_user_reseller_merchant,
-            ))->join('users','users.id','user_reseller_merchants.id_user')
-              ->join('merchants','merchants.id_merchant','user_reseller_merchants.id_merchant')
-              ->leftjoin('outlets','outlets.id_outlet','merchants.id_outlet')
-              ->leftjoin('merchant_gradings','merchant_gradings.id_merchant_grading','user_reseller_merchants.id_merchant_grading')
-              ->select('user_reseller_merchants.*','users.name as user_name','outlets.outlet_name as outlet','merchant_gradings.grading_name as grading')
+    }
+    public function candidateUpdate(Request $request)
+    {
+        $post = $request->json()->all();
+        if (isset($post['id_user_reseller_merchant']) && !empty($post['id_user_reseller_merchant'])) {
+            $detail = UserResellerMerchant::where(array(
+            "id_user_reseller_merchant" => $request->id_user_reseller_merchant,
+            ))->join('users', 'users.id', 'user_reseller_merchants.id_user')
+              ->join('merchants', 'merchants.id_merchant', 'user_reseller_merchants.id_merchant')
+              ->leftjoin('outlets', 'outlets.id_outlet', 'merchants.id_outlet')
+              ->leftjoin('merchant_gradings', 'merchant_gradings.id_merchant_grading', 'user_reseller_merchants.id_merchant_grading')
+              ->select('user_reseller_merchants.*', 'users.name as user_name', 'outlets.outlet_name as outlet', 'merchant_gradings.grading_name as grading')
               ->update([
-                  'reseller_merchant_status'=>$post['reseller_merchant_status'],
-                  'notes'=>$post['notes'],
-                  'id_approved'=>Auth::user()->id
+                  'reseller_merchant_status' => $post['reseller_merchant_status'],
+                  'notes' => $post['notes'],
+                  'id_approved' => Auth::user()->id
               ]);
             return response()->json(MyHelper::checkGet($detail));
-        }else{
+        } else {
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
         }
-   }
-    public function index(Request $request) {
+    }
+    public function index(Request $request)
+    {
         $post = $request->all();
         $employee = UserResellerMerchant::where(
-            "user_reseller_merchants.reseller_merchant_status",'!=',"Pending",
-            )->join('users','users.id','user_reseller_merchants.id_user')
-              ->join('merchants','merchants.id_merchant','user_reseller_merchants.id_merchant')
-              ->leftjoin('outlets','outlets.id_outlet','merchants.id_outlet')
-              ->leftjoin('merchant_gradings','merchant_gradings.id_merchant_grading','user_reseller_merchants.id_merchant_grading');
-        if(isset($post['conditions']) && !empty($post['conditions'])){
+            "user_reseller_merchants.reseller_merchant_status",
+            '!=',
+            "Pending",
+        )->join('users', 'users.id', 'user_reseller_merchants.id_user')
+              ->join('merchants', 'merchants.id_merchant', 'user_reseller_merchants.id_merchant')
+              ->leftjoin('outlets', 'outlets.id_outlet', 'merchants.id_outlet')
+              ->leftjoin('merchant_gradings', 'merchant_gradings.id_merchant_grading', 'user_reseller_merchants.id_merchant_grading');
+        if (isset($post['conditions']) && !empty($post['conditions'])) {
             $rule = 'and';
-            if(isset($post['rule'])){
+            if (isset($post['rule'])) {
                 $rule = $post['rule'];
             }
-            if($rule == 'and'){
-                foreach ($post['conditions'] as $condition){
-                    if(isset($condition['subject'])){               
+            if ($rule == 'and') {
+                foreach ($post['conditions'] as $condition) {
+                    if (isset($condition['subject'])) {
                         $employee = $employee->where($condition['subject'], $condition['parameter']);
                     }
                 }
-            }else{
-                $employee = $employee->where(function ($q) use ($post){
-                    foreach ($post['conditions'] as $condition){
-                        if(isset($condition['subject'])){
-                                 if($condition['operator'] == 'like'){
-                                      $q->orWhere($condition['subject'], 'like', '%'.$condition['parameter'].'%');
-                                 }else{
-                                      $q->orWhere($condition['subject'], $condition['parameter']);
-                                 }
+            } else {
+                $employee = $employee->where(function ($q) use ($post) {
+                    foreach ($post['conditions'] as $condition) {
+                        if (isset($condition['subject'])) {
+                            if ($condition['operator'] == 'like') {
+                                 $q->orWhere($condition['subject'], 'like', '%' . $condition['parameter'] . '%');
+                            } else {
+                                 $q->orWhere($condition['subject'], $condition['parameter']);
+                            }
                         }
                     }
                 });
             }
         }
             $employee = $employee->orderBy('user_reseller_merchants.created_at', 'desc')
-                        ->select('user_reseller_merchants.*','users.name as user_name','outlets.outlet_name as outlet','merchant_gradings.grading_name as grading')
+                        ->select('user_reseller_merchants.*', 'users.name as user_name', 'outlets.outlet_name as outlet', 'merchant_gradings.grading_name as grading')
                         ->paginate($request->length ?: 10);
         return MyHelper::checkGet($employee);
-   }
-   public function detail(Request $request) {
-       $post = $request->json()->all();
-        if(isset($post['id_user_reseller_merchant']) && !empty($post['id_user_reseller_merchant'])){
+    }
+    public function detail(Request $request)
+    {
+        $post = $request->json()->all();
+        if (isset($post['id_user_reseller_merchant']) && !empty($post['id_user_reseller_merchant'])) {
              $detail = UserResellerMerchant::where(array(
-            "id_user_reseller_merchant"=>$request->id_user_reseller_merchant,
-            ))->join('users','users.id','user_reseller_merchants.id_user')
-              ->join('merchants','merchants.id_merchant','user_reseller_merchants.id_merchant')
-              ->leftjoin('outlets','outlets.id_outlet','merchants.id_outlet')
-              ->leftjoin('merchant_gradings','merchant_gradings.id_merchant_grading','user_reseller_merchants.id_merchant_grading')
-              ->select('user_reseller_merchants.*','users.name as user_name','outlets.outlet_name as outlet','merchant_gradings.grading_name as grading','merchants.reseller_status','merchants.auto_grading')
+            "id_user_reseller_merchant" => $request->id_user_reseller_merchant,
+             ))->join('users', 'users.id', 'user_reseller_merchants.id_user')
+              ->join('merchants', 'merchants.id_merchant', 'user_reseller_merchants.id_merchant')
+              ->leftjoin('outlets', 'outlets.id_outlet', 'merchants.id_outlet')
+              ->leftjoin('merchant_gradings', 'merchant_gradings.id_merchant_grading', 'user_reseller_merchants.id_merchant_grading')
+              ->select('user_reseller_merchants.*', 'users.name as user_name', 'outlets.outlet_name as outlet', 'merchant_gradings.grading_name as grading', 'merchants.reseller_status', 'merchants.auto_grading')
               ->first();
-             if(!$detail){
-                 return response()->json(MyHelper::checkGet($detail));
-             }
+            if (!$detail) {
+                return response()->json(MyHelper::checkGet($detail));
+            }
              $detail['gradings'] = UserResellerMerchant::where(array(
-            "id_user_reseller_merchant"=>$request->id_user_reseller_merchant,
-            ))->leftjoin('merchant_gradings','merchant_gradings.id_merchant','user_reseller_merchants.id_merchant')
-              ->select('merchant_gradings.id_merchant_grading','merchant_gradings.grading_name')
+            "id_user_reseller_merchant" => $request->id_user_reseller_merchant,
+             ))->leftjoin('merchant_gradings', 'merchant_gradings.id_merchant', 'user_reseller_merchants.id_merchant')
+              ->select('merchant_gradings.id_merchant_grading', 'merchant_gradings.grading_name')
               ->get();
              $approved = UserResellerMerchant::where(array(
-            "id_user_reseller_merchant"=>$request->id_user_reseller_merchant,
-            ))->join('users','users.id','user_reseller_merchants.id_approved')->select('users.name')->first();
-             $detail['approved'] = $approved->name??'';
+            "id_user_reseller_merchant" => $request->id_user_reseller_merchant,
+             ))->join('users', 'users.id', 'user_reseller_merchants.id_approved')->select('users.name')->first();
+             $detail['approved'] = $approved->name ?? '';
             return response()->json(MyHelper::checkGet($detail));
-        }else{
+        } else {
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
         }
-   }
-   public function update(Request $request) {
-       $post = $request->json()->all();
-        if(isset($post['id_user_reseller_merchant']) && !empty($post['id_user_reseller_merchant'])){
-           $detail = UserResellerMerchant::where(array(
-            "id_user_reseller_merchant"=>$request->id_user_reseller_merchant,
+    }
+    public function update(Request $request)
+    {
+        $post = $request->json()->all();
+        if (isset($post['id_user_reseller_merchant']) && !empty($post['id_user_reseller_merchant'])) {
+            $detail = UserResellerMerchant::where(array(
+            "id_user_reseller_merchant" => $request->id_user_reseller_merchant,
             ))->update($post);
             return response()->json(MyHelper::checkGet($detail));
-        }else{
+        } else {
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
         }
-   }
+    }
 }

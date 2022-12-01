@@ -39,6 +39,7 @@ use Modules\Merchant\Entities\MerchantGrading;
 use Modules\Merchant\Entities\UserResellerMerchant;
 use Modules\Merchant\Http\Requests\UserReseller\Register;
 use Illuminate\Support\Facades\Auth;
+
 class ApiUserResellerMerchantController extends Controller
 {
     public function __construct()
@@ -54,20 +55,19 @@ class ApiUserResellerMerchantController extends Controller
         $post = $request->json()->all();
         $post['id_user'] = Auth::user()->id;
         $get = UserResellerMerchant::where(array(
-                    'id_merchant'=>$post['id_merchant'],
-                    'id_user'=>$post['id_user'],
-                ))->where('reseller_merchant_status','Rejected')->orwhere('reseller_merchant_status','Inactive')->first();
-        if($get){
+                    'id_merchant' => $post['id_merchant'],
+                    'id_user' => $post['id_user'],
+                ))->where('reseller_merchant_status', 'Rejected')->orwhere('reseller_merchant_status', 'Inactive')->first();
+        if ($get) {
             $get = UserResellerMerchant::where(array(
-                    'id_merchant'=>$post['id_merchant'],
-                    'id_user'=>$post['id_user'],
-                ))->where('reseller_merchant_status','Rejected')->orwhere('reseller_merchant_status','Inactive')
+                    'id_merchant' => $post['id_merchant'],
+                    'id_user' => $post['id_user'],
+                ))->where('reseller_merchant_status', 'Rejected')->orwhere('reseller_merchant_status', 'Inactive')
                     ->update([
-                        'notes_user'=>$post['notes_user'],
-                        'reseller_merchant_status'=>'Pending'
+                        'notes_user' => $post['notes_user'],
+                        'reseller_merchant_status' => 'Pending'
                     ]);
-        
-        }else{
+        } else {
             $get = UserResellerMerchant::create($post);
         }
         return response()->json(MyHelper::checkUpdate($get));

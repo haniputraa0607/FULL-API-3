@@ -110,7 +110,7 @@ Route::group(['prefix' => 'merchant'], function () {
             Route::post('delivery/tracking', 'ApiMerchantTransactionController@deliveryTracking');
             Route::get('total-pending', 'ApiMerchantTransactionController@getTotalTransactionPending');
         });
-        
+
         //User Reseller Agent
         Route::group(['prefix' => 'user-reseller'], function () {
             Route::post('/register', 'ApiUserResellerMerchantController@register');
@@ -147,7 +147,7 @@ Route::group(['prefix' => 'merchant'], function () {
         Route::post('withdrawal/completed', 'ApiMerchantManagementController@withdrawalChangeStatus');
 
         Route::post('balance/list', 'ApiMerchantController@balanceList');
-        
+
         //Reseller
         Route::group(['prefix' => 'be/reseller/'], function () {
             Route::post('candidate', 'ApiBeUserResellerMerchantController@candidate');

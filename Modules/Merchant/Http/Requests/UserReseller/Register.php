@@ -23,31 +23,29 @@ class Register extends FormRequest
     public function withValidator($validator)
     {
         $validator->addExtension('cek_pending', function ($attribute, $value, $parameters, $validator) {
-        $user =  Auth::user();
-        $pending = UserResellerMerchant::where(array(
-            'id_user'=>$user['id'],
-            'id_merchant'=>$value,
-            'reseller_merchant_status'=>'Pending'
-        ))->first();
-        if($pending){
-            return false;
-        }
+            $user =  Auth::user();
+            $pending = UserResellerMerchant::where(array(
+            'id_user' => $user['id'],
+            'id_merchant' => $value,
+            'reseller_merchant_status' => 'Pending'
+            ))->first();
+            if ($pending) {
+                return false;
+            }
             return true;
-          
-        }); 
+        });
         $validator->addExtension('cek_active', function ($attribute, $value, $parameters, $validator) {
-        $user =  Auth::user();
-        $pending = UserResellerMerchant::where(array(
-            'id_user'=>$user['id'],
-            'id_merchant'=>$value,
-            'reseller_merchant_status'=>'Active'
-        ))->first();
-        if($pending){
-            return false;
-        }
+            $user =  Auth::user();
+            $pending = UserResellerMerchant::where(array(
+            'id_user' => $user['id'],
+            'id_merchant' => $value,
+            'reseller_merchant_status' => 'Active'
+            ))->first();
+            if ($pending) {
+                return false;
+            }
             return true;
-          
-        }); 
+        });
     }
     public function messages()
     {

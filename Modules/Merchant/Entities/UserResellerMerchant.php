@@ -18,5 +18,4 @@ class UserResellerMerchant extends Model
         'notes',
         'notes_user',
     ];
-
 }
