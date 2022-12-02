@@ -1223,6 +1223,8 @@ class ApiProductController extends Controller
                 $idProductVariantGroup = ProductVariantGroup::where('id_product', $post['id_product'])->pluck('id_product_variant_group')->toArray();
                 ProductVariantGroup::where('id_product', $post['id_product'])->delete();
                 ProductVariantGroupDetail::whereIn('id_product_variant_group', $idProductVariantGroup)->delete();
+                $idProductVariant = ProductVariantPivot::whereIn('id_product_variant_group', $idProductVariantGroup)->pluck('id_product_variant')->toArray();
+                ProductVariant::whereIn('id_product_variant', $idProductVariant)->delete();
 
                 $result = [
                     'status' => 'success',

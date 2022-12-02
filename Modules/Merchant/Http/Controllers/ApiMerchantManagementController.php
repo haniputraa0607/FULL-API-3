@@ -1060,6 +1060,7 @@ class ApiMerchantManagementController extends Controller
             $wholesalerStatus = false;
             $variantGroup = ProductVariantGroup::where('id_product', $detail['id_product'])->get()->toArray();
             $variants = [];
+            $checkVariantUseTransaction = [];
             foreach ($variantGroup as $group) {
                 $variant = ProductVariant::join('product_variant_pivot', 'product_variant_pivot.id_product_variant', 'product_variants.id_product_variant')->where('id_product_variant_group', $group['id_product_variant_group'])->get()->toArray();
                 $variantName = array_column($variant, 'product_variant_name');
@@ -1094,6 +1095,11 @@ class ApiMerchantManagementController extends Controller
                         "data" => $variantChild,
                         "wholesaler_price" => $wholesaler
                     ];
+
+                    $checkTransactionVariant = TransactionProduct::where('id_product_variant_group', $group['id_product_variant_group'])->first();
+                    if (!empty($checkTransactionVariant)) {
+                        $checkVariantUseTransaction[] = implode(' ', $variantName);
+                    }
                 }
             }
 
@@ -1111,6 +1117,7 @@ class ApiMerchantManagementController extends Controller
                 $result['stock'] = ProductDetail::where('id_product', $detail['id_product'])->where('id_outlet', $checkMerchant['id_outlet'])->first()['product_detail_stock_item'] ?? 0;
             }
             $result['variants'] = $variants;
+            $result['variant_use_transaction'] = $checkVariantUseTransaction;
             return response()->json(MyHelper::checkGet($result));
         } else {
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
@@ -1132,6 +1139,8 @@ class ApiMerchantManagementController extends Controller
                 $idProductVariantGroup = ProductVariantGroup::where('id_product', $post['id_product'])->pluck('id_product_variant_group')->toArray();
                 ProductVariantGroup::where('id_product', $post['id_product'])->delete();
                 ProductVariantGroupDetail::whereIn('id_product_variant_group', $idProductVariantGroup)->delete();
+                $idProductVariant = ProductVariantPivot::whereIn('id_product_variant_group', $idProductVariantGroup)->pluck('id_product_variant')->toArray();
+                ProductVariant::whereIn('id_product_variant', $idProductVariant)->delete();
             }
             return response()->json(MyHelper::checkDelete($delete));
         } else {
