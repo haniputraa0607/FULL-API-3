@@ -2,6 +2,7 @@
 
 namespace Modules\Autocrm\Http\Controllers;
 
+use App\Http\Models\LogBalance;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -1174,11 +1175,9 @@ class ApiAutoCrm extends Controller
                 }
 
                 if ($replace['keyword'] == "%points%") {
-                    if (is_integer($replaced)) {
-                        $points = number_format($replaced, 0, ',', '.');
-                    } else {
-                        $points = $replaced;
-                    }
+                    $points = $user['balance'] ?? 0;
+                    $points = number_format($points, 0, ',', '.');
+
                     $text = str_replace("%point%", $points, $text);
                     $text = str_replace("%points%", $points, $text);
                     $text = str_replace($replace['keyword'], $points, $text);

@@ -468,6 +468,7 @@ class ApiNotification extends Controller
                     return false;
                 }
                 $usere = User::where('id', $data['id_user'])->first();
+                $orderId = TransactionShipment::where('id_transaction', $data['id_transaction'])->first()['order_id'] ?? ' ';
                 $send = app($this->autocrm)->SendAutoCRM(
                     'Transaction Point Achievement',
                     $usere->phone,
@@ -476,7 +477,8 @@ class ApiNotification extends Controller
                         "transaction_date"  => $data['transaction_date'],
                         'id_transaction'    => $data['id_transaction'],
                         'receipt_number'    => $data['transaction_receipt_number'],
-                        'received_point'    => (string) $data['transaction_cashback_earned']
+                        'received_point'    => (string) $data['transaction_cashback_earned'],
+                        'order_id'          => $orderId
                     ]
                 );
                 if ($send != true) {
