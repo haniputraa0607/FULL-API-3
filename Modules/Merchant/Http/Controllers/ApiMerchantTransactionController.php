@@ -432,7 +432,7 @@ class ApiMerchantTransactionController extends Controller
                 'estimated' => $transaction['shipment_courier_etd']
             ],
             'payment' => $paymentMethod ?? '',
-            'payment_logo' => $paymentLogo ?? '',
+            'payment_logo' => $paymentLogo ?? env('STORAGE_URL_API') . 'default_image/payment_method/default.png',
             'payment_detail' => $paymentDetail,
             'point_receive' => (!empty($transaction['transaction_cashback_earned'] && $transaction['transaction_status'] != 'Rejected') ? ($transaction['cashback_insert_status'] ? 'Mendapatkan +' : 'Anda akan mendapatkan +') . number_format((int)$transaction['transaction_cashback_earned'], 0, ",", ".") . ' point dari transaksi ini' : ''),
             'transaction_reject_reason' => $transaction['transaction_reject_reason'],
