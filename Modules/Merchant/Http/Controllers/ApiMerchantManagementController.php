@@ -407,7 +407,7 @@ class ApiMerchantManagementController extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
-        $products = Product::where('id_merchant', $checkMerchant['id_merchant'])->select('products.id_product', 'product_name');
+        $products = Product::where('id_merchant', $checkMerchant['id_merchant'])->select('products.id_product', 'product_name', 'product_count_transaction');
 
         if (!empty($post['search_key'])) {
             $products = $products->where('product_name', 'like', '%' . $post['search_key'] . '%');
@@ -424,6 +424,8 @@ class ApiMerchantManagementController extends Controller
             $price = (int)(ProductGlobalPrice::where('id_product', $value['id_product'])->first()['product_global_price'] ?? 0);
             $products['data'][$key]['price'] = 'Rp ' . number_format($price, 0, ",", ".");
             $products['data'][$key]['image'] = (!empty($photo) ? config('url.storage_url_api') . $photo : config('url.storage_url_api') . 'img/default.jpg');
+            $products['data'][$key]['sold'] = $this->productCount($value['product_count_transaction']);
+            unset($products['data'][$key]['product_count_transaction']);
         }
         return response()->json(MyHelper::checkGet($products));
     }
@@ -818,7 +820,6 @@ class ApiMerchantManagementController extends Controller
             }
 
             $product = [
-                'product_name' => $post['product_name'],
                 'product_description' => $post['product_description'],
                 'id_product_category' => (!empty($post['id_product_category']) ? $post['id_product_category'] : null),
                 'product_weight' => (!empty($post['product_weight']) ? $post['product_weight'] : 0),
@@ -828,6 +829,11 @@ class ApiMerchantManagementController extends Controller
                 'product_variant_status' => $post['variant_status'] ?? 0,
                 'need_recipe_status' => $post['need_recipe_status'] ?? 0
             ];
+
+
+            if($checkProduct['product_count_transaction'] <= 0){
+                $product['product_name'] =  $post['product_name'];
+            }
 
             DB::beginTransaction();
             $update = Product::where('id_product', $post['id_product'])->update($product);
@@ -997,7 +1003,7 @@ class ApiMerchantManagementController extends Controller
     public function productDetail($post)
     {
         $idUser = $post['id_user'];
-
+        
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
         if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
@@ -1012,8 +1018,9 @@ class ApiMerchantManagementController extends Controller
         }
 
         if (!empty($post['id_product'])) {
+
             $detail = Product::leftJoin('product_categories', 'product_categories.id_product_category', 'products.id_product_category')
-                ->where('id_product', $post['id_product'])->select('products.*', 'product_category_name')->first();
+                ->where('id_product', $post['id_product'])->select('products.*', 'product_category_name', 'product_count_transaction')->first();
 
             if (empty($detail)) {
                 return response()->json(['status' => 'fail', 'messages' => ['Data produk tidak ditemukan']]);
@@ -1054,8 +1061,11 @@ class ApiMerchantManagementController extends Controller
                 'product_width' => $detail['product_width'],
                 'product_length' => $detail['product_length'],
                 'product_variant_status' => $detail['product_variant_status'],
-                'need_recipe_status' => $detail['need_recipe_status']
+                'need_recipe_status' => $detail['need_recipe_status'],
+                'sold' => $this->productCount($detail['product_count_transaction'])
             ];
+
+            $result['update_product_name'] = $detail['product_count_transaction'] >= 1 ? false : true;
 
             $wholesalerStatus = false;
             $variantGroup = ProductVariantGroup::where('id_product', $detail['id_product'])->get()->toArray();
@@ -1685,5 +1695,26 @@ class ApiMerchantManagementController extends Controller
             }
         }
         return true;
+    }
+
+    public function productCount($total = 0){
+    
+        if ($total >= 0 && $total < 1000){
+            $total = $total. ' terjual';
+        }elseif($total >= 1000 && $total < 10000){
+            $total = substr($total, 0, 2);
+            if($total%10==0){
+                $total = substr($total, 0, 1). 'rb+ terjual';
+            }else{
+                $total = substr_replace($total, ',', 1, 0).'rb+ terjual';
+            }
+        }elseif($total >= 10000){
+            $total = substr($total, 0, 2);
+            $total = $total. 'rb+ terjual';
+        }else{
+            $total = '0 terjual';
+        }
+
+        return $total;
     }
 }
