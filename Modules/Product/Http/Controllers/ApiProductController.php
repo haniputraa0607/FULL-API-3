@@ -1223,6 +1223,8 @@ class ApiProductController extends Controller
                 $idProductVariantGroup = ProductVariantGroup::where('id_product', $post['id_product'])->pluck('id_product_variant_group')->toArray();
                 ProductVariantGroup::where('id_product', $post['id_product'])->delete();
                 ProductVariantGroupDetail::whereIn('id_product_variant_group', $idProductVariantGroup)->delete();
+                $idProductVariant = ProductVariantPivot::whereIn('id_product_variant_group', $idProductVariantGroup)->pluck('id_product_variant')->toArray();
+                ProductVariant::whereIn('id_product_variant', $idProductVariant)->delete();
 
                 $result = [
                     'status' => 'success',
@@ -1814,10 +1816,17 @@ class ApiProductController extends Controller
         if ($product['need_recipe_status'] == 1) {
             $idUser = $request->user()->id;
             $checkRecipe = TransactionConsultation::join('transaction_consultation_recomendations', 'transaction_consultation_recomendations.id_transaction_consultation', 'transaction_consultations.id_transaction_consultation')
+                ->whereNotNull('completed_at')
                 ->whereNotIn('consultation_status', ['canceled'])
-                ->where('id_user', $idUser)->where('product_type', 'Drug')->where('id_product', $product['id_product'])->first();
-            $maxQty = ($checkRecipe['recipe_redemption_limit'] ?? 0) * ($checkRecipe['qty_product'] ?? 0);
-            $qtyCanBuy = $maxQty - $checkRecipe['qty_product_redeem'];
+                ->where('id_user', $idUser)->where('product_type', 'Drug')->where('id_product', $product['id_product'])
+                ->get()->toArray();
+
+            $qtyCanBuy = 0;
+            foreach ($checkRecipe as $valueRecipe) {
+                $maxQty = ($valueRecipe['recipe_redemption_limit'] ?? 0) * ($valueRecipe['qty_product'] ?? 0);
+                $calculate = $maxQty - $valueRecipe['qty_product_redeem'];
+                $qtyCanBuy = $qtyCanBuy + $calculate;
+            }
 
             if (!empty($checkRecipe) && $qtyCanBuy > 0) {
                 $product['need_recipe_status'] = 0;

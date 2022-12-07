@@ -146,7 +146,8 @@ class ApiShipperController extends Controller
         $outlet = Outlet::where('id_outlet', $transaction['id_outlet'])->first();
 
         $shipper = $body['external_status'];
-        if ($shipper['code'] == '999') {
+        $shipperInternal = $body['internal_status'] ?? null;
+        if ($shipper['code'] == '999' && $shipperInternal['code'] == '999' && $transaction['transaction_status'] != 'Rejected') {
             $dtReject = [
                 'id_transaction' => $transaction['id_transaction'],
                 'reject_reason' => 'Auto reject transaction from delivery'

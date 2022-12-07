@@ -38,6 +38,7 @@ Route::group(['middleware' => ['auth_client', 'log_activities', 'user_agent'], '
     Route::get('/navigation-sidebar', 'ApiSetting@NavigationSidebar');
     Route::get('/navigation-navbar', 'ApiSetting@NavigationNavbar');
     Route::any('outletapp/splash-screen', 'ApiSetting@splashScreenOutletApps');
+    Route::any('social-login', 'ApiSetting@socialLogin');
 });
 
 Route::group(['middleware' => ['auth_client', 'log_activities', 'user_agent'], 'prefix' => 'api/version', 'namespace' => 'Modules\Setting\Http\Controllers'], function () {

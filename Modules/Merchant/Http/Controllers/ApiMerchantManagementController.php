@@ -1070,6 +1070,7 @@ class ApiMerchantManagementController extends Controller
             $wholesalerStatus = false;
             $variantGroup = ProductVariantGroup::where('id_product', $detail['id_product'])->get()->toArray();
             $variants = [];
+            $checkVariantUseTransaction = [];
             foreach ($variantGroup as $group) {
                 $variant = ProductVariant::join('product_variant_pivot', 'product_variant_pivot.id_product_variant', 'product_variants.id_product_variant')->where('id_product_variant_group', $group['id_product_variant_group'])->get()->toArray();
                 $variantName = array_column($variant, 'product_variant_name');
@@ -1104,6 +1105,11 @@ class ApiMerchantManagementController extends Controller
                         "data" => $variantChild,
                         "wholesaler_price" => $wholesaler
                     ];
+
+                    $checkTransactionVariant = TransactionProduct::where('id_product_variant_group', $group['id_product_variant_group'])->first();
+                    if (!empty($checkTransactionVariant)) {
+                        $checkVariantUseTransaction[] = implode(' ', $variantName);
+                    }
                 }
             }
 
@@ -1121,6 +1127,7 @@ class ApiMerchantManagementController extends Controller
                 $result['stock'] = ProductDetail::where('id_product', $detail['id_product'])->where('id_outlet', $checkMerchant['id_outlet'])->first()['product_detail_stock_item'] ?? 0;
             }
             $result['variants'] = $variants;
+            $result['variant_use_transaction'] = $checkVariantUseTransaction;
             return response()->json(MyHelper::checkGet($result));
         } else {
             return response()->json(['status' => 'fail', 'messages' => ['ID can not be empty']]);
@@ -1142,6 +1149,8 @@ class ApiMerchantManagementController extends Controller
                 $idProductVariantGroup = ProductVariantGroup::where('id_product', $post['id_product'])->pluck('id_product_variant_group')->toArray();
                 ProductVariantGroup::where('id_product', $post['id_product'])->delete();
                 ProductVariantGroupDetail::whereIn('id_product_variant_group', $idProductVariantGroup)->delete();
+                $idProductVariant = ProductVariantPivot::whereIn('id_product_variant_group', $idProductVariantGroup)->pluck('id_product_variant')->toArray();
+                ProductVariant::whereIn('id_product_variant', $idProductVariant)->delete();
             }
             return response()->json(MyHelper::checkDelete($delete));
         } else {
@@ -1639,27 +1648,27 @@ class ApiMerchantManagementController extends Controller
         return $this->productDetail($post);
     }
 
-    public function updateGrading(Request $request){
+    public function updateGrading(Request $request)
+    {
         $post = $request->all();
 
-        if(isset($post['reseller_status'])){
+        if (isset($post['reseller_status'])) {
             $data_update['reseller_status'] = 1;
             $data_update['auto_grading'] = $post['auto_grading'];
-
-        }else{
+        } else {
             $data_update['reseller_status'] = 0;
             $data_update['auto_grading'] = 0;
         }
-        
+
         DB::beginTransaction();
         $update = Merchant::where('id_merchant', $post['id_merchant'])->update($data_update);
-        if(!$update){
+        if (!$update) {
             DB::rollback();
             return response()->json(['status' => 'fail', 'messages' => ['Failed to update merchant']]);
         }
 
-        $detail_grading = $this->updateDetailGrading($post['merchant_grading']??null,$data_update['reseller_status'], $post['id_merchant']);
-        if(!$detail_grading){
+        $detail_grading = $this->updateDetailGrading($post['merchant_grading'] ?? null, $data_update['reseller_status'], $post['id_merchant']);
+        if (!$detail_grading) {
             DB::rollback();
             return response()->json(['status' => 'fail', 'messages' => ['Failed to update merchant']]);
         }
@@ -1668,20 +1677,21 @@ class ApiMerchantManagementController extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
 
-    public function updateDetailGrading($data = null, $status, $id_merchant) {
-       
-        $grading = MerchantGrading::where('id_merchant', $id_merchant)->get()->toArray();
-      
+    public function updateDetailGrading($data, $status, $id_merchant)
+    {
 
-        if($grading){
+        $grading = MerchantGrading::where('id_merchant', $id_merchant)->get()->toArray();
+
+
+        if ($grading) {
             $delete = MerchantGrading::where('id_merchant', $id_merchant)->delete();
-            if(!$delete){
+            if (!$delete) {
                 return false;
             }
         }
-        
-        if($status != 0){
-            foreach($data ?? null as $key => $val){
+
+        if ($status != 0) {
+            foreach ($data ?? null as $key => $val) {
                 $data_val = [
                     'id_merchant' => $id_merchant,
                     'grading_name' => $val['grading_name'],
@@ -1689,7 +1699,7 @@ class ApiMerchantManagementController extends Controller
                     'min_nominal' => $val['min_nominal'],
                 ];
                 $add_grading = MerchantGrading::where('id_merchant', $id_merchant)->create($data_val);
-                if(!$add_grading){
+                if (!$add_grading) {
                     return false;
                 }
             }

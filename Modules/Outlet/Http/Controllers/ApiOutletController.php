@@ -3812,7 +3812,7 @@ class ApiOutletController extends Controller
                 'product_best_seller' => $bestProduct
             ];
 
-            if(in_array('141',$config)){
+            if (in_array('141', $config)) {
                 $result['reseller_status'] = (empty($detail['reseller_status']) ? 0 : 1);
             }
 

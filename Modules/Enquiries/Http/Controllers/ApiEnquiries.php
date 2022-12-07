@@ -699,6 +699,19 @@ class ApiEnquiries extends Controller
             }
         }
 
+        $getAllFile = EnquiriesFile::where('id_enquiry', $save['id_enquiry'])->get()->toArray();
+        $getAllFile = array_column($getAllFile, 'url_enquiry_file');
+        $finalContent = 'Name : ' . $checkUser['name'] . '<br>';
+        $finalContent .= 'Email : ' . $checkUser['email'] . '<br>';
+        $finalContent .= 'Phone : ' . $checkUser['phone'] . '<br><br><br>';
+        $finalContent .= $post['messages'] . '<br>';
+        $finalContent .= (!empty($getAllFile) ? '<br> Attactment : <br>' . implode('<br>', $getAllFile) : '<br> Attactment : -');
+
+        app($this->autocrm)->SendAutoCRM('Forward Contact Us', $request->user()->phone, [
+                    'subject_contact_us' => $post['subject'] ?? '',
+                    'content_contact_us' => $finalContent,
+                ], null, true);
+
         return response()->json(MyHelper::checkCreate($save));
     }
 
@@ -748,6 +761,18 @@ class ApiEnquiries extends Controller
                 EnquiriesFile::insert($fileSubmit);
             }
         }
+
+        $getAllFile = EnquiriesFile::where('id_enquiry', $save['id_enquiry'])->get()->toArray();
+        $getAllFile = array_column($getAllFile, 'url_enquiry_file');
+        $finalContent = 'Doctor Name : ' . $checkUser['name'] . '<br>';
+        $finalContent .= 'Doctor Phone : ' . $checkUser['doctor_phone'] . '<br><br><br>';
+        $finalContent .= $post['messages'] . '<br>';
+        $finalContent .= (!empty($getAllFile) ? '<br> Attactment : <br>' . implode('<br>', $getAllFile) : '<br> Attactment : -');
+
+        app($this->autocrm)->SendAutoCRM('Forward Contact Us', $request->user()->phone, [
+            'subject_contact_us' => $post['subject'] ?? '',
+            'content_contact_us' => $finalContent,
+        ], null, true);
 
         return response()->json(MyHelper::checkCreate($save));
     }

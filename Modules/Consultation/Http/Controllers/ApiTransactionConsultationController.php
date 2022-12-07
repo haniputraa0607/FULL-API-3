@@ -112,7 +112,7 @@ class ApiTransactionConsultationController extends Controller
 
         //get doctor consultation
         $doctor_constultation = TransactionConsultation::where('id_doctor', $id_doctor)->where('schedule_date', $picked_date)
-                                ->whereNotIn('consultation_status', ['canceled'])
+                                ->whereNotIn('consultation_status', ['canceled', 'done'])
                                 ->where('schedule_start_time', $picked_time)->count();
 
         $getSetting = Setting::where('key', 'max_consultation_quota')->first()->toArray();
@@ -300,7 +300,7 @@ class ApiTransactionConsultationController extends Controller
 
         //get doctor consultation
         $doctor_constultation = TransactionConsultation::where('id_doctor', $id_doctor)->where('schedule_date', $picked_date)
-                                ->whereNotIn('consultation_status', ['canceled'])
+                                ->whereNotIn('consultation_status', ['canceled', 'done'])
                                 ->where('schedule_start_time', $picked_time)->count();
         $getSetting = Setting::where('key', 'max_consultation_quota')->first()->toArray();
         $quota = $getSetting['value'];
@@ -1559,13 +1559,11 @@ class ApiTransactionConsultationController extends Controller
 
         $transaction = Transaction::with('consultation')->where('id_user', $id);
 
-        if (isset($post['filter'])) {
-            $id_doctor = Doctor::where('doctor_name', 'like', '%' . $post['filter'] . '%')->pluck('id_doctor')->toArray();
-            $transaction = $transaction->whereHas('consultation', function ($query) use ($post, $id_doctor) {
-                $query->whereIn('consultation_status', ['done', 'completed', 'missed'])->where(function ($query2) use ($post, $id_doctor) {
-                    $query2->orWhere('schedule_date', 'like', '%' . $post['filter'] . '%');
-                    $query2->orWhereIn('id_doctor', $id_doctor);
-                });
+        if (!empty($post['filter_date_start']) && !empty($post['filter_date_end'])) {
+            $transaction = $transaction->whereHas('consultation', function ($query) use ($post) {
+                $query->whereIn('consultation_status', ['done', 'completed', 'missed'])
+                    ->whereDate('schedule_date', '>=', date('Y-m-d', strtotime($post['filter_date_start'])))
+                    ->whereDate('schedule_date', '<=', date('Y-m-d', strtotime($post['filter_date_end'])));
             });
         } else {
             $transaction = $transaction->whereHas('consultation', function ($query) {
@@ -3408,7 +3406,7 @@ class ApiTransactionConsultationController extends Controller
             'payment_token' => $paymentToken,
             'payment_url' => $paymentURL,
             'payment_detail' => $paymentDetail,
-            'point_receive' => (!empty($transaction['transaction_cashback_earned'] && $transaction['transaction_status'] != 'Rejected') ? 'Mendapatkan +' . number_format((int)$transaction['transaction_cashback_earned'], 0, ",", ".") . ' Points Dari Transaksi ini' : ''),
+            'point_receive' => (!empty($transaction['transaction_cashback_earned'] && $transaction['transaction_status'] != 'Rejected') ? ($transaction['cashback_insert_status'] ? 'Mendapatkan +' : 'Anda akan mendapatkan +') . number_format((int)$transaction['transaction_cashback_earned'], 0, ",", ".") . ' point dari transaksi ini' : ''),
             'transaction_reject_reason' => $transaction['transaction_reject_reason'],
             'transaction_reject_at' => (!empty($transaction['transaction_reject_at']) ? MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($transaction['transaction_reject_at'])), true) : null),
             'transaction_consultation_chat_url' => $transaction_consultation_chat_url,
@@ -3979,7 +3977,7 @@ class ApiTransactionConsultationController extends Controller
 
         //get doctor consultation
         $doctor_constultation = TransactionConsultation::where('id_doctor', $id_doctor)->where('schedule_date', $picked_date)
-                                ->whereNotIn('consultation_status', ['canceled'])
+                                ->whereNotIn('consultation_status', ['canceled', 'done'])
                                 ->where('schedule_start_time', $picked_time)->count();
 
         $getSettingQuota = Setting::where('key', 'max_consultation_quota')->first()->toArray();
@@ -4158,6 +4156,10 @@ class ApiTransactionConsultationController extends Controller
                 //get setting late
                 $getSettingLate = Setting::where('key', 'consultation_starts_late')->first();
                 $endConsultation = $consultationSoon['schedule_date'] . $consultationSoon['schedule_end_time'];
+                if (strtotime($consultationSoon['schedule_start_time']) > strtotime($consultationSoon['schedule_end_time'])) {
+                    $date = date('Y-m-d', strtotime($consultationSoon['schedule_date'] . ' +1 day'));
+                    $endConsultation = $date . $consultationSoon['schedule_end_time'];
+                }
 
                 if (!empty($getSettingLate)) {
                     $endConsultation = date('Y-m-d H:i:s', strtotime("{$consultationSoon['schedule_date']} {$consultationSoon['schedule_start_time']} +{$getSettingLate->value}minutes"));
