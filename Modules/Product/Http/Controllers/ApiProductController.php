@@ -60,6 +60,7 @@ class ApiProductController extends Controller
     public function __construct()
     {
         date_default_timezone_set('Asia/Jakarta');
+        $this->management_merchant = "Modules\Merchant\Http\Controllers\ApiMerchantManagementController";
     }
 
     public $saveImage = "img/product/item/";
@@ -1768,7 +1769,7 @@ class ApiProductController extends Controller
         $post = $request->json()->all();
         //get product
         $product = Product::join('product_categories', 'product_categories.id_product_category', 'products.id_product_category')
-                    ->select('id_merchant', 'products.id_product_category', 'product_categories.product_category_name', 'id_product', 'product_code', 'product_name', 'product_description', 'product_code', 'product_variant_status', 'need_recipe_status')
+                    ->select('id_merchant', 'products.id_product_category', 'product_categories.product_category_name', 'id_product', 'product_code', 'product_name', 'product_description', 'product_code', 'product_variant_status', 'need_recipe_status', 'product_count_transaction')
                     ->where('id_product', $post['id_product'])->first();
 
         if (!$product) {
@@ -1777,6 +1778,9 @@ class ApiProductController extends Controller
             // toArray error jika $product Null,
             $product = $product->toArray();
         }
+        
+        $product['sold'] = app($this->management_merchant)->productCount($product['product_count_transaction']);
+        unset($product['product_count_transaction']);
 
         $merchant = Merchant::where('id_merchant', $product['id_merchant'])->first();
         $post['id_outlet'] = $merchant['id_outlet'] ?? null;
@@ -2042,6 +2046,7 @@ class ApiProductController extends Controller
             'products.id_product',
             'products.product_name',
             'products.product_code',
+            'products.product_count_transaction',
             'products.product_description',
             'product_variant_status',
             'product_global_price as product_price',
@@ -2085,6 +2090,8 @@ class ApiProductController extends Controller
             $list[$key]['product_price'] = (int)$list[$key]['product_price'];
             $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
             $list[$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api') . $image['product_photo'] : config('url.storage_url_api') . 'img/default.jpg');
+            $list[$key]['sold'] = app($this->management_merchant)->productCount($product['product_count_transaction']);
+            unset($list[$key]['product_count_transaction']);
         }
         $list = array_values($list);
         $list = array_slice($list, 0, 10);
@@ -2105,6 +2112,7 @@ class ApiProductController extends Controller
             'products.product_name',
             'products.product_code',
             'products.product_description',
+            'products.product_count_transaction',
             'product_variant_status',
             'product_global_price as product_price',
             'product_detail_stock_status as stock_status',
@@ -2150,6 +2158,8 @@ class ApiProductController extends Controller
             $list[$key]['product_price'] = (int)$list[$key]['product_price'];
             $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
             $list[$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api') . $image['product_photo'] : config('url.storage_url_api') . 'img/default.jpg');
+            $list[$key]['sold'] = app($this->management_merchant)->productCount($product['product_count_transaction']);
+            unset($list[$key]['product_count_transaction']);
         }
         $list = array_values($list);
         return $list;
@@ -2246,7 +2256,8 @@ class ApiProductController extends Controller
                 'product_detail_stock_status as stock_status',
                 'product_detail.id_outlet',
                 'need_recipe_status',
-                'product_categories.product_category_name'
+                'product_categories.product_category_name',
+                'products.product_count_transaction'
             );
         }
 
@@ -2282,6 +2293,8 @@ class ApiProductController extends Controller
                 $list['data'][$key]['favorite'] = (!empty($favorite) ? true : false);
                 $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
                 $list['data'][$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api') . $image['product_photo'] : config('url.storage_url_api') . 'img/default.jpg');
+                $list['data'][$key]['sold'] = app($this->management_merchant)->productCount($product['product_count_transaction']);
+                unset($list['data'][$key]['product_count_transaction']);
             }
             $list['data'] = array_values($list['data']);
         } else {
@@ -2304,6 +2317,8 @@ class ApiProductController extends Controller
                 $list[$key]['favorite'] = (!empty($favorite) ? true : false);
                 $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
                 $list[$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api') . $image['product_photo'] : config('url.storage_url_api') . 'img/default.jpg');
+                $list['data'][$key]['sold'] = app($this->management_merchant)->productCount($product['product_count_transaction']);
+                unset($list['data'][$key]['product_count_transaction']);
             }
             $list = array_values($list);
         }
@@ -2337,7 +2352,8 @@ class ApiProductController extends Controller
             'product_detail_stock_status as stock_status',
             'product_detail.id_outlet',
             'product_categories.product_category_name',
-            'need_recipe_status'
+            'need_recipe_status',
+            'product_count_transaction'
         )
             ->leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
             ->leftJoin('product_categories', 'product_categories.id_product_category', '=', 'products.id_product_category')
@@ -2373,6 +2389,9 @@ class ApiProductController extends Controller
             $list[$key]['product_price'] = (int)$list[$key]['product_price'];
             $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
             $list[$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api') . $image['product_photo'] : config('url.storage_url_api') . 'img/default.jpg');
+            $list[$key]['sold'] = app($this->management_merchant)->productCount($product['product_count_transaction']);
+            unset($list[$key]['product_count_transaction']);
+
         }
         $list = array_values($list);
 

@@ -1709,7 +1709,7 @@ class ApiMerchantManagementController extends Controller
 
     public function productCount($total = 0){
     
-        if ($total >= 0 && $total < 1000){
+        if ($total > 0 && $total < 1000){
             $total = $total. ' terjual';
         }elseif($total >= 1000 && $total < 10000){
             $total = substr($total, 0, 2);
@@ -1722,7 +1722,7 @@ class ApiMerchantManagementController extends Controller
             $total = substr($total, 0, 2);
             $total = $total. 'rb+ terjual';
         }else{
-            $total = '0 terjual';
+            $total = '';
         }
 
         return $total;
