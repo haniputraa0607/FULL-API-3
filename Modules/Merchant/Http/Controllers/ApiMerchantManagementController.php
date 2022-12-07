@@ -831,7 +831,7 @@ class ApiMerchantManagementController extends Controller
             ];
 
 
-            if($checkProduct['product_count_transaction'] <= 0){
+            if ($checkProduct['product_count_transaction'] <= 0) {
                 $product['product_name'] =  $post['product_name'];
             }
 
@@ -1003,7 +1003,7 @@ class ApiMerchantManagementController extends Controller
     public function productDetail($post)
     {
         $idUser = $post['id_user'];
-        
+
         $checkMerchant = Merchant::where('id_user', $idUser)->first();
         if (empty($checkMerchant)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
@@ -1018,7 +1018,6 @@ class ApiMerchantManagementController extends Controller
         }
 
         if (!empty($post['id_product'])) {
-
             $detail = Product::leftJoin('product_categories', 'product_categories.id_product_category', 'products.id_product_category')
                 ->where('id_product', $post['id_product'])->select('products.*', 'product_category_name', 'product_count_transaction')->first();
 
@@ -1707,21 +1706,22 @@ class ApiMerchantManagementController extends Controller
         return true;
     }
 
-    public function productCount($total = 0){
-    
-        if ($total > 0 && $total < 1000){
-            $total = $total. ' terjual';
-        }elseif($total >= 1000 && $total < 10000){
+    public function productCount($total = 0)
+    {
+
+        if ($total > 0 && $total < 1000) {
+            $total = $total . ' terjual';
+        } elseif ($total >= 1000 && $total < 10000) {
             $total = substr($total, 0, 2);
-            if($total%10==0){
-                $total = substr($total, 0, 1). 'rb+ terjual';
-            }else{
-                $total = substr_replace($total, ',', 1, 0).'rb+ terjual';
+            if ($total % 10 == 0) {
+                $total = substr($total, 0, 1) . 'rb+ terjual';
+            } else {
+                $total = substr_replace($total, ',', 1, 0) . 'rb+ terjual';
             }
-        }elseif($total >= 10000){
+        } elseif ($total >= 10000) {
             $total = substr($total, 0, 2);
-            $total = $total. 'rb+ terjual';
-        }else{
+            $total = $total . 'rb+ terjual';
+        } else {
             $total = '';
         }
 

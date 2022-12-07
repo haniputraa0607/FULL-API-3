@@ -1778,7 +1778,7 @@ class ApiProductController extends Controller
             // toArray error jika $product Null,
             $product = $product->toArray();
         }
-        
+
         $product['sold'] = app($this->management_merchant)->productCount($product['product_count_transaction']);
         unset($product['product_count_transaction']);
 
@@ -2391,7 +2391,6 @@ class ApiProductController extends Controller
             $list[$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api') . $image['product_photo'] : config('url.storage_url_api') . 'img/default.jpg');
             $list[$key]['sold'] = app($this->management_merchant)->productCount($product['product_count_transaction']);
             unset($list[$key]['product_count_transaction']);
-
         }
         $list = array_values($list);
 
