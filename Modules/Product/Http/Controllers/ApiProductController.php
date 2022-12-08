@@ -1796,6 +1796,8 @@ class ApiProductController extends Controller
         $productGlobalPrice = ProductGlobalPrice::where('id_product', $post['id_product'])->first();
         if ($productGlobalPrice) {
             $product['product_price'] = $productGlobalPrice['product_global_price'];
+            $product['product_label_discount'] = $productGlobalPrice['global_price_discount_percent'];
+            $product['product_label_price_before_discount'] = $productGlobalPrice['global_price_before_discount'];
         }
 
         if ($product['product_variant_status']) {
@@ -1806,6 +1808,8 @@ class ApiProductController extends Controller
                                 ->where('product_variant_group_stock_status', 'Available')
                                 ->orderBy('product_variant_group_price', 'asc')->first();
             $product['product_price'] = $selectedVariant['product_variant_group_price'] ?? $product['product_price'];
+            $product['product_label_discount'] = $selectedVariant['product_variant_group_price'] ?? $product['product_price'];
+            $product['product_label_price_before_discount'] = $selectedVariant['variant_group_price_before_discount'] ?? $product['product_price'];
             $post['id_product_variant_group'] = $selectedVariant['id_product_variant_group'] ?? null;
             $product['id_product_variant_group'] = $post['id_product_variant_group'];
         } else {
@@ -1840,7 +1844,7 @@ class ApiProductController extends Controller
         }
 
         if (!$product['product_variant_status']) {
-            $wholesaler = ProductWholesaler::where('id_product', $product['id_product'])->select('id_product_wholesaler', 'product_wholesaler_minimum as minimum', 'product_wholesaler_unit_price as unit_price')->get()->toArray();
+            $wholesaler = ProductWholesaler::where('id_product', $product['id_product'])->select('id_product_wholesaler', 'product_wholesaler_minimum as minimum', 'product_wholesaler_unit_price as unit_price', 'wholesaler_unit_price_before_discount as unit_price_before_discount', 'wholesaler_unit_price_discount_percent as discount_percent')->get()->toArray();
             foreach ($wholesaler as $key => $w) {
                 $wholesaler[$key]['unit_price'] = (int)$w['unit_price'];
             }
@@ -2045,6 +2049,8 @@ class ApiProductController extends Controller
             'products.product_description',
             'product_variant_status',
             'product_global_price as product_price',
+            'global_price_discount_percent as product_label_discount',
+            'global_price_before_discount as product_label_price_before_discount',
             'product_detail_stock_status as stock_status',
             'need_recipe_status',
             'outlets.id_outlet',
@@ -2077,6 +2083,8 @@ class ApiProductController extends Controller
                     continue;
                 }
                 $list[$key]['product_price'] = ($variantTree['base_price'] ?? false) ?: $product['product_price'];
+                $list['data']['product_label_discount'] = ($variantTree['base_price_discount_percent'] ?? false) ?: $product['product_label_discount'];
+                $list['data']['product_label_price_before_discount'] = ($variantTree['base_price_before_discount'] ?? false) ?: $product['product_label_price_before_discount'];
             }
 
             unset($list[$key]['id_outlet']);
@@ -2107,6 +2115,8 @@ class ApiProductController extends Controller
             'products.product_description',
             'product_variant_status',
             'product_global_price as product_price',
+            'global_price_discount_percent as product_label_discount',
+            'global_price_before_discount as product_label_price_before_discount',
             'product_detail_stock_status as stock_status',
             'need_recipe_status',
             'outlets.id_outlet',
@@ -2142,6 +2152,8 @@ class ApiProductController extends Controller
                     continue;
                 }
                 $list[$key]['product_price'] = ($variantTree['base_price'] ?? false) ?: $product['product_price'];
+                $list['data']['product_label_discount'] = ($variantTree['base_price_discount_percent'] ?? false) ?: $product['product_label_discount'];
+                $list['data']['product_label_price_before_discount'] = ($variantTree['base_price_before_discount'] ?? false) ?: $product['product_label_price_before_discount'];
             }
 
             unset($list[$key]['id_outlet']);
@@ -2215,6 +2227,8 @@ class ApiProductController extends Controller
                     'products.product_description',
                     'product_variant_status',
                     'product_global_price as product_price',
+                    'global_price_discount_percent as product_label_discount',
+                    'global_price_before_discount as product_label_price_before_discount',
                     'product_detail_stock_status as stock_status',
                     'product_detail.id_outlet',
                     'need_recipe_status',
@@ -2243,6 +2257,8 @@ class ApiProductController extends Controller
                 'products.product_description',
                 'product_variant_status',
                 'product_global_price as product_price',
+                'global_price_discount_percent as product_label_discount',
+                'global_price_before_discount as product_label_price_before_discount',
                 'product_detail_stock_status as stock_status',
                 'product_detail.id_outlet',
                 'need_recipe_status',
@@ -2273,6 +2289,8 @@ class ApiProductController extends Controller
                         $list['data'][$key]['stock_status'] = 'Sold Out';
                     }
                     $list['data'][$key]['product_price'] = ($variantTree['base_price'] ?? false) ?: $product['product_price'];
+                    $list['data'][$key]['product_label_discount'] = ($variantTree['base_price_discount_percent'] ?? false) ?: $product['product_label_discount'];
+                    $list['data'][$key]['product_label_price_before_discount'] = ($variantTree['base_price_before_discount'] ?? false) ?: $product['product_label_price_before_discount'];
                 }
 
                 unset($list['data'][$key]['id_outlet']);
@@ -2295,6 +2313,8 @@ class ApiProductController extends Controller
                         $list[$key]['stock_status'] = 'Sold Out';
                     }
                     $list[$key]['product_price'] = ($variantTree['base_price'] ?? false) ?: $product['product_price'];
+                    $list[$key]['product_label_discount'] = ($variantTree['base_price_discount_percent'] ?? false) ?: $product['product_label_discount'];
+                    $list[$key]['product_label_price_before_discount'] = ($variantTree['base_price_before_discount'] ?? false) ?: $product['product_label_price_before_discount'];
                 }
 
                 unset($list[$key]['id_outlet']);
@@ -2334,6 +2354,8 @@ class ApiProductController extends Controller
             'products.product_description',
             'product_variant_status',
             'product_global_price as product_price',
+            'global_price_discount_percent as product_label_discount',
+            'global_price_before_discount as product_label_price_before_discount',
             'product_detail_stock_status as stock_status',
             'product_detail.id_outlet',
             'product_categories.product_category_name',
@@ -2366,6 +2388,8 @@ class ApiProductController extends Controller
                     $list[$key]['stock_status'] = 'Sold Out';
                 }
                 $list[$key]['product_price'] = ($variantTree['base_price'] ?? false) ?: $product['product_price'];
+                $list[$key]['product_label_discount'] = ($variantTree['base_price_discount_percent'] ?? false) ?: $product['product_label_discount'];
+                $list[$key]['product_label_price_before_discount'] = ($variantTree['base_price_before_discount'] ?? false) ?: $product['product_label_price_before_discount'];
             }
 
             unset($list[$key]['id_outlet']);

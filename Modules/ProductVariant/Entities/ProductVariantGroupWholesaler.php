@@ -13,6 +13,8 @@ class ProductVariantGroupWholesaler extends Model
     protected $fillable = [
         'id_product_variant_group',
         'variant_wholesaler_minimum',
-        'variant_wholesaler_unit_price'
+        'variant_wholesaler_unit_price',
+        'variant_wholesaler_unit_price_discount_percent',
+        'variant_wholesaler_unit_price_before_discount'
     ];
 }

@@ -11,6 +11,8 @@ class ProductWholesaler extends Model
     protected $fillable = [
         'id_product',
         'product_wholesaler_minimum',
-        'product_wholesaler_unit_price'
+        'product_wholesaler_unit_price',
+        'wholesaler_unit_price_before_discount',
+        'wholesaler_unit_price_discount_percent'
     ];
 }

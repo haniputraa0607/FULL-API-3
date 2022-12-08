@@ -11,6 +11,8 @@ class ProductGlobalPrice extends Model
     protected $fillable = [
         'id_product',
         'product_global_price',
+        'global_price_before_discount',
+        'global_price_discount_percent',
         'created_at',
         'updated_at'
     ];

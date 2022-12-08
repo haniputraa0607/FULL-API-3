@@ -293,7 +293,7 @@ class Product extends Model
         }
 
         // get all product variant groups assigned to this product
-        $variant_group_raws = ProductVariantGroup::select('product_variant_groups.id_product_variant_group', 'product_variant_group_stock_status', 'product_variant_group_stock_item')->where('id_product', $id_product)->with(['id_product_variants']);
+        $variant_group_raws = ProductVariantGroup::select('product_variant_groups.id_product_variant_group', 'product_variant_group_stock_status', 'product_variant_group_stock_item', 'variant_group_price_before_discount', 'variant_group_price_discount_percent')->where('id_product', $id_product)->with(['id_product_variants']);
 
         if ($outlet['outlet_different_price']) {
             $variant_group_raws->addSelect('product_variant_group_special_prices.product_variant_group_price')->join('product_variant_group_special_prices', function ($join) use ($outlet) {
@@ -421,12 +421,18 @@ class Product extends Model
 
         // get base price and unset from array [for nice array structure]
         $base_price = $variants['product_variant_group_price'] ?? $product_price;
+        $disc = $variants['variant_group_price_discount_percent'] ?? 0;
+        $price_before = $variants['variant_group_price_before_discount'] ?? 0;
         unset($variants['product_variant_group_price']);
         unset($variants['product_variant_stock_status']);
+        unset($variants['variant_group_price_discount_percent']);
+        unset($variants['variant_group_price_before_discount']);
 
         // create result
         $result = [
             'base_price'    => $base_price,
+            'base_price_discount_percent' => $disc,
+            'base_price_before_discount'  => $price_before,
             'variants_tree' => $variants,
         ];
         // save to cache
@@ -466,9 +472,13 @@ class Product extends Model
                     // assign price, from lowest price of variant with lower level, [previously saved in variant detail]
                     $variant['product_variant_group_price'] = $variant['variant']['product_variant_group_price'];
                     $variant['product_variant_stock_status'] = $variant['variant']['product_variant_stock_status'];
+                    $variant['variant_group_price_before_discount'] = $variant['variant']['variant_group_price_before_discount'];
+                    $variant['variant_group_price_discount_percent'] = $variant['variant']['variant_group_price_discount_percent'];
                     // unset price in variant detail
                     unset($variant['variant']['product_variant_group_price']);
                     unset($variant['variant']['product_variant_stock_status']);
+                    unset($variant['variant']['variant_group_price_before_discount']);
+                    unset($variant['variant']['variant_group_price_discount_percent']);
 
                     // set this level lowest price to parent variant detail
                     if (!isset($variants['product_variant_group_price']) || $variants['product_variant_group_price'] > $variant['product_variant_group_price']) {
@@ -476,6 +486,14 @@ class Product extends Model
                     }
                     if (!isset($variants['product_variant_stock_status']) || $variant['product_variant_stock_status'] == 'Available') {
                         $variants['product_variant_stock_status'] = $variant['product_variant_stock_status'];
+                    }
+
+                    if (isset($variant['variant_group_price_before_discount'])) {
+                        $variants['variant_group_price_before_discount'] = $variant['variant_group_price_before_discount'];
+                    }
+
+                    if (isset($variant['variant_group_price_discount_percent'])) {
+                        $variants['variant_group_price_discount_percent'] = $variant['variant_group_price_discount_percent'];
                     }
                     continue;
                 }
@@ -492,6 +510,8 @@ class Product extends Model
                 $variant['id_product_variant_group']    = $variant_group['id_product_variant_group'];
                 $variant['product_variant_group_price'] = (double) $variant_group['product_variant_group_price'];
                 $variant['product_variant_stock_status'] = $variant_group['product_variant_group_stock_status'];
+                $variant['variant_group_price_before_discount'] = $variant_group['variant_group_price_before_discount'];
+                $variant['variant_group_price_discount_percent'] = $variant_group['variant_group_price_discount_percent'];
 
                 // set this level lowest price to parent variant detail
                 if (!isset($variants['product_variant_group_price']) || $variants['product_variant_group_price'] > $variant_group['product_variant_group_price']) {
@@ -500,6 +520,14 @@ class Product extends Model
 
                 if (!isset($variants['product_variant_stock_status']) || $variant_group['product_variant_group_stock_status'] == 'Available') {
                     $variants['product_variant_stock_status'] = $variant_group['product_variant_group_stock_status'];
+                }
+
+                if (isset($variant_group['variant_group_price_before_discount'])) {
+                    $variants['variant_group_price_before_discount'] = $variant_group['variant_group_price_before_discount'];
+                }
+
+                if (isset($variant_group['variant_group_price_discount_percent'])) {
+                    $variants['variant_group_price_discount_percent'] = $variant_group['variant_group_price_discount_percent'];
                 }
             } else { // doesn't has
                 // delete from array
@@ -517,6 +545,8 @@ class Product extends Model
                 'product_variant_name'  => $variant['product_variant_name'],
                 'product_variant_price' => $variant['product_variant_price'],
                 'product_variant_stock_status' => $variant['product_variant_stock_status'],
+                'variant_group_price_before_discount' => $variant['variant_group_price_before_discount'],
+                'variant_group_price_discount_percent' => $variant['variant_group_price_discount_percent']
             ];
             if ($with_name_detail_trx) {
                 $new_order['product_variant_name_detail_trx']  = $variant['product_variant_name'];
@@ -556,7 +586,9 @@ class Product extends Model
             'product_variant_name'        => $variants['product_variant_name'],
             'childs'                      => $variants['childs'],
             'product_variant_group_price' => $variants['product_variant_group_price'], // do not remove or rename this
-            'product_variant_stock_status' => $variants['product_variant_stock_status'], // do not remove or rename this
+            'product_variant_stock_status' => $variants['product_variant_stock_status'],
+            'variant_group_price_before_discount' => $variants['variant_group_price_before_discount'],
+            'variant_group_price_discount_percent' => $variants['variant_group_price_discount_percent']
         ];
 
         $variants = $new_order;
@@ -755,7 +787,7 @@ class Product extends Model
         }
 
         // get all product variant groups assigned to this product
-        $variant_group_raws = ProductVariantGroup::select('product_variant_groups.id_product_variant_group', 'product_variant_group_stock_status', 'product_variant_group_stock_item')->where('id_product', $id_product)->where('product_variant_groups.id_product_variant_group', $id_product_variant_group)->with(['id_product_variants']);
+        $variant_group_raws = ProductVariantGroup::select('product_variant_groups.id_product_variant_group', 'product_variant_group_stock_status', 'product_variant_group_stock_item', 'variant_group_price_before_discount', 'variant_group_price_discount_percent')->where('id_product', $id_product)->where('product_variant_groups.id_product_variant_group', $id_product_variant_group)->with(['id_product_variants']);
 
         if ($outlet['outlet_different_price']) {
             $variant_group_raws->addSelect('product_variant_group_special_prices.product_variant_group_price')->join('product_variant_group_special_prices', function ($join) use ($outlet) {
