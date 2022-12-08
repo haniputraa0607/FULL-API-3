@@ -15,6 +15,8 @@ class ProductVariantGroup extends Model
         'product_variant_group_name',
         'product_variant_group_visibility',
         'product_variant_group_price',
+        'variant_group_price_before_discount',
+        'variant_group_price_discount_percent',
         'product_variant_groups_plastic_used'
     ];
 

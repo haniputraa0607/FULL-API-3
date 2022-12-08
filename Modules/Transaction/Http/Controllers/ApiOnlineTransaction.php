@@ -383,7 +383,7 @@ class ApiOnlineTransaction extends Controller
                     'id_user'                      => $insertTransaction['id_user'],
                     'transaction_product_qty'      => $valueProduct['qty'],
                     'transaction_product_price'    => $valueProduct['product_price'],
-                    'transaction_product_price_base' => $valueProduct['product_price'],
+                    'transaction_product_price_base' => (!empty($valueProduct['product_price_before_discount']) ? $valueProduct['product_price_before_discount'] : $valueProduct['product_price']),
                     'transaction_product_subtotal' => $valueProduct['product_price_subtotal'],
                     'transaction_product_net' => $valueProduct['product_price_subtotal'],
                     'transaction_variant_subtotal' => ($variantSubtotal < 0 ? 0 : $variantSubtotal),
@@ -2632,6 +2632,8 @@ class ApiOnlineTransaction extends Controller
                     $productGlobalPrice = ProductGlobalPrice::where('id_product', $item['id_product'])->first();
                     if ($productGlobalPrice) {
                         $product['product_price'] = $productGlobalPrice['product_global_price'];
+                        $product['product_price_discount'] = $productGlobalPrice['global_price_discount_percent'];
+                        $product['product_price_before_discount'] = $productGlobalPrice['global_price_before_discount'];
                     }
 
                     $product['stock_item'] = 0;
@@ -2651,8 +2653,10 @@ class ApiOnlineTransaction extends Controller
                             ->where('product_variant_visibility', 'Visible')->where('id_product_variant_group', $item['id_product_variant_group'])->pluck('product_variant_name')->toArray();
                         $product['variants'] = implode(', ', $variants);
                         $product['stock_item'] = $check['product_variant_group_stock_item'] ?? 0;
-                        $variantPrice = ProductVariantGroup::where('id_product_variant_group', $item['id_product_variant_group'])->first()['product_variant_group_price'] ?? 0;
-                        $product['product_price'] = $variantPrice;
+                        $variantPrice = ProductVariantGroup::where('id_product_variant_group', $item['id_product_variant_group'])->first();
+                        $product['product_price'] = $variantPrice['product_variant_group_price'] ?? 0;
+                        $product['product_price_discount'] = $variantPrice['variant_group_price_discount_percent'];
+                        $product['product_price_before_discount'] = $variantPrice['variant_group_price_before_discount'];
 
                         //check wholesaler
                         $wholesalerVariant = ProductVariantGroupWholesaler::where('id_product_variant_group', $item['id_product_variant_group'])
@@ -2664,6 +2668,8 @@ class ApiOnlineTransaction extends Controller
                             $idWholesalerVariant = $wholesalerVariant['id_product_variant_group_wholesaler'];
                             $variantPrice = $wholesalerVariant['variant_wholesaler_unit_price'];
                             $product['product_price'] = $wholesalerVariant['variant_wholesaler_unit_price'];
+                            $product['product_price_discount'] = $wholesalerVariant['variant_wholesaler_unit_price_discount_percent'];
+                            $product['product_price_before_discount'] = $wholesalerVariant['variant_wholesaler_unit_price_before_discount'];
                             $product['wholesaler_minimum'] = $wholesalerVariant['variant_wholesaler_minimum'];
                         }
                     } else {
@@ -2680,6 +2686,8 @@ class ApiOnlineTransaction extends Controller
                         if (!empty($wholesaler)) {
                             $idWholesaler = $wholesaler['id_product_wholesaler'];
                             $product['product_price'] = $wholesaler['product_wholesaler_unit_price'];
+                            $product['product_price_discount'] = $wholesaler['wholesaler_unit_price_discount_percent'];
+                            $product['product_price_before_discount'] = $wholesaler['wholesaler_unit_price_before_discount'];
                             $product['wholesaler_minimum'] = $wholesaler['product_wholesaler_minimum'];
                         }
                     }
@@ -2778,6 +2786,9 @@ class ApiOnlineTransaction extends Controller
                         "product_base_price" => (int)$productGlobalPrice['product_global_price'],
                         "product_price" => (int)$product['product_price'],
                         "product_price_text" => 'Rp ' . number_format((int)$product['product_price'], 0, ",", "."),
+                        "product_discount" => $product['product_price_discount'],
+                        "product_price_before_discount" => $product['product_price_before_discount'],
+                        "product_price_before_discount_text" => 'Rp ' . number_format($product['product_price_before_discount'], 0, ",", "."),
                         "product_price_subtotal" => (int)$totalPrice,
                         "product_price_subtotal_text" => 'Rp ' . number_format((int)$totalPrice, 0, ",", "."),
                         "product_variant_price" => (int)$variantPrice,

@@ -287,6 +287,8 @@ class ApiMerchantTransactionController extends Controller
                 'product_name' => $value['product_name'],
                 'product_qty' => $value['transaction_product_qty'],
                 'need_recipe_status' =>  $value['transaction_product_recipe_status'],
+                'product_label_price_before_discount' => ($value['transaction_product_price_base'] > $value['transaction_product_price'] ? 'Rp ' . number_format((int)$value['transaction_product_price_base'], 0, ",", ".") : 0),
+                'product_base_price' => 'Rp ' . number_format((int)$value['transaction_product_price'], 0, ",", "."),
                 'product_total_price' => 'Rp ' . number_format((int)$value['transaction_product_subtotal'], 0, ",", "."),
                 'discount_all' => (int)$value['transaction_product_discount_all'],
                 'discount_all_text' => 'Rp ' . number_format((int)$value['transaction_product_discount_all'], 0, ",", "."),
