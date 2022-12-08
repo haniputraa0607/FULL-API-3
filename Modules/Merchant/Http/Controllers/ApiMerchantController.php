@@ -1106,15 +1106,11 @@ class ApiMerchantController extends Controller
             ];
         }
 
-        if (!empty($start)) {
-            $start = MyHelper::dateFormatInd($start, false, false);
-            $start = str_replace('01', '', $start);
-        }
         $end = MyHelper::dateFormatInd($end, false, false);
         $end = str_replace('01', '', $end);
 
         $result = [
-            'revenue_text' => (!empty($start) ? 'Pendapatan' . $start . ' sampai ' . $end : 'Pendapatan' . $end),
+            'revenue_text' => 'Pendapatan' . $start . ' sampai ' . $end,
             'revenue_value' => 'Rp ' . number_format((int)$grandTotal, 0, ",", "."),
             'data' => $data
         ];
