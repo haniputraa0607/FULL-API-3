@@ -1106,6 +1106,8 @@ class ApiMerchantController extends Controller
             ];
         }
 
+        $start = MyHelper::dateFormatInd($start, false, false);
+        $start = str_replace('01', '', $start);
         $end = MyHelper::dateFormatInd($end, false, false);
         $end = str_replace('01', '', $end);
 
