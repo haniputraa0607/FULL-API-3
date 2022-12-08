@@ -87,9 +87,10 @@ class ApiAutoCrm extends Controller
             } elseif ($recipient_type == 'doctor') {
                 $users = Doctor::select('id_doctor as id', 'doctors.*')->where('doctor_phone', '=', $receipient)->get()->toArray();
             } elseif ($recipient_type == 'merchant') {
-                $users = Merchant::join('outlets', 'outlets.id_outlet', 'merchants.id_outlet')
+                $users = Merchant::join('users', 'users.id', 'merchants.id_user')
+                    ->join('outlets', 'outlets.id_outlet', 'merchants.id_outlet')
                     ->where('id_merchant', $receipient)
-                    ->select('merchants.*', 'merchants.id_merchant as id', 'outlets.*', 'outlets.outlet_phone as phone', 'outlets.outlet_email as email', 'outlets.outlet_name as name')
+                    ->select('users.phone as user_phone', 'merchants.*', 'merchants.id_merchant as id', 'outlets.*', 'outlets.outlet_phone as phone', 'outlets.outlet_email as email', 'outlets.outlet_name as name')
                     ->get()->toArray();
             }
         }
@@ -559,6 +560,10 @@ class ApiAutoCrm extends Controller
             }
 
             if ($crm['autocrm_push_toogle'] == 1 && !$forward_only) {
+                if ($recipient_type == 'merchant') {
+                    $user['phone'] = $user['user_phone'] ?? null;
+                }
+
                 if (!empty($user['phone'])) {
                     try {
                         $dataOptional          = $variables['data_optional'] ?? [];
