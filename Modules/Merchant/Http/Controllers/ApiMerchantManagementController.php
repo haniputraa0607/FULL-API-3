@@ -771,6 +771,7 @@ class ApiMerchantManagementController extends Controller
             }
         }
 
+        $post['wholesaler_price'] = $post['wholesaler'] ?? [];
         if (empty($post['variants']) && !empty($post['wholesaler_price'])) {
             if (!is_array($post['wholesaler_price'])) {
                 $post['wholesaler_price'] = (array)json_decode($post['wholesaler_price']);
