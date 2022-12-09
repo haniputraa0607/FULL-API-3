@@ -477,7 +477,7 @@ class ApiMerchantManagementController extends Controller
                 $discount = 0;
                 $priceBeforeDiscount = 0;
                 if (!empty($idProductVariantGroup)) {
-                    $wholesaler = ProductVariantGroupWholesaler::where('id_product_variant_group', $idProductVariantGroup)->select('id_product_variant_group_wholesaler', 'variant_wholesaler_minimum as minimum', 'variant_wholesaler_unit_price as unit_price')->get()->toArray();
+                    $wholesaler = ProductVariantGroupWholesaler::where('id_product_variant_group', $idProductVariantGroup)->select('id_product_variant_group_wholesaler', 'variant_wholesaler_minimum as minimum', 'variant_wholesaler_unit_price_discount_percent as discount_percent', 'variant_wholesaler_unit_price_before_discount as unit_price_before_discount', 'variant_wholesaler_unit_price as unit_price')->get()->toArray();
                     foreach ($wholesaler as $key => $w) {
                         $wholesaler[$key]['unit_price'] = (int)$w['unit_price'];
                     }
@@ -772,7 +772,9 @@ class ApiMerchantManagementController extends Controller
         }
 
         if (empty($post['variants']) && !empty($post['wholesaler_price'])) {
-            $post['wholesaler_price'] = (array)json_decode($post['wholesaler_price']);
+            if (!is_array($post['wholesaler_price'])) {
+                $post['wholesaler_price'] = (array)json_decode($post['wholesaler_price']);
+            }
             $insertWholesaler = [];
 
             foreach ($post['wholesaler_price'] as $wholesaler) {
@@ -828,8 +830,8 @@ class ApiMerchantManagementController extends Controller
             [
                 'id_product' => $idProduct,
                 'product_global_price' => $price,
-                'global_price_before_discount' => $discountPercent,
-                'global_price_discount_percent' => $priceBeforeDiscount
+                'global_price_before_discount' => $priceBeforeDiscount,
+                'global_price_discount_percent' => $discountPercent
             ]
         );
         return response()->json(MyHelper::checkCreate($create));
@@ -1076,8 +1078,8 @@ class ApiMerchantManagementController extends Controller
 
             ProductGlobalPrice::where('id_product', $post['id_product'])->update([
                 'product_global_price' => $price,
-                'global_price_before_discount' => $discountPercent,
-                'global_price_discount_percent' => $priceBeforeDiscount
+                'global_price_before_discount' => $priceBeforeDiscount,
+                'global_price_discount_percent' => $discountPercent
             ]);
             return response()->json(MyHelper::checkUpdate($update));
         } else {
@@ -1191,7 +1193,7 @@ class ApiMerchantManagementController extends Controller
                         "price" => (int)$group['product_variant_group_price'],
                         "price_discount" => $group['variant_group_price_discount_percent'],
                         "price_before_discount" => $group['variant_group_price_before_discount'],
-                        "visibility" => ($stock['product_variant_group_visibility'] ?? 'hidden' == 'Hidden' ? 0 : 1),
+                        "visibility" => ($stock['product_variant_group_visibility'] == 'Hidden' ? 0 : 1),
                         "stock" => (int)($stock['product_variant_group_stock_item'] ?? 0),
                         "data" => $variantChild,
                         "wholesaler_price" => $wholesaler
@@ -1515,6 +1517,8 @@ class ApiMerchantManagementController extends Controller
                     if (!empty($idVariants)) {
                         $combination['price'] = str_replace('.', '', $combination['price']);
                         if (!empty($combination['price_discount']) && !empty($combination['price_before_discount'])) {
+                            $combination['price_discount'] = str_replace('.', '', $combination['price_discount']);
+                            $combination['price_before_discount'] = str_replace('.', '', $combination['price_before_discount']);
                             $disc = $combination['price_before_discount'] * ($combination['price_discount'] / 100);
                             $combination['price'] = $combination['price_before_discount'] - $disc;
                         }
@@ -1551,6 +1555,8 @@ class ApiMerchantManagementController extends Controller
                 } else {
                     $combination['price'] = str_replace('.', '', $combination['price']);
                     if (!empty($combination['price_discount']) && !empty($combination['price_before_discount'])) {
+                        $combination['price_discount'] = str_replace('.', '', $combination['price_discount']);
+                        $combination['price_before_discount'] = str_replace('.', '', $combination['price_before_discount']);
                         $disc = $combination['price_before_discount'] * ($combination['price_discount'] / 100);
                         $combination['price'] = $combination['price_before_discount'] - $disc;
                     }
@@ -1614,6 +1620,8 @@ class ApiMerchantManagementController extends Controller
                         $wholesaler['unit_price'] = str_replace('.', '', $wholesaler['unit_price'] ?? 0);
                         $priceVariantWholesaler = $wholesaler['unit_price'];
                         if (!empty($wholesaler['discount_percent']) && !empty($wholesaler['unit_price_before_discount'])) {
+                            $wholesaler['discount_percent'] = str_replace('.', '', $wholesaler['discount_percent'] ?? 0);
+                            $wholesaler['unit_price_before_discount'] = str_replace('.', '', $wholesaler['unit_price_before_discount'] ?? 0);
                             $discountVarWhole = $wholesaler['unit_price_before_discount'] * ($wholesaler['discount_percent'] / 100);
                             $priceVariantWholesaler = (int)($wholesaler['unit_price_before_discount'] - $discountVarWhole);
                         }

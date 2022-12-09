@@ -1137,10 +1137,19 @@ class ApiProductController extends Controller
                         return response()->json(['status' => 'fail', 'messages' => ['Minimum wholesaler must be more than one']]);
                     }
 
+                    $priceProductWholesaler = str_replace('.', '', $wholesaler['unit_price'] ?? 0);
+                    if (!empty($wholesaler['discount_percent']) && !empty($wholesaler['unit_price_before_discount'])) {
+                        $wholesaler['unit_price_before_discount'] = str_replace('.', '', $wholesaler['unit_price_before_discount']);
+                        $wholesaler['discount_percent'] = str_replace('.', '', $wholesaler['discount_percent']);
+                        $discount = $wholesaler['unit_price_before_discount'] * ($wholesaler['discount_percent'] / 100);
+                        $priceProductWholesaler = (int)($wholesaler['unit_price_before_discount'] - $discount);
+                    }
                     $insertWholesaler[] = [
                         'id_product' => $post['id_product'],
                         'product_wholesaler_minimum' => $wholesaler['minimum'] ?? 0,
-                        'product_wholesaler_unit_price' => str_replace('.', '', $wholesaler['unit_price']) ?? 0,
+                        'product_wholesaler_unit_price' => $priceProductWholesaler ?? 0,
+                        'wholesaler_unit_price_before_discount' => $wholesaler['unit_price_before_discount'] ?? 0,
+                        'wholesaler_unit_price_discount_percent' => $wholesaler['discount_percent'] ?? 0,
                         'created_at' => date('Y-m-d H:i:s'),
                         'updated_at' => date('Y-m-d H:i:s')
                     ];
@@ -1177,11 +1186,21 @@ class ApiProductController extends Controller
             }
 
             if (isset($post['base_price']) && !empty($post['base_price'])) {
-                $globalPrice = str_replace(".", "", $post['base_price']);
+                $price = str_replace(".", "", $post['base_price'] ?? 0);
+                $discountPercent = str_replace(".", "", $post['base_price_discount_percent'] ?? 0);
+                $priceBeforeDiscount = str_replace(".", "", $post['base_price_before_discount'] ?? 0);
+                if (!empty($discountPercent)) {
+                    $discount = $priceBeforeDiscount * ($discountPercent / 100);
+                    $price = (int)($priceBeforeDiscount - $discount);
+                }
 
                 ProductGlobalPrice::updateOrCreate(
                     ['id_product' => $post['id_product']],
-                    ['product_global_price' => (int)$globalPrice]
+                    [
+                        'product_global_price' => $price,
+                        'global_price_before_discount' => $priceBeforeDiscount,
+                        'global_price_discount_percent' => $discountPercent
+                    ]
                 );
             }
 
