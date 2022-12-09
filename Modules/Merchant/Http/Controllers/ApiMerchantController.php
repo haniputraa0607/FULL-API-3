@@ -936,13 +936,13 @@ class ApiMerchantController extends Controller
 
         $result = [];
         if ($post['type'] == 'daily') {
-            $result = $this->statisticsDaily($checkMerchant['id_outlet'], $date);
+            $result = $this->statisticsDaily($checkMerchant['id_merchant'], $date);
         } elseif ($post['type'] == 'weekly') {
-            $result = $this->statisticsWeekly($checkMerchant['id_outlet'], $date);
+            $result = $this->statisticsWeekly($checkMerchant['id_merchant'], $date);
         } elseif ($post['type'] == 'monthly') {
-            $result = $this->statisticsMonthly($checkMerchant['id_outlet'], $date);
+            $result = $this->statisticsMonthly($checkMerchant['id_merchant'], $date);
         } elseif ($post['type'] == 'yearly') {
-            $result = $this->statisticsYearly($checkMerchant['id_outlet'], $date);
+            $result = $this->statisticsYearly($checkMerchant['id_merchant'], $date);
         }
 
         if (!empty($result['status'])) {
@@ -952,7 +952,7 @@ class ApiMerchantController extends Controller
         }
     }
 
-    public function statisticsDaily($id_outlet, $date)
+    public function statisticsDaily($id_merchant, $date)
     {
         if (!empty($date)) {
             $start = $date['start_date'];
@@ -971,20 +971,18 @@ class ApiMerchantController extends Controller
         }
 
         $grandTotal = 0;
-        $transactions = Transaction::where('id_outlet', $id_outlet)->where('transaction_status', 'Completed')
-                    ->whereDate('transaction_date', '>=', $start)->whereDate('transaction_date', '<=', $end)
-                    ->select(DB::raw('DATE(transaction_date) as date'), DB::raw('SUM(transaction_grandtotal) AS value'))
-                    ->groupBy(DB::raw('DATE(transaction_date)'))->get()->toArray();
+        $transactions = MerchantLogBalance::where('id_merchant', $id_merchant)->orderBy('created_at', 'desc')
+                        ->whereDate('created_at', '>=', $start)
+                        ->whereDate('created_at', '<=', $end)
+                        ->select(DB::raw('DATE(created_at) as date'), DB::raw('SUM(merchant_balance) AS value'), DB::raw('Count(Case When merchant_balance_source not IN ("Withdrawal Fee","Withdrawal") Then 1 End) as count'))
+                        ->groupBy(DB::raw('DATE(created_at)'))
+                        ->get()->toArray();
 
         $resultDate = [];
         foreach ($transactions as $trx) {
             $grandTotal = $grandTotal + (int)$trx['value'];
             $date = date('Y-m-d', strtotime($trx['date']));
-            if (!empty($resultDate[$date])) {
-                $resultDate[$date] = $resultDate[$date] + 1;
-            } else {
-                $resultDate[$date] = 1;
-            }
+            $resultDate[$date] = (int)$trx['count'];
         }
 
         $data = [];
@@ -1004,7 +1002,7 @@ class ApiMerchantController extends Controller
         return $result;
     }
 
-    public function statisticsWeekly($id_outlet, $date)
+    public function statisticsWeekly($id_merchant, $date)
     {
         if (!empty($date)) {
             $start = $date['start_date'];
@@ -1024,19 +1022,21 @@ class ApiMerchantController extends Controller
         }
 
         $grandTotal = 0;
-        $transactions = Transaction::where('id_outlet', $id_outlet)->where('transaction_status', 'Completed')
-            ->whereDate('transaction_date', '>=', $start)->whereDate('transaction_date', '<=', $end)
-            ->select(DB::raw('DATE(transaction_date) as date'), DB::raw('SUM(transaction_grandtotal) AS value'))
-            ->groupBy(DB::raw('DATE(transaction_date)'))->get()->toArray();
+        $transactions = MerchantLogBalance::where('id_merchant', $id_merchant)->orderBy('created_at', 'desc')
+            ->whereDate('created_at', '>=', $start)
+            ->whereDate('created_at', '<=', $end)
+            ->select(DB::raw('DATE(created_at) as date'), DB::raw('SUM(merchant_balance) AS value'), DB::raw('Count(Case When merchant_balance_source not IN ("Withdrawal Fee","Withdrawal") Then 1 End) as count'))
+            ->groupBy(DB::raw('DATE(created_at)'))
+            ->get()->toArray();
 
         $resultDate = [];
         foreach ($transactions as $trx) {
             $grandTotal = $grandTotal + (int)$trx['value'];
             $date = date("Y-m-d", strtotime('monday this week', strtotime($trx['date'])));
             if (!empty($resultDate[$date])) {
-                $resultDate[$date] = $resultDate[$date] + 1;
+                $resultDate[$date] = $resultDate[$date] + (int)$trx['count'];
             } else {
-                $resultDate[$date] = 1;
+                $resultDate[$date] = (int)$trx['count'];
             }
         }
 
@@ -1058,7 +1058,7 @@ class ApiMerchantController extends Controller
         return $result;
     }
 
-    public function statisticsMonthly($id_outlet, $date)
+    public function statisticsMonthly($id_merchant, $date)
     {
         if (!empty($date)) {
             $dateQuery = $date['end_date'];
@@ -1095,10 +1095,12 @@ class ApiMerchantController extends Controller
 
             $month = date('m', strtotime($date));
             $year = date('Y', strtotime($date));
-            $value = Transaction::where('id_outlet', $id_outlet)->where('transaction_status', 'Completed')
-                    ->whereMonth('transaction_date', $month)
-                    ->whereYear('transaction_date', $year)
-                    ->select(DB::raw('SUM(transaction_grandtotal) as value'), DB::raw('COUNT(id_transaction) as count'))->first();
+            $value = MerchantLogBalance::where('id_merchant', $id_merchant)->orderBy('created_at', 'desc')
+                ->whereMonth('created_at', $month)
+                ->whereYear('created_at', $year)
+                ->select(DB::raw('SUM(merchant_balance) AS value'), DB::raw('Count(Case When merchant_balance_source not IN ("Withdrawal Fee","Withdrawal") Then 1 End) as count'))
+                ->first();
+
             $grandTotal = $grandTotal + (int)($value['value'] ?? 0);
             $data[] = [
                 'key' => $monthFormat,
@@ -1106,20 +1108,22 @@ class ApiMerchantController extends Controller
             ];
         }
 
-        $start = MyHelper::dateFormatInd($start, false, false);
-        $start = str_replace('01', '', $start);
+        if (!empty($start)) {
+            $start = MyHelper::dateFormatInd($start, false, false);
+            $start = str_replace('01', '', $start);
+        }
         $end = MyHelper::dateFormatInd($end, false, false);
         $end = str_replace('01', '', $end);
 
         $result = [
-            'revenue_text' => 'Pendapatan' . $start . ' sampai ' . $end,
+            'revenue_text' => (!empty($start) ? 'Pendapatan' . $start . ' sampai ' . $end : 'Pendapatan' .  $end),
             'revenue_value' => 'Rp ' . number_format((int)$grandTotal, 0, ",", "."),
             'data' => $data
         ];
         return $result;
     }
 
-    public function statisticsYearly($id_outlet, $date)
+    public function statisticsYearly($id_merchant, $date)
     {
         if (!empty($date)) {
             $currentYear = date('Y', strtotime($date['end_date']));
@@ -1135,11 +1139,18 @@ class ApiMerchantController extends Controller
 
         $data = [];
         $grandTotal = 0;
+        $startYear = $currentYear;
+        $endYear = '';
         for ($i = 0; $i <= $totalYear; $i++) {
             $year = $currentYear - $i;
-            $value = Transaction::where('id_outlet', $id_outlet)->where('transaction_status', 'Completed')
-                ->whereYear('transaction_date', $year)
-                ->select(DB::raw('SUM(transaction_grandtotal) as value'), DB::raw('COUNT(id_transaction) as count'))->first();
+            if ($i == $totalYear) {
+                $endYear = $year;
+            }
+            $value = MerchantLogBalance::where('id_merchant', $id_merchant)->orderBy('created_at', 'desc')
+                ->whereYear('created_at', $year)
+                ->select(DB::raw('SUM(merchant_balance) AS value'), DB::raw('Count(Case When merchant_balance_source not IN ("Withdrawal Fee","Withdrawal") Then 1 End) as count'))
+                ->first();
+
             $grandTotal = $grandTotal + (int)($value['value'] ?? 0);
             $data[] = [
                 'key' => $year,
@@ -1148,7 +1159,7 @@ class ApiMerchantController extends Controller
         }
 
         $result = [
-            'revenue_text' => 'Pendapatan',
+            'revenue_text' => ($startYear != $endYear ? 'Pendapatan ' . $startYear . ' sampai ' . $endYear : 'Pendapatan ' . $startYear),
             'revenue_value' => 'Rp ' . number_format((int)$grandTotal, 0, ",", "."),
             'data' => $data
         ];
@@ -1292,8 +1303,14 @@ class ApiMerchantController extends Controller
 
     public function inboxMarkedAll(Request $request)
     {
-        $update = MerchantInbox::where('id_merchant', $request->id_merchant)->update(['read' => 1]);
-        return response()->json(MyHelper::checkUpdate($update));
+        $idUser = $request->user()->id;
+        $checkMerchant = Merchant::where('id_user', $idUser)->first();
+        if (empty($checkMerchant)) {
+            return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
+        }
+
+        $update = MerchantInbox::where('id_merchant', $checkMerchant['id_merchant'])->update(['read' => 1]);
+        return response()->json(['status' => 'success']);
     }
 
     public function balanceDetail(Request $request)
