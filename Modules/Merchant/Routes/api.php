@@ -115,6 +115,9 @@ Route::group(['prefix' => 'merchant'], function () {
         Route::group(['prefix' => 'user-reseller'], function () {
             Route::post('/register', 'ApiUserResellerMerchantController@register');
         });
+        Route::group(['prefix' => 'search'], function () {
+            Route::post('/list', 'ApiMerchantCustomerController@list');
+        });
     });
 
     Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:be']], function () {
