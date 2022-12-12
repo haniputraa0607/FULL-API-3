@@ -207,7 +207,7 @@ class ApiMembershipWebview extends Controller
             if ($nextTrxType == 'count') {
                 $count_transaction = Transaction::leftJoin('transaction_consultations', 'transaction_consultations.id_transaction', 'transactions.id_transaction')
                     ->where('transactions.id_user', $post['id_user'])
-                    ->whereNotIn('transactions.id_transaction', function($query){
+                    ->whereNotIn('transactions.id_transaction', function ($query) {
                         $query->select('id_transaction')
                             ->from('user_rating_logs')
                             ->where('user_rating_logs.id_transaction', 'transactions.id_transactiion');
@@ -226,7 +226,7 @@ class ApiMembershipWebview extends Controller
             } elseif ($nextTrxType == 'value') {
                 $subtotal_transaction = Transaction::leftJoin('transaction_consultations', 'transaction_consultations.id_transaction', 'transactions.id_transaction')
                     ->where('transactions.id_user', $post['id_user'])
-                    ->whereNotIn('transactions.id_transaction', function($query){
+                    ->whereNotIn('transactions.id_transaction', function ($query) {
                         $query->select('id_transaction')
                             ->from('user_rating_logs')
                             ->where('user_rating_logs.id_transaction', 'transactions.id_transactiion');
@@ -276,7 +276,7 @@ class ApiMembershipWebview extends Controller
             if ($allMembership[0]['membership_type'] == 'count') {
                 $count_transaction = Transaction::leftJoin('transaction_consultations', 'transaction_consultations.id_transaction', 'transactions.id_transaction')
                     ->where('transactions.id_user', $post['id_user'])
-                    ->whereNotIn('transactions.id_transaction', function($query){
+                    ->whereNotIn('transactions.id_transaction', function ($query) {
                         $query->select('id_transaction')
                             ->from('user_rating_logs')
                             ->where('user_rating_logs.id_transaction', 'transactions.id_transactiion');
@@ -295,7 +295,7 @@ class ApiMembershipWebview extends Controller
             } elseif ($allMembership[0]['membership_type'] == 'value') {
                 $subtotal_transaction = Transaction::leftJoin('transaction_consultations', 'transaction_consultations.id_transaction', 'transactions.id_transaction')
                     ->where('transactions.id_user', $post['id_user'])
-                    ->whereNotIn('transactions.id_transaction', function($query){
+                    ->whereNotIn('transactions.id_transaction', function ($query) {
                         $query->select('id_transaction')
                             ->from('user_rating_logs')
                             ->where('user_rating_logs.id_transaction', 'transactions.id_transactiion');

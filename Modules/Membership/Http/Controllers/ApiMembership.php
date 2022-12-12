@@ -475,7 +475,7 @@ class ApiMembership extends Controller
 
                     $trx_count = Transaction::leftJoin('transaction_consultations', 'transaction_consultations.id_transaction', 'transactions.id_transaction')
                                             ->where('transactions.id_user', $check['id'])
-                                            ->whereNotIn('transactions.id_transaction', function($query){
+                                            ->whereNotIn('transactions.id_transaction', function ($query) {
                                                 $query->select('id_transaction')
                                                     ->from('user_rating_logs')
                                                     ->where('user_rating_logs.id_transaction', 'transactions.id_transactiion');
@@ -493,7 +493,7 @@ class ApiMembership extends Controller
 
                     $trx_value = Transaction::leftJoin('transaction_consultations', 'transaction_consultations.id_transaction', 'transactions.id_transaction')
                                             ->where('transactions.id_user', $check['id'])
-                                            ->whereNotIn('transactions.id_transaction', function($query){
+                                            ->whereNotIn('transactions.id_transaction', function ($query) {
                                                 $query->select('id_transaction')
                                                     ->from('user_rating_logs')
                                                     ->where('user_rating_logs.id_transaction', 'transactions.id_transactiion');
@@ -665,7 +665,7 @@ class ApiMembership extends Controller
                 // untuk membership yang gak pakai retain
                     $trx_count = Transaction::leftJoin('transaction_consultations', 'transaction_consultations.id_transaction', 'transactions.id_transaction')
                                             ->where('transactions.id_user', $check['id'])
-                                            ->whereNotIn('transactions.id_transaction', function($query){
+                                            ->whereNotIn('transactions.id_transaction', function ($query) {
                                                 $query->select('id_transaction')
                                                     ->from('user_rating_logs')
                                                     ->where('user_rating_logs.id_transaction', 'transactions.id_transactiion');
@@ -681,7 +681,7 @@ class ApiMembership extends Controller
 
                     $trx_value = Transaction::leftJoin('transaction_consultations', 'transaction_consultations.id_transaction', 'transactions.id_transaction')
                                             ->where('transactions.id_user', $check['id'])
-                                            ->whereNotIn('transactions.id_transaction', function($query){
+                                            ->whereNotIn('transactions.id_transaction', function ($query) {
                                                 $query->select('id_transaction')
                                                     ->from('user_rating_logs')
                                                     ->where('user_rating_logs.id_transaction', 'transactions.id_transactiion');
@@ -760,7 +760,7 @@ class ApiMembership extends Controller
                 //bisa langsung lompat membership
                 $trx_count = Transaction::leftJoin('transaction_consultations', 'transaction_consultations.id_transaction', 'transactions.id_transaction')
                                             ->where('transactions.id_user', $check['id'])
-                                            ->whereNotIn('transactions.id_transaction', function($query){
+                                            ->whereNotIn('transactions.id_transaction', function ($query) {
                                                 $query->select('id_transaction')
                                                     ->from('user_rating_logs')
                                                     ->where('user_rating_logs.id_transaction', 'transactions.id_transactiion');
@@ -776,7 +776,7 @@ class ApiMembership extends Controller
 
                 $trx_value = Transaction::leftJoin('transaction_consultations', 'transaction_consultations.id_transaction', 'transactions.id_transaction')
                                         ->where('transactions.id_user', $check['id'])
-                                        ->whereNotIn('transactions.id_transaction', function($query){
+                                        ->whereNotIn('transactions.id_transaction', function ($query) {
                                             $query->select('id_transaction')
                                                 ->from('user_rating_logs')
                                                 ->where('user_rating_logs.id_transaction', 'transactions.id_transactiion');
@@ -1044,7 +1044,7 @@ class ApiMembership extends Controller
         foreach ($users as $datauser) {
             $trx_count = Transaction::leftJoin('transaction_consultations', 'transaction_consultations.id_transaction', 'transactions.id_transaction')
                 ->where('transactions.id_user', $datauser->id)
-                ->whereNotIn('transactions.id_transaction', function($query){
+                ->whereNotIn('transactions.id_transaction', function ($query) {
                     $query->select('id_transaction')
                         ->from('user_rating_logs')
                         ->where('user_rating_logs.id_transaction', 'transactions.id_transactiion');
@@ -1060,7 +1060,7 @@ class ApiMembership extends Controller
 
             $trx_value = Transaction::leftJoin('transaction_consultations', 'transaction_consultations.id_transaction', 'transactions.id_transaction')
                 ->where('transactions.id_user', $datauser->id)
-                ->whereNotIn('transactions.id_transaction', function($query){
+                ->whereNotIn('transactions.id_transaction', function ($query) {
                     $query->select('id_transaction')
                         ->from('user_rating_logs')
                         ->where('user_rating_logs.id_transaction', 'transactions.id_transactiion');
