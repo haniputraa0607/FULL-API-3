@@ -54,6 +54,7 @@ use Modules\PromoCampaign\Entities\UserPromo;
 use App\Http\Models\Deal;
 use Modules\PromoCampaign\Entities\PromoCampaign;
 use Modules\Subscription\Entities\Subscription;
+use function Clue\StreamFilter\fun;
 
 class ApiProductController extends Controller
 {
@@ -2301,11 +2302,27 @@ class ApiProductController extends Controller
         }
 
         if (!empty($post['filter_min_price'])) {
-            $list = $list->where('product_global_price', '>=', $post['filter_min_price']);
+            $list = $list->where(function ($q) use ($post){
+                $q->where(function ($query1) use ($post) {
+                    $query1->where('product_global_price', '>=', $post['filter_min_price'])
+                        ->where('product_variant_status', 0);
+                });
+                $q->orWhereHas('base_price_variant', function ($query2) use ($post){
+                    $query2->where('product_variant_group_price', '>=', $post['filter_min_price']);
+                });
+            });
         }
 
         if (!empty($post['filter_max_price'])) {
-            $list = $list->where('product_global_price', '<=', $post['filter_max_price']);
+            $list = $list->where(function ($q) use ($post){
+                $q->where(function ($query1) use ($post) {
+                    $query1->where('product_global_price', '<=', $post['filter_max_price'])
+                        ->where('product_variant_status', 0);
+                });
+                $q->orWhereHas('base_price_variant', function ($query2) use ($post){
+                    $query2->where('product_variant_group_price', '<=', $post['filter_max_price']);
+                });
+            });
         }
 
         if (!empty($post['pagination'])) {

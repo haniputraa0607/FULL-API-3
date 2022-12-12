@@ -473,19 +473,39 @@ class ApiMembership extends Controller
                     //ambil batas tanggal terhitung diceknya
                     $date_start = date('Y-m-d', strtotime($check['retain_date'] . ' -' . $membership['retain_days'] . ' days'));
 
-                    $trx_count = Transaction::where('id_user', $check['id'])
+                    $trx_count = Transaction::leftJoin('transaction_consultations', 'transaction_consultations.id_transaction', 'transactions.id_transaction')
+                                            ->where('transactions.id_user', $check['id'])
+                                            ->whereNotIn('transactions.id_transaction', function($query){
+                                                $query->select('id_transaction')
+                                                    ->from('user_rating_logs')
+                                                    ->where('user_rating_logs.id_transaction', 'transactions.id_transactiion');
+                                            })
+                                            ->where(function ($q) {
+                                                $q->where('consultation_status', 'completed')
+                                                    ->orWhereNull('transaction_consultations.id_transaction_consultation');
+                                            })
+                                            ->where('transaction_status', 'Completed')
                                             ->whereDate('transaction_date', '>=', $date_start)
                                             ->whereDate('transaction_date', '<=', date('Y-m-d', strtotime($check['retain_date'])))
                                             ->where('transaction_payment_status', 'Completed')
-                                            ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
                                             ->whereNull('fraud_flag')
                                             ->distinct()->count('id_transaction_group');
 
-                    $trx_value = Transaction::where('id_user', $check['id'])
+                    $trx_value = Transaction::leftJoin('transaction_consultations', 'transaction_consultations.id_transaction', 'transactions.id_transaction')
+                                            ->where('transactions.id_user', $check['id'])
+                                            ->whereNotIn('transactions.id_transaction', function($query){
+                                                $query->select('id_transaction')
+                                                    ->from('user_rating_logs')
+                                                    ->where('user_rating_logs.id_transaction', 'transactions.id_transactiion');
+                                            })
+                                            ->where(function ($q) {
+                                                $q->where('consultation_status', 'completed')
+                                                    ->orWhereNull('transaction_consultations.id_transaction_consultation');
+                                            })
+                                            ->where('transaction_status', 'Completed')
                                             ->whereDate('transaction_date', '>=', $date_start)
                                             ->whereDate('transaction_date', '<=', date('Y-m-d', strtotime($check['retain_date'])))
                                             ->where('transaction_payment_status', 'Completed')
-                                            ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
                                             ->whereNull('fraud_flag')
                                             ->sum('transaction_grandtotal');
 
@@ -643,15 +663,35 @@ class ApiMembership extends Controller
                     }
                 } else {
                 // untuk membership yang gak pakai retain
-                    $trx_count = Transaction::where('id_user', $check['id'])
+                    $trx_count = Transaction::leftJoin('transaction_consultations', 'transaction_consultations.id_transaction', 'transactions.id_transaction')
+                                            ->where('transactions.id_user', $check['id'])
+                                            ->whereNotIn('transactions.id_transaction', function($query){
+                                                $query->select('id_transaction')
+                                                    ->from('user_rating_logs')
+                                                    ->where('user_rating_logs.id_transaction', 'transactions.id_transactiion');
+                                            })
+                                            ->where(function ($q) {
+                                                $q->where('consultation_status', 'completed')
+                                                    ->orWhereNull('transaction_consultations.id_transaction_consultation');
+                                            })
+                                            ->where('transaction_status', 'Completed')
                                             ->where('transaction_payment_status', 'Completed')
-                                            ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
                                             ->whereNull('fraud_flag')
                                             ->distinct()->count('id_transaction_group');
 
-                    $trx_value = Transaction::where('id_user', $check['id'])
+                    $trx_value = Transaction::leftJoin('transaction_consultations', 'transaction_consultations.id_transaction', 'transactions.id_transaction')
+                                            ->where('transactions.id_user', $check['id'])
+                                            ->whereNotIn('transactions.id_transaction', function($query){
+                                                $query->select('id_transaction')
+                                                    ->from('user_rating_logs')
+                                                    ->where('user_rating_logs.id_transaction', 'transactions.id_transactiion');
+                                            })
+                                            ->where(function ($q) {
+                                                $q->where('consultation_status', 'completed')
+                                                    ->orWhereNull('transaction_consultations.id_transaction_consultation');
+                                            })
+                                            ->where('transaction_status', 'Completed')
                                             ->where('transaction_payment_status', 'Completed')
-                                            ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
                                             ->whereNull('fraud_flag')
                                             ->sum('transaction_grandtotal');
 
@@ -718,15 +758,35 @@ class ApiMembership extends Controller
             } else {
                 //belum pernah punya membership
                 //bisa langsung lompat membership
-                $trx_count = Transaction::where('id_user', $check['id'])
+                $trx_count = Transaction::leftJoin('transaction_consultations', 'transaction_consultations.id_transaction', 'transactions.id_transaction')
+                                            ->where('transactions.id_user', $check['id'])
+                                            ->whereNotIn('transactions.id_transaction', function($query){
+                                                $query->select('id_transaction')
+                                                    ->from('user_rating_logs')
+                                                    ->where('user_rating_logs.id_transaction', 'transactions.id_transactiion');
+                                            })
+                                            ->where(function ($q) {
+                                                $q->where('consultation_status', 'completed')
+                                                    ->orWhereNull('transaction_consultations.id_transaction_consultation');
+                                            })
+                                            ->where('transaction_status', 'Completed')
                                             ->where('transaction_payment_status', 'Completed')
-                                            ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
                                             ->whereNull('fraud_flag')
                                             ->distinct()->count('id_transaction_group');
 
-                $trx_value = Transaction::where('id_user', $check['id'])
+                $trx_value = Transaction::leftJoin('transaction_consultations', 'transaction_consultations.id_transaction', 'transactions.id_transaction')
+                                        ->where('transactions.id_user', $check['id'])
+                                        ->whereNotIn('transactions.id_transaction', function($query){
+                                            $query->select('id_transaction')
+                                                ->from('user_rating_logs')
+                                                ->where('user_rating_logs.id_transaction', 'transactions.id_transactiion');
+                                        })
+                                        ->where(function ($q) {
+                                            $q->where('consultation_status', 'completed')
+                                                ->orWhereNull('transaction_consultations.id_transaction_consultation');
+                                        })
+                                        ->where('transaction_status', 'Completed')
                                         ->where('transaction_payment_status', 'Completed')
-                                        ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
                                         ->whereNull('fraud_flag')
                                         ->sum('transaction_grandtotal');
 
@@ -982,15 +1042,35 @@ class ApiMembership extends Controller
     {
         $users = User::all();
         foreach ($users as $datauser) {
-            $trx_count = Transaction::where('id_user', $datauser->id)
+            $trx_count = Transaction::leftJoin('transaction_consultations', 'transaction_consultations.id_transaction', 'transactions.id_transaction')
+                ->where('transactions.id_user', $datauser->id)
+                ->whereNotIn('transactions.id_transaction', function($query){
+                    $query->select('id_transaction')
+                        ->from('user_rating_logs')
+                        ->where('user_rating_logs.id_transaction', 'transactions.id_transactiion');
+                })
+                ->where(function ($q) {
+                    $q->where('consultation_status', 'completed')
+                        ->orWhereNull('transaction_consultations.id_transaction_consultation');
+                })
+                ->where('transaction_status', 'Completed')
                 ->where('transaction_payment_status', 'Completed')
-                ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
                 ->whereNull('fraud_flag')
                 ->distinct()->count('id_transaction_group');
 
-            $trx_value = Transaction::where('id_user', $datauser->id)
+            $trx_value = Transaction::leftJoin('transaction_consultations', 'transaction_consultations.id_transaction', 'transactions.id_transaction')
+                ->where('transactions.id_user', $datauser->id)
+                ->whereNotIn('transactions.id_transaction', function($query){
+                    $query->select('id_transaction')
+                        ->from('user_rating_logs')
+                        ->where('user_rating_logs.id_transaction', 'transactions.id_transactiion');
+                })
+                ->where(function ($q) {
+                    $q->where('consultation_status', 'completed')
+                        ->orWhereNull('transaction_consultations.id_transaction_consultation');
+                })
+                ->where('transaction_status', 'Completed')
                 ->where('transaction_payment_status', 'Completed')
-                ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
                 ->whereNull('fraud_flag')
                 ->sum('transaction_grandtotal');
 
