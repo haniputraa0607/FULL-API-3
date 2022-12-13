@@ -434,7 +434,7 @@ class ApiElearning extends Controller
         ->whereDate('news_publish_date', '<=', $now)->where(function ($query) use ($now) {
             $query->whereDate('news_expired_date', '>=', $now)
                 ->orWhere('news_expired_date', null);
-        })->where('news_favorites.id_user', $idUser)->orderBy('news_publish_date', 'desc');
+        })->where('news_favorites.id_user', $idUser)->orderBy('news_publish_date', 'desc')->groupBy('news.id_news');
 
         if (!empty($post['search_key'])) {
             $list = $list->where(function ($query) use ($post) {
