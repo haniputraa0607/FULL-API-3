@@ -205,8 +205,18 @@ class ApiMembershipWebview extends Controller
             $maxProg = $allMembership[$indexNow + 1]['min_value'] ?? $allMembership[$indexNow]['min_value'] ?? 0;
 
             if ($nextTrxType == 'count') {
-                $count_transaction = Transaction::where('id_user', $post['id_user'])
-                    ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
+                $count_transaction = Transaction::leftJoin('transaction_consultations', 'transaction_consultations.id_transaction', 'transactions.id_transaction')
+                    ->where('transactions.id_user', $post['id_user'])
+                    ->whereNotIn('transactions.id_transaction', function ($query) {
+                        $query->select('id_transaction')
+                            ->from('user_rating_logs')
+                            ->where('user_rating_logs.id_transaction', 'transactions.id_transactiion');
+                    })
+                    ->where(function ($q) {
+                        $q->where('consultation_status', 'completed')
+                        ->orWhereNull('transaction_consultations.id_transaction_consultation');
+                    })
+                    ->where('transaction_status', 'Completed')
                     ->whereNull('fraud_flag')
                     ->where('transaction_payment_status', 'Completed')->distinct()->count('id_transaction_group');
                 $count_final = (!empty($maxProg) && $count_transaction > $maxProg ? $maxProg : $count_transaction);
@@ -214,8 +224,18 @@ class ApiMembershipWebview extends Controller
                 $membershipUser['progress_now'] = (int) $count_final;
                 $membershipUser['value_now'] = (int) $count_transaction;
             } elseif ($nextTrxType == 'value') {
-                $subtotal_transaction = Transaction::where('id_user', $post['id_user'])
-                    ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
+                $subtotal_transaction = Transaction::leftJoin('transaction_consultations', 'transaction_consultations.id_transaction', 'transactions.id_transaction')
+                    ->where('transactions.id_user', $post['id_user'])
+                    ->whereNotIn('transactions.id_transaction', function ($query) {
+                        $query->select('id_transaction')
+                            ->from('user_rating_logs')
+                            ->where('user_rating_logs.id_transaction', 'transactions.id_transactiion');
+                    })
+                    ->where(function ($q) {
+                        $q->where('consultation_status', 'completed')
+                            ->orWhereNull('transaction_consultations.id_transaction_consultation');
+                    })
+                    ->where('transaction_status', 'Completed')
                     ->whereNull('fraud_flag')
                     ->where('transaction_payment_status', 'Completed')->sum('transaction_grandtotal');
                 $subtotal_final = (!empty($maxProg) && $subtotal_transaction > $maxProg ? $maxProg : $subtotal_transaction);
@@ -254,17 +274,37 @@ class ApiMembershipWebview extends Controller
             $result['progress_active'] = 100;
             $result['next_trx'] = 0;
             if ($allMembership[0]['membership_type'] == 'count') {
-                $count_transaction = Transaction::where('id_user', $post['id_user'])->where('transaction_payment_status', 'Completed')
+                $count_transaction = Transaction::leftJoin('transaction_consultations', 'transaction_consultations.id_transaction', 'transactions.id_transaction')
+                    ->where('transactions.id_user', $post['id_user'])
+                    ->whereNotIn('transactions.id_transaction', function ($query) {
+                        $query->select('id_transaction')
+                            ->from('user_rating_logs')
+                            ->where('user_rating_logs.id_transaction', 'transactions.id_transactiion');
+                    })
+                    ->where(function ($q) {
+                        $q->where('consultation_status', 'completed')
+                            ->orWhereNull('transaction_consultations.id_transaction_consultation');
+                    })
+                    ->where('transaction_status', 'Completed')
                     ->whereNull('fraud_flag')
-                    ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
                     ->distinct()->count('id_transaction_group');
                 $count_final = (!empty($maxProg) && $count_transaction > $maxProg ? $maxProg : $count_transaction);
                 $membershipUser['progress_now_text'] = MyHelper::requestNumber($count_final, '_CURRENCY');
                 $membershipUser['progress_now'] = (int) $count_final;
                 $membershipUser['value_now'] = (int) $count_transaction;
             } elseif ($allMembership[0]['membership_type'] == 'value') {
-                $subtotal_transaction = Transaction::where('id_user', $post['id_user'])
-                    ->where('show_rate_popup', 0)->where('transaction_status', 'Completed')
+                $subtotal_transaction = Transaction::leftJoin('transaction_consultations', 'transaction_consultations.id_transaction', 'transactions.id_transaction')
+                    ->where('transactions.id_user', $post['id_user'])
+                    ->whereNotIn('transactions.id_transaction', function ($query) {
+                        $query->select('id_transaction')
+                            ->from('user_rating_logs')
+                            ->where('user_rating_logs.id_transaction', 'transactions.id_transactiion');
+                    })
+                    ->where(function ($q) {
+                        $q->where('consultation_status', 'completed')
+                            ->orWhereNull('transaction_consultations.id_transaction_consultation');
+                    })
+                    ->where('transaction_status', 'Completed')
                     ->whereNull('fraud_flag')
                     ->where('transaction_payment_status', 'Completed')->sum('transaction_grandtotal');
                 $subtotal_final = (!empty($maxProg) && $subtotal_transaction > $maxProg ? $maxProg : $subtotal_transaction);

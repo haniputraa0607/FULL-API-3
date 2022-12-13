@@ -89,13 +89,13 @@ class ApiDoctorAppVersion extends Controller
                     }
                 }
                 $versionRec = array_shift($compare_version);
-                $setting['version_text_alert_mobile'] = str_replace('%version_app%', $versionRec['app_version'], $setting['version_text_alert_mobile']);
+                $setting['version_text_alert_doctor_mobile'] = str_replace('%version_app%', $versionRec['app_version'], $setting['version_text_alert_doctor_mobile']);
                 return response()->json([
                     'status' => 'fail',
                     'result' => [
                         'image' => config('url.storage_url_api') . $setting['version_image_doctor_mobile'],
-                        'text' => $setting['version_text_alert_mobile'],
-                        'button_text' => $setting['version_text_button_mobile'],
+                        'text' => $setting['version_text_alert_doctor_mobile'],
+                        'button_text' => $setting['version_text_button_doctor_mobile'],
                         'button_url' => $setting['version_playstore']
                     ],
                 ]);
@@ -114,13 +114,13 @@ class ApiDoctorAppVersion extends Controller
                     }
                 }
                 $versionRec = array_shift($compare_version);
-                $setting['version_text_alert_mobile'] = str_replace('%version_app%', $versionRec['app_version'], $setting['version_text_alert_mobile']);
+                $setting['version_text_alert_doctor_mobile'] = str_replace('%version_app%', $versionRec['app_version'], $setting['version_text_alert_doctor_mobile']);
                 return response()->json([
                     'status' => 'fail',
                     'result' => [
                         'image' => config('url.storage_url_api') . $setting['version_image_doctor_mobile'],
-                        'text' => $setting['version_text_alert_mobile'],
-                        'button_text' => $setting['version_text_button_mobile'],
+                        'text' => $setting['version_text_alert_doctor_mobile'],
+                        'button_text' => $setting['version_text_button_doctor_mobile'],
                         'button_url' => $setting['version_appstore']
                     ],
                 ]);

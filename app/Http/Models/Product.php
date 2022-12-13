@@ -246,6 +246,13 @@ class Product extends Model
             ->join('outlets', 'outlets.id_outlet', 'merchants.id_outlet');
     }
 
+    public function base_price_variant()
+    {
+        return $this->hasOne(ProductVariantGroup::class, 'id_product', 'id_product')
+            ->where('product_variant_group_visibility', 'visible')
+            ->orderBy('product_variant_group_price', 'asc');
+    }
+
     /**
      * Generate fresh product variant tree
      * @param  integer  $id_product     id of product
