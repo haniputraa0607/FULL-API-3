@@ -1261,6 +1261,14 @@ class ApiLoginRegisterV2 extends Controller
                     return response()->json($result);
                 }
 
+                $checkPrevDelete = User::where('email', '=', $request->json('email') . '-deleted')->first();
+                if (!empty($checkPrevDelete)) {
+                    return response()->json([
+                        'status' => 'fail',
+                        'messages' => ['Anda tidak bisa mendaftar menggunakan email ' . $request->json('provider_email') . '. Silahkan hubungi Admin untuk mengembalikan akun Anda.']
+                    ]);
+                }
+
                 $checkEmail = User::where('email', '=', $request->json('email'))->first();
                 if ($checkEmail) {
                     if ($checkEmail['phone'] != $phone) {
@@ -1413,6 +1421,14 @@ class ApiLoginRegisterV2 extends Controller
             'user_phone' => ['required']
         ]);
 
+        $checkPrevDelete = User::where('email', '=', $request->json('provider_email') . '-deleted')->first();
+        if (!empty($checkPrevDelete)) {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['Anda tidak bisa mendaftar menggunakan email ' . $request->json('provider_email') . '. Silahkan hubungi Admin untuk mengembalikan akun Anda.']
+            ]);
+        }
+
         if ($validate->fails()) {
             return response()->json([
                 'status' => 'fail',
@@ -1448,6 +1464,14 @@ class ApiLoginRegisterV2 extends Controller
             $verified->token == $post['provider_token'] &&
             $verified->name == $post['user_name']
         ) {
+            $checkPrevDeletePhone = User::where('phone', '=', $phone . '-deleted')->first();
+            if (!empty($checkPrevDeletePhone)) {
+                return response()->json([
+                    'status' => 'fail',
+                    'messages' => ['Anda tidak bisa mendaftar menggunakan nomor ' . $phone . '. Silahkan hubungi Admin untuk mengembalikan akun Anda.']
+                ]);
+            }
+
             $check = User::where('email', $post['user_email'])->first();
 
             // create if only user does not registered in DB

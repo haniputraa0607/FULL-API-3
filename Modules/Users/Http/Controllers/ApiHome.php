@@ -130,7 +130,7 @@ class ApiHome extends Controller
             $item['type']       = 'none';
             $item['id_reference']    = $value->id_reference;
 
-            if ($value->url != null) {
+            if ($value->url != null && $value->type == 'url') {
                 $item['link']        = $value->url;
                 unset($item['id_reference']);
             }

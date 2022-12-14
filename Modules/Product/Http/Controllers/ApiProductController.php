@@ -2374,7 +2374,7 @@ class ApiProductController extends Controller
                 $list[$key]['favorite'] = (!empty($favorite) ? true : false);
                 $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
                 $list[$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api') . $image['product_photo'] : config('url.storage_url_api') . 'img/default.jpg');
-                $list['data'][$key]['sold'] = app($this->management_merchant)->productCount($product['product_count_transaction']);
+                $list[$key]['sold'] = app($this->management_merchant)->productCount($product['product_count_transaction']);
                 unset($list['data'][$key]['product_count_transaction']);
             }
             $list = array_values($list);
