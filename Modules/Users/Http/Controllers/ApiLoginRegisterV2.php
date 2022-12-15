@@ -1342,9 +1342,21 @@ class ApiLoginRegisterV2 extends Controller
         $validate = Validator::make($request->json()->all(), [
             'provider' => ['required'],
             'provider_name' => ['required'],
-            'provider_email' => ['required', 'email'],
+            'provider_email' => ['email'],
             'provider_token' => ['required'],
         ]);
+
+        if (empty($request->json('provider_email')) && strtolower($request->json('provider')) == 'facebook') {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ["Akun facebook ini tidak dapat digunakan untuk masuk/mendaftar karena tidak memiliki akun email terkait"]
+            ]);
+        } elseif (empty($request->json('provider_email'))) {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ["Email tidak boleh kosong"]
+            ]);
+        }
 
         $checkPrevDelete = User::where('email', '=', $request->json('provider_email') . '-deleted')->first();
         if (!empty($checkPrevDelete)) {
@@ -1416,12 +1428,24 @@ class ApiLoginRegisterV2 extends Controller
             'provider' => ['required'],
             'provider_token' => ['required'],
             'user_name' => ['required'],
-            'user_email' => ['required', 'email'],
+            'user_email' => ['email'],
             'user_password' => ['required'],
             'user_phone' => ['required']
         ]);
 
-        $checkPrevDelete = User::where('email', '=', $request->json('provider_email') . '-deleted')->first();
+        if (empty($request->json('user_email')) && strtolower($request->json('provider')) == 'facebook') {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ["Akun facebook ini tidak dapat digunakan untuk masuk/mendaftar karena tidak memiliki akun email terkait"]
+            ]);
+        } elseif (empty($request->json('user_email'))) {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ["Email tidak boleh kosong"]
+            ]);
+        }
+
+        $checkPrevDelete = User::where('email', '=', $request->json('user_email') . '-deleted')->first();
         if (!empty($checkPrevDelete)) {
             return response()->json([
                 'status' => 'fail',
