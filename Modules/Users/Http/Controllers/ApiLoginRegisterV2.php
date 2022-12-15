@@ -1385,8 +1385,7 @@ class ApiLoginRegisterV2 extends Controller
         }
 
         if (
-            $verified->token == $post['provider_token'] &&
-            $verified->name == $post['provider_name']
+            $verified->token == $post['provider_token']
         ) {
             $check = User::where('email', $post['provider_email'])->first();
 
@@ -1485,8 +1484,7 @@ class ApiLoginRegisterV2 extends Controller
         }
 
         if (
-            $verified->token == $post['provider_token'] &&
-            $verified->name == $post['user_name']
+            $verified->token == $post['provider_token']
         ) {
             $checkPrevDeletePhone = User::where('phone', '=', $phone . '-deleted')->first();
             if (!empty($checkPrevDeletePhone)) {
@@ -1583,8 +1581,7 @@ class ApiLoginRegisterV2 extends Controller
         }
 
         if (
-            $verified->token == $post['provider_token'] &&
-            $verified->name == $post['provider_name']
+            $verified->token == $post['provider_token']
         ) {
             $getUser = User::where('email', $post['provider_email'])->where('phone_verified', 1)->first();
             if (empty($getUser)) {
