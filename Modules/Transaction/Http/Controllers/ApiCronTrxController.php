@@ -69,7 +69,6 @@ class ApiCronTrxController extends Controller
             $expired   = date('Y-m-d H:i:s', strtotime('- 5minutes'));
 
             $getTrx = TransactionGroup::where('transaction_payment_status', 'Pending')
-                ->whereNotNull('transaction_payment_type')
                 ->where('transaction_group_date', '<=', $expired)->get();
 
             if (empty($getTrx)) {
@@ -79,81 +78,83 @@ class ApiCronTrxController extends Controller
 
             $count = 0;
             foreach ($getTrx as $key => $singleTrx) {
-                $payment_type = $singleTrx->transaction_payment_type;
-                if ($payment_type == 'Balance') {
-                    $multi_payment = TransactionMultiplePayment::select('type')->where('id_transaction_group', $singleTrx->id_transaction_group)->pluck('type')->toArray();
-                    foreach ($multi_payment as $pm) {
-                        if ($pm != 'Balance') {
-                            $payment_type = $pm;
-                            break;
+                if (!empty($singleTrx['transaction_payment_type'])) {
+                    $payment_type = $singleTrx->transaction_payment_type;
+                    if ($payment_type == 'Balance') {
+                        $multi_payment = TransactionMultiplePayment::select('type')->where('id_transaction_group', $singleTrx->id_transaction_group)->pluck('type')->toArray();
+                        foreach ($multi_payment as $pm) {
+                            if ($pm != 'Balance') {
+                                $payment_type = $pm;
+                                break;
+                            }
                         }
                     }
-                }
 
-                $user = User::where('id', $singleTrx->id_user)->first();
-                if (empty($user)) {
-                    continue;
-                }
-                if ($payment_type == 'Midtrans') {
-                    $dtMidtrans = TransactionPaymentMidtran::where('id_transaction_group', $singleTrx->id_transaction_group)->first();
-
-                    if (empty($dtMidtrans)) {
+                    $user = User::where('id', $singleTrx->id_user)->first();
+                    if (empty($user)) {
                         continue;
                     }
+                    if ($payment_type == 'Midtrans') {
+                        $dtMidtrans = TransactionPaymentMidtran::where('id_transaction_group', $singleTrx->id_transaction_group)->first();
 
-                    $paymentMethod = str_replace(" ", "_", $dtMidtrans['payment_type']);
-                    $configTime = config('payment_method.midtrans_' . strtolower($paymentMethod) . '.refund_time');
-                    $configTime = (int)$configTime;
-                    ;
-                    $trxDate = strtotime($singleTrx->transaction_group_date);
-                    $currentDate = strtotime(date('Y-m-d H:i:s'));
-                    $mins = ($currentDate - $trxDate) / 60;
-                    if ($mins < $configTime) {
-                        continue;
-                    }
-
-                    $midtransStatus = Midtrans::status($singleTrx->id_transaction_group);
-                    if (!empty($midtransStatus['status_code']) && $midtransStatus['status_code'] == 200) {
-                        $singleTrx->triggerPaymentCompleted();
-                        continue;
-                    } elseif (
-                        (($midtransStatus['status'] ?? false) == 'fail' && ($midtransStatus['messages'][0] ?? false) == 'Midtrans payment not found') || in_array(($midtransStatus['response']['transaction_status'] ?? $midtransStatus['transaction_status'] ?? false), ['deny', 'cancel', 'expire', 'failure']) || ($midtransStatus['status_code'] ?? false) == '404' ||
-                        (!empty($midtransStatus['payment_type']) && $midtransStatus['payment_type'] == 'gopay' && $midtransStatus['transaction_status'] == 'pending')
-                    ) {
-                        $connectMidtrans = Midtrans::expire($singleTrx->transaction_receipt_number);
-
-                        if (!$connectMidtrans) {
+                        if (empty($dtMidtrans)) {
                             continue;
                         }
-                    }
-                } elseif ($payment_type == 'Xendit') {
-                    $dtXendit = TransactionPaymentXendit::where('id_transaction_group', $singleTrx->id_transaction_group)->first();
-                    if (empty($dtXendit['xendit_id'])) {
-                        continue;
-                    }
 
-                    $paymentMethod = str_replace(" ", "_", $dtXendit['type']);
-                    $configTime = config('payment_method.xendit_' . strtolower($paymentMethod) . '.refund_time');
-                    $configTime = (int)$configTime;
-                    $trxDate = strtotime($singleTrx->transaction_group_date);
-                    $currentDate = strtotime(date('Y-m-d H:i:s'));
-                    $mins = ($currentDate - $trxDate) / 60;
-                    if ($mins < $configTime) {
-                        continue;
-                    }
+                        $paymentMethod = str_replace(" ", "_", $dtMidtrans['payment_type']);
+                        $configTime = config('payment_method.midtrans_' . strtolower($paymentMethod) . '.refund_time');
+                        $configTime = (int)$configTime;
 
-                    if (!empty($dtXendit->xendit_id)) {
-                        $status = app('Modules\Xendit\Http\Controllers\XenditController')->checkStatus($dtXendit->xendit_id, $dtXendit->type);
-                        if ($status && $status['status'] == 'PENDING') {
-                            $cancel = app('Modules\Xendit\Http\Controllers\XenditController')->expireInvoice($dtXendit['xendit_id']);
-                            if (!$cancel) {
-                                continue;
-                            }
-                        } elseif ($status && ($status['status'] == 'COMPLETED' || $status['status'] == 'PAID')) {
+                        $trxDate = strtotime($singleTrx->transaction_group_date);
+                        $currentDate = strtotime(date('Y-m-d H:i:s'));
+                        $mins = ($currentDate - $trxDate) / 60;
+                        if ($mins < $configTime) {
+                            continue;
+                        }
+
+                        $midtransStatus = Midtrans::status($singleTrx->id_transaction_group);
+                        if (!empty($midtransStatus['status_code']) && $midtransStatus['status_code'] == 200) {
                             $singleTrx->triggerPaymentCompleted();
                             continue;
-                        } else {
+                        } elseif (
+                            (($midtransStatus['status'] ?? false) == 'fail' && ($midtransStatus['messages'][0] ?? false) == 'Midtrans payment not found') || in_array(($midtransStatus['response']['transaction_status'] ?? $midtransStatus['transaction_status'] ?? false), ['deny', 'cancel', 'expire', 'failure']) || ($midtransStatus['status_code'] ?? false) == '404' ||
+                            (!empty($midtransStatus['payment_type']) && $midtransStatus['payment_type'] == 'gopay' && $midtransStatus['transaction_status'] == 'pending')
+                        ) {
+                            $connectMidtrans = Midtrans::expire($singleTrx->transaction_receipt_number);
+
+                            if (!$connectMidtrans) {
+                                continue;
+                            }
+                        }
+                    } elseif ($payment_type == 'Xendit') {
+                        $dtXendit = TransactionPaymentXendit::where('id_transaction_group', $singleTrx->id_transaction_group)->first();
+                        if (empty($dtXendit['xendit_id'])) {
                             continue;
+                        }
+
+                        $paymentMethod = str_replace(" ", "_", $dtXendit['type']);
+                        $configTime = config('payment_method.xendit_' . strtolower($paymentMethod) . '.refund_time');
+                        $configTime = (int)$configTime;
+                        $trxDate = strtotime($singleTrx->transaction_group_date);
+                        $currentDate = strtotime(date('Y-m-d H:i:s'));
+                        $mins = ($currentDate - $trxDate) / 60;
+                        if ($mins < $configTime) {
+                            continue;
+                        }
+
+                        if (!empty($dtXendit->xendit_id)) {
+                            $status = app('Modules\Xendit\Http\Controllers\XenditController')->checkStatus($dtXendit->xendit_id, $dtXendit->type);
+                            if ($status && $status['status'] == 'PENDING') {
+                                $cancel = app('Modules\Xendit\Http\Controllers\XenditController')->expireInvoice($dtXendit['xendit_id']);
+                                if (!$cancel) {
+                                    continue;
+                                }
+                            } elseif ($status && ($status['status'] == 'COMPLETED' || $status['status'] == 'PAID')) {
+                                $singleTrx->triggerPaymentCompleted();
+                                continue;
+                            } else {
+                                continue;
+                            }
                         }
                     }
                 }
