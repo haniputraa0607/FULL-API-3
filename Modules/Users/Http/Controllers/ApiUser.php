@@ -106,23 +106,24 @@ class ApiUser extends Controller
                     }
                     if ($condition['subject'] == 'response_status') {
                         $var = "t_log_activities." . $condition['subject'];
+                        $condition['parameter'] = null;
                     }
 
                     if ($rule == 'and') {
                         if ($condition['operator'] == 'like') {
-                            $queryApps = $queryApps->where($var, 'like', '%' . $condition['parameter'] . '%');
-                            $queryBe = $queryBe->where($var, 'like', '%' . $condition['parameter'] . '%');
+                            $queryApps = $queryApps->where($var, 'like', '%' . (empty($condition['parameter']) ? $condition['operator'] : $condition['parameter']) . '%');
+                            $queryBe = $queryBe->where($var, 'like', '%' . (empty($condition['parameter']) ? $condition['operator'] : $condition['parameter']) . '%');
                         } else {
-                            $queryApps = $queryApps->where($var, '=', $condition['parameter']);
-                            $queryBe = $queryBe->where($var, '=', $condition['parameter']);
+                            $queryApps = $queryApps->where($var, '=', (empty($condition['parameter']) ? $condition['operator'] : $condition['parameter']));
+                            $queryBe = $queryBe->where($var, '=', (empty($condition['parameter']) ? $condition['operator'] : $condition['parameter']));
                         }
                     } else {
                         if ($condition['operator'] == 'like') {
-                            $queryApps = $queryApps->orWhere($var, 'like', '%' . $condition['parameter'] . '%');
-                            $queryBe = $queryBe->orWhere($var, 'like', '%' . $condition['parameter'] . '%');
+                            $queryApps = $queryApps->orWhere($var, 'like', '%' . (empty($condition['parameter']) ? $condition['operator'] : $condition['parameter']) . '%');
+                            $queryBe = $queryBe->orWhere($var, 'like', '%' . (empty($condition['parameter']) ? $condition['operator'] : $condition['parameter']) . '%');
                         } else {
-                            $queryApps = $queryApps->orWhere($var, '=', $condition['parameter']);
-                            $queryBe = $queryBe->orWhere($var, '=', $condition['parameter']);
+                            $queryApps = $queryApps->orWhere($var, '=', (empty($condition['parameter']) ? $condition['operator'] : $condition['parameter']));
+                            $queryBe = $queryBe->orWhere($var, '=', (empty($condition['parameter']) ? $condition['operator'] : $condition['parameter']));
                         }
                     }
                 }

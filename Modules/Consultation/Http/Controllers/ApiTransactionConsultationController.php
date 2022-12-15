@@ -562,7 +562,13 @@ class ApiTransactionConsultationController extends Controller
         }
 
         //update receipt
-        $receipt = rand() . time() . '-' . substr($post['id_outlet'], 0, 4) . rand(1000, 9999);
+        $receiptNumber = 'TRX-' . $outlet['outlet_code'] . '-' . date('Y') . '-' . date('m') . '-' . date('d') . '-';
+        $lastReceipt = Transaction::where('transaction_receipt_number', 'like', $receiptNumber . '%')->orderBy('transaction_receipt_number', 'desc')->first()['transaction_receipt_number'] ?? '';
+        $lastReceipt = explode('-', $lastReceipt)[5] ?? 0;
+        $lastReceipt = (int)$lastReceipt;
+        $countReciptNumber = $lastReceipt + 1;
+        $receipt = $receiptNumber . sprintf("%04d", $countReciptNumber);
+
         $updateReceiptNumber = Transaction::where('id_transaction', $insertTransaction['id_transaction'])->update([
             'transaction_receipt_number' => $receipt
         ]);

@@ -286,7 +286,12 @@ class ApiOnlineTransaction extends Controller
                 $earnedPoint = $this->countTranscationPoint(['subtotal' => (int)$data['items_subtotal']], $user);
             }
             $cashback = $earnedPoint['cashback'] ?? 0;
-            $receiptNumber = rand() . time() . '-' . substr($data['id_outlet'], 0, 4) . rand(1000, 9999);
+            $receiptNumber = 'TRX-' . $outlet['outlet_code'] . '-' . date('Y') . '-' . date('m') . '-' . date('d') . '-';
+            $lastReceipt = Transaction::where('transaction_receipt_number', 'like', $receiptNumber . '%')->orderBy('transaction_receipt_number', 'desc')->first()['transaction_receipt_number'] ?? '';
+            $lastReceipt = explode('-', $lastReceipt)[5] ?? 0;
+            $lastReceipt = (int)$lastReceipt;
+            $countReciptNumber = $lastReceipt + 1;
+            $receiptNumber = $receiptNumber . sprintf("%04d", $countReciptNumber);
 
             $discount = $data['discount'] ?? 0;
             $discountDelivery = $data['discount_delivery'] ?? 0;
