@@ -33,11 +33,6 @@ class AccessTokenController extends PassportAccessTokenController
                             return response()->json(['status' => 'fail', 'messages' => 'Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami.']);
                         }
 
-                        //check if otp have expired and the current time exceeds the expiration time
-                        if (!empty($user->otp_forgot) && !is_null($user->otp_valid_time) && strtotime(date('Y-m-d H:i:s')) > strtotime($user->otp_valid_time)) {
-                            return response()->json(['status' => 'fail', 'messages' => 'This OTP is expired, please re-request OTP from apps']);
-                        }
-
                         if (isset($request->getParsedBody()['scope'])) {
                             if ($request->getParsedBody()['scope'] == 'be' && strtolower($user->level) == 'customer') {
                                 return response()->json(['status' => 'fail', 'messages' => "You don't have access in this app"]);
