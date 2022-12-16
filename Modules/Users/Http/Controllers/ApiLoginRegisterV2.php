@@ -1517,7 +1517,7 @@ class ApiLoginRegisterV2 extends Controller
 
                 $idUser = $new_user->id;
             } else {
-                $checkPhone = User::where('phone', $phone)->first();
+                $checkPhone = User::where('phone', $phone)->whereNotIn('id', [$check['id']])->first();
                 if (!empty($checkPhone)) {
                     return response()->json([
                         'status' => 'fail',
@@ -1543,6 +1543,8 @@ class ApiLoginRegisterV2 extends Controller
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
             ]);
+
+            app($this->membership)->calculateMembership($phone);
 
             return response()->json(['status' => 'success']);
         } else {
