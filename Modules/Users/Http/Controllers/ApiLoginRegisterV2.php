@@ -1593,6 +1593,8 @@ class ApiLoginRegisterV2 extends Controller
                 ]);
             }
 
+            app($this->membership)->calculateMembership($getUser['phone']);
+
             return response()->json([
                 'status' => 'success',
                 'result' => $this->passwordLoginSocialMedia($getUser['phone'])
