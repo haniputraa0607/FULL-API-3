@@ -470,7 +470,7 @@ class ApiEnquiries extends Controller
 
                     if (!empty($deviceToken)) {
                         if (isset($deviceToken['token']) && !empty($deviceToken['token'])) {
-                            $push = PushNotificationHelper::sendPush($deviceToken, $subject, $content, $image, $dataOptional);
+                            $push = PushNotificationHelper::sendPush($deviceToken['token'], $subject, $content, $image, $dataOptional);
                             $getUser = User::where('phone', $check['enquiry_phone'])->first();
                             if (isset($push['success']) && $push['success'] > 0 && $getUser) {
                                 $logData = [];
