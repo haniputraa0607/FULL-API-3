@@ -1342,9 +1342,21 @@ class ApiLoginRegisterV2 extends Controller
         $validate = Validator::make($request->json()->all(), [
             'provider' => ['required'],
             'provider_name' => ['required'],
-            'provider_email' => ['required', 'email'],
+            'provider_email' => ['email'],
             'provider_token' => ['required'],
         ]);
+
+        if (empty($request->json('provider_email')) && strtolower($request->json('provider')) == 'facebook') {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ["Akun facebook ini tidak dapat digunakan untuk masuk/mendaftar karena tidak memiliki akun email terkait"]
+            ]);
+        } elseif (empty($request->json('provider_email'))) {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ["Email tidak boleh kosong"]
+            ]);
+        }
 
         $checkPrevDelete = User::where('email', '=', $request->json('provider_email') . '-deleted')->first();
         if (!empty($checkPrevDelete)) {
@@ -1373,8 +1385,7 @@ class ApiLoginRegisterV2 extends Controller
         }
 
         if (
-            $verified->token == $post['provider_token'] &&
-            $verified->name == $post['provider_name']
+            $verified->token == $post['provider_token']
         ) {
             $check = User::where('email', $post['provider_email'])->first();
 
@@ -1416,12 +1427,24 @@ class ApiLoginRegisterV2 extends Controller
             'provider' => ['required'],
             'provider_token' => ['required'],
             'user_name' => ['required'],
-            'user_email' => ['required', 'email'],
+            'user_email' => ['email'],
             'user_password' => ['required'],
             'user_phone' => ['required']
         ]);
 
-        $checkPrevDelete = User::where('email', '=', $request->json('provider_email') . '-deleted')->first();
+        if (empty($request->json('user_email')) && strtolower($request->json('provider')) == 'facebook') {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ["Akun facebook ini tidak dapat digunakan untuk masuk/mendaftar karena tidak memiliki akun email terkait"]
+            ]);
+        } elseif (empty($request->json('user_email'))) {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ["Email tidak boleh kosong"]
+            ]);
+        }
+
+        $checkPrevDelete = User::where('email', '=', $request->json('user_email') . '-deleted')->first();
         if (!empty($checkPrevDelete)) {
             return response()->json([
                 'status' => 'fail',
@@ -1461,8 +1484,7 @@ class ApiLoginRegisterV2 extends Controller
         }
 
         if (
-            $verified->token == $post['provider_token'] &&
-            $verified->name == $post['user_name']
+            $verified->token == $post['provider_token']
         ) {
             $checkPrevDeletePhone = User::where('phone', '=', $phone . '-deleted')->first();
             if (!empty($checkPrevDeletePhone)) {
@@ -1495,7 +1517,7 @@ class ApiLoginRegisterV2 extends Controller
 
                 $idUser = $new_user->id;
             } else {
-                $checkPhone = User::where('phone', $phone)->first();
+                $checkPhone = User::where('phone', $phone)->whereNotIn('id', [$check['id']])->first();
                 if (!empty($checkPhone)) {
                     return response()->json([
                         'status' => 'fail',
@@ -1521,6 +1543,8 @@ class ApiLoginRegisterV2 extends Controller
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
             ]);
+
+            app($this->membership)->calculateMembership($phone);
 
             return response()->json(['status' => 'success']);
         } else {
@@ -1559,8 +1583,7 @@ class ApiLoginRegisterV2 extends Controller
         }
 
         if (
-            $verified->token == $post['provider_token'] &&
-            $verified->name == $post['provider_name']
+            $verified->token == $post['provider_token']
         ) {
             $getUser = User::where('email', $post['provider_email'])->where('phone_verified', 1)->first();
             if (empty($getUser)) {
