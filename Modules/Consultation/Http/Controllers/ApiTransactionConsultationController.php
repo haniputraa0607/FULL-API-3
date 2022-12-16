@@ -319,12 +319,6 @@ class ApiTransactionConsultationController extends Controller
             $post['transaction_date'] = date('Y-m-d H:i:s');
         }
 
-        if (isset($post['transaction_payment_status'])) {
-            $post['transaction_payment_status'] = $post['transaction_payment_status'];
-        } else {
-            $post['transaction_payment_status'] = 'Pending';
-        }
-
         //user suspend
         if (isset($user['is_suspended']) && $user['is_suspended'] == '1') {
             DB::rollback();
@@ -526,17 +520,13 @@ class ApiTransactionConsultationController extends Controller
             'transaction_point_earned'    => $post['point'] ?? 0,
             'transaction_cashback_earned' => $post['cashback'],
             'trasaction_payment_type'     => $paymentType,
-            'transaction_payment_status'  => $post['transaction_payment_status'],
+            'transaction_payment_status'  => $paymentStatus,
             'latitude'                    => $post['latitude'],
             'longitude'                   => $post['longitude'],
             'distance_customer'           => $distance,
             'void_date'                   => null,
             'transaction_status'          => $transactionStatus
         ];
-
-        if ($transaction['transaction_grandtotal'] == 0) {
-            $transaction['transaction_payment_status'] = 'Completed';
-        }
 
         $useragent = $_SERVER['HTTP_USER_AGENT'];
         if (stristr($useragent, 'iOS')) {
@@ -664,17 +654,6 @@ class ApiTransactionConsultationController extends Controller
             $savelocation = app($this->location)->saveLocation($post['latitude'], $post['longitude'], $insertTransaction['id_user'], $insertTransaction['id_transaction'], $outlet['id_outlet']);
         }
         DB::commit();
-
-        $trx = Transaction::where('id_transaction', $insertTransaction['id_transaction'])->first();
-        if ($trx['transaction_grandtotal'] == 0) {
-            $trx->triggerPaymentCompleted();
-
-            return response()->json([
-                'status'   => 'success',
-                'redirect' => false,
-                'result'   => $insertTransaction
-            ]);
-        }
 
         return response()->json([
             'status'   => 'success',
