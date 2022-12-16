@@ -3784,6 +3784,9 @@ class ApiOutletController extends Controller
         $post = $request->json()->all();
         $config = Configs::where('is_active', 1)->select('id_config')->get()->toArray();
         $config = array_pluck($config, 'id_config');
+        if (!empty($post['outlet_code'])) {
+            $post['id_outlet'] = MyHelper::decSlug($post['outlet_code']);
+        }
 
         if (!empty($post['id_outlet'])) {
             $detail = Outlet::where('outlet_status', 'Active')->where('id_outlet', $post['id_outlet'])->first();
@@ -3804,6 +3807,7 @@ class ApiOutletController extends Controller
             $result = [
                 'is_closed' => (empty($detail['outlet_is_closed']) ? false : true),
                 'id_outlet' => $detail['id_outlet'],
+                'outlet_code' => MyHelper::encSlug($detail['id_outlet']),
                 'outlet_name' => $detail['outlet_name'],
                 'outlet_description' => $detail['outlet_description'] ?: '-',
                 'outlet_image_cover' => $detail['url_outlet_image_cover'],
@@ -3831,7 +3835,7 @@ class ApiOutletController extends Controller
             ->where('outlet_status', 'Active')
             ->where('outlet_is_closed', 0)
             ->where('merchant_status', 'Active')
-            ->select('outlets.id_outlet', 'id_merchant', 'outlet_name', 'outlet_image_logo_portrait');
+            ->select('outlets.id_outlet', 'id_merchant', 'outlet_name', 'outlet_image_logo_portrait', 'outlet_code');
 
         if (!empty($post['search_key'])) {
             $list = $list->where('outlet_name', 'like', '%' . $post['search_key'] . '%');
@@ -3841,6 +3845,7 @@ class ApiOutletController extends Controller
             $list = $list->paginate($post['pagination_total_row'] ?? 10)->toArray();
 
             foreach ($list['data'] as $key => $dt) {
+                $list['data'][$key]['outlet_code'] = MyHelper::encSlug($dt['id_outlet']);
                 $list['data'][$key]['outlet_name'] = $dt['outlet_name'];
                 $list['data'][$key]['outlet_image_logo_portrait'] = $dt['url_outlet_image_logo_portrait'];
                 unset($list['data'][$key]['url_outlet_image_logo_landscape']);
@@ -3853,6 +3858,7 @@ class ApiOutletController extends Controller
             $list = $list->get()->toArray();
 
             foreach ($list as $key => $dt) {
+                $list['data']['outlet_code'] = MyHelper::encSlug($dt['id_outlet']);
                 $list[$key]['outlet_name'] = $dt['outlet_name'];
                 $list[$key]['outlet_image_logo_portrait'] = $dt['url_outlet_image_logo_portrait'];
                 unset($list[$key]['url_outlet_image_logo_landscape']);
@@ -3880,6 +3886,7 @@ class ApiOutletController extends Controller
             $top[] = [
                 'id_outlet' => $dt['id_outlet'],
                 'id_merchant' => $dt['id_merchant'],
+                'outlet_code' => MyHelper::encSlug($dt['id_outlet']),
                 'outlet_name' => $dt['outlet_name'],
                 'outlet_image_logo_portrait' => $dt['url_outlet_image_logo_portrait']
             ];
@@ -3897,6 +3904,7 @@ class ApiOutletController extends Controller
             $newest[] = [
                 'id_outlet' => $dt['id_outlet'],
                 'id_merchant' => $dt['id_merchant'],
+                'outlet_code' => MyHelper::encSlug($dt['id_outlet']),
                 'outlet_name' => $dt['outlet_name'],
                 'outlet_image_logo_portrait' => $dt['url_outlet_image_logo_portrait']
             ];
