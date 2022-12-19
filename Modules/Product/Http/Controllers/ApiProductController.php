@@ -2109,8 +2109,8 @@ class ApiProductController extends Controller
                     continue;
                 }
                 $list[$key]['product_price'] = ($variantTree['base_price'] ?? false) ?: $product['product_price'];
-                $list['data']['product_label_discount'] = ($variantTree['base_price_discount_percent'] ?? false) ?: $product['product_label_discount'];
-                $list['data']['product_label_price_before_discount'] = ($variantTree['base_price_before_discount'] ?? false) ?: $product['product_label_price_before_discount'];
+                $list[$key]['product_label_discount'] = ($variantTree['base_price_discount_percent'] ?? false) ?: $product['product_label_discount'];
+                $list[$key]['product_label_price_before_discount'] = ($variantTree['base_price_before_discount'] ?? false) ?: $product['product_label_price_before_discount'];
             }
 
             unset($list[$key]['id_outlet']);
@@ -2181,8 +2181,8 @@ class ApiProductController extends Controller
                     continue;
                 }
                 $list[$key]['product_price'] = ($variantTree['base_price'] ?? false) ?: $product['product_price'];
-                $list['data']['product_label_discount'] = ($variantTree['base_price_discount_percent'] ?? false) ?: $product['product_label_discount'];
-                $list['data']['product_label_price_before_discount'] = ($variantTree['base_price_before_discount'] ?? false) ?: $product['product_label_price_before_discount'];
+                $list[$key]['product_label_discount'] = ($variantTree['base_price_discount_percent'] ?? false) ?: $product['product_label_discount'];
+                $list[$key]['product_label_price_before_discount'] = ($variantTree['base_price_before_discount'] ?? false) ?: $product['product_label_price_before_discount'];
             }
 
             unset($list[$key]['id_outlet']);
