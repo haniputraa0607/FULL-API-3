@@ -3858,7 +3858,7 @@ class ApiOutletController extends Controller
             $list = $list->get()->toArray();
 
             foreach ($list as $key => $dt) {
-                $list['data']['outlet_code'] = MyHelper::encSlug($dt['id_outlet']);
+                $list[$key]['outlet_code'] = MyHelper::encSlug($dt['id_outlet']);
                 $list[$key]['outlet_name'] = $dt['outlet_name'];
                 $list[$key]['outlet_image_logo_portrait'] = $dt['url_outlet_image_logo_portrait'];
                 unset($list[$key]['url_outlet_image_logo_landscape']);
