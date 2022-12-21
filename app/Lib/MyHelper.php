@@ -465,47 +465,47 @@ class MyHelper
         return $generatedstring;
     }
 
-    public static function encSlug($id)
+    public static function encSlug($id, $char = '123456789')
     {
         // create random char awal 1-9
         $randfirst = self::createrandom(1, null, '123456789');
         // bikin switch case untuk char 1-9
         switch ($randfirst) {
             case 1:
-                $firstRand  = self::createrandom(3, null, '123456789');
-                $lastRand   = self::createrandom(4, null, '123456789');
+                $firstRand  = self::createrandom(3, null, $char);
+                $lastRand   = self::createrandom(4, null, $char);
                 break;
             case 2:
-                $firstRand  = self::createrandom(2, null, '123456789');
-                $lastRand   = self::createrandom(3, null, '123456789');
+                $firstRand  = self::createrandom(2, null, $char);
+                $lastRand   = self::createrandom(3, null, $char);
                 break;
             case 3:
-                $firstRand  = self::createrandom(4, null, '123456789');
-                $lastRand   = self::createrandom(4, null, '123456789');
+                $firstRand  = self::createrandom(4, null, $char);
+                $lastRand   = self::createrandom(4, null, $char);
                 break;
             case 4:
-                $firstRand  = self::createrandom(1, null, '123456789');
-                $lastRand   = self::createrandom(4, null, '123456789');
+                $firstRand  = self::createrandom(1, null, $char);
+                $lastRand   = self::createrandom(4, null, $char);
                 break;
             case 5:
-                $firstRand  = self::createrandom(5, null, '123456789');
-                $lastRand   = self::createrandom(1, null, '123456789');
+                $firstRand  = self::createrandom(5, null, $char);
+                $lastRand   = self::createrandom(1, null, $char);
                 break;
             case 6:
-                $firstRand  = self::createrandom(3, null, '123456789');
-                $lastRand   = self::createrandom(3, null, '123456789');
+                $firstRand  = self::createrandom(3, null, $char);
+                $lastRand   = self::createrandom(3, null, $char);
                 break;
             case 7:
-                $firstRand  = self::createrandom(2, null, '123456789');
-                $lastRand   = self::createrandom(4, null, '123456789');
+                $firstRand  = self::createrandom(2, null, $char);
+                $lastRand   = self::createrandom(4, null, $char);
                 break;
             case 8:
-                $firstRand  = self::createrandom(3, null, '123456789');
-                $lastRand   = self::createrandom(2, null, '123456789');
+                $firstRand  = self::createrandom(3, null, $char);
+                $lastRand   = self::createrandom(2, null, $char);
                 break;
             case 9:
-                $firstRand  = self::createrandom(2, null, '123456789');
-                $lastRand   = self::createrandom(2, null, '123456789');
+                $firstRand  = self::createrandom(2, null, $char);
+                $lastRand   = self::createrandom(2, null, $char);
                 break;
         }
         // $firstRand   = self::createrandom(env('ENC_FIRST_SLUG', 4), null, '123456789');

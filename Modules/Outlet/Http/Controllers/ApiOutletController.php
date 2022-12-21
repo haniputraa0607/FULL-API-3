@@ -3807,7 +3807,7 @@ class ApiOutletController extends Controller
             $result = [
                 'is_closed' => (empty($detail['outlet_is_closed']) ? false : true),
                 'id_outlet' => $detail['id_outlet'],
-                'outlet_code' => MyHelper::encSlug($detail['id_outlet']),
+                'outlet_code' => MyHelper::encSlug($detail['id_outlet'], null),
                 'outlet_name' => $detail['outlet_name'],
                 'outlet_description' => $detail['outlet_description'] ?: '-',
                 'outlet_image_cover' => $detail['url_outlet_image_cover'],
@@ -3845,7 +3845,7 @@ class ApiOutletController extends Controller
             $list = $list->paginate($post['pagination_total_row'] ?? 10)->toArray();
 
             foreach ($list['data'] as $key => $dt) {
-                $list['data'][$key]['outlet_code'] = MyHelper::encSlug($dt['id_outlet']);
+                $list['data'][$key]['outlet_code'] = MyHelper::encSlug($dt['id_outlet'], null);
                 $list['data'][$key]['outlet_name'] = $dt['outlet_name'];
                 $list['data'][$key]['outlet_image_logo_portrait'] = $dt['url_outlet_image_logo_portrait'];
                 unset($list['data'][$key]['url_outlet_image_logo_landscape']);
@@ -3858,7 +3858,7 @@ class ApiOutletController extends Controller
             $list = $list->get()->toArray();
 
             foreach ($list as $key => $dt) {
-                $list[$key]['outlet_code'] = MyHelper::encSlug($dt['id_outlet']);
+                $list[$key]['outlet_code'] = MyHelper::encSlug($dt['id_outlet'], null);
                 $list[$key]['outlet_name'] = $dt['outlet_name'];
                 $list[$key]['outlet_image_logo_portrait'] = $dt['url_outlet_image_logo_portrait'];
                 unset($list[$key]['url_outlet_image_logo_landscape']);
@@ -3886,7 +3886,7 @@ class ApiOutletController extends Controller
             $top[] = [
                 'id_outlet' => $dt['id_outlet'],
                 'id_merchant' => $dt['id_merchant'],
-                'outlet_code' => MyHelper::encSlug($dt['id_outlet']),
+                'outlet_code' => MyHelper::encSlug($dt['id_outlet'], null),
                 'outlet_name' => $dt['outlet_name'],
                 'outlet_image_logo_portrait' => $dt['url_outlet_image_logo_portrait']
             ];
@@ -3904,7 +3904,7 @@ class ApiOutletController extends Controller
             $newest[] = [
                 'id_outlet' => $dt['id_outlet'],
                 'id_merchant' => $dt['id_merchant'],
-                'outlet_code' => MyHelper::encSlug($dt['id_outlet']),
+                'outlet_code' => MyHelper::encSlug($dt['id_outlet'], null),
                 'outlet_name' => $dt['outlet_name'],
                 'outlet_image_logo_portrait' => $dt['url_outlet_image_logo_portrait']
             ];

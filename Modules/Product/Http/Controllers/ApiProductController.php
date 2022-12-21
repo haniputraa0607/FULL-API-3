@@ -1790,8 +1790,14 @@ class ApiProductController extends Controller
         $post = $request->json()->all();
         //get product
         $product = Product::join('product_categories', 'product_categories.id_product_category', 'products.id_product_category')
-                    ->select('id_merchant', 'products.id_product_category', 'product_categories.product_category_name', 'id_product', 'product_code', 'product_name', 'product_description', 'product_code', 'product_variant_status', 'need_recipe_status', 'product_count_transaction')
-                    ->where('id_product', $post['id_product'])->first();
+                    ->select('id_merchant', 'products.id_product_category', 'product_categories.product_category_name', 'id_product', 'product_code', 'product_name', 'product_description', 'product_code', 'product_variant_status', 'need_recipe_status', 'product_count_transaction');
+
+
+        if (!empty($post['id_product'])) {
+            $product = $product->where('id_product', $post['id_product'])->first();
+        } else {
+            $product = $product->where('product_code', $post['product_code'])->first();
+        }
 
         if (!$product) {
             return MyHelper::checkGet([]);
@@ -1799,7 +1805,7 @@ class ApiProductController extends Controller
             // toArray error jika $product Null,
             $product = $product->toArray();
         }
-
+        $post['id_product'] = $product['id_product'];
         $product['sold'] = app($this->management_merchant)->productCount($product['product_count_transaction']);
         unset($product['product_count_transaction']);
 
