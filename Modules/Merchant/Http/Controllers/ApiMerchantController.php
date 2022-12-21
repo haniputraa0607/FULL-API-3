@@ -472,7 +472,7 @@ class ApiMerchantController extends Controller
         $detail = [
             'outlet' => [
                 'id_outlet' => $detail['id_outlet'],
-                'outlet_code' => MyHelper::encSlug($detail['id_outlet']),
+                'outlet_code' => MyHelper::encSlug($detail['id_outlet'], null),
                 'is_active' => ($detail['outlet_status'] == 'Active' ? true : false),
                 'is_closed' => (empty($detail['outlet_is_closed']) ? false : true),
                 'merchant_name' => $detail['outlet_name'],
