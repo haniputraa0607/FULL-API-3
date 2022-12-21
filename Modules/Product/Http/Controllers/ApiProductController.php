@@ -1793,9 +1793,9 @@ class ApiProductController extends Controller
                     ->select('id_merchant', 'products.id_product_category', 'product_categories.product_category_name', 'id_product', 'product_code', 'product_name', 'product_description', 'product_code', 'product_variant_status', 'need_recipe_status', 'product_count_transaction');
 
 
-        if(!empty($post['id_product'])){
+        if (!empty($post['id_product'])) {
             $product = $product->where('id_product', $post['id_product'])->first();
-        }else{
+        } else {
             $product = $product->where('product_code', $post['product_code'])->first();
         }
 
