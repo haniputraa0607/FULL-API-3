@@ -2907,6 +2907,7 @@ class ApiOnlineTransaction extends Controller
                         $items[$index]['delivery'] = $value['delivery'] ?? [];
 
                         $shipmentRateID = null;
+                        $mustUseInsurance = false;
                         if (!empty($value['delivery']['rate_id'])) {
                             foreach ($deliveryPriceList as $shipmentCheck) {
                                 foreach ($shipmentCheck['service'] as $service) {
@@ -2918,6 +2919,7 @@ class ApiOnlineTransaction extends Controller
                                         $shipmentInsuranceStatus = (($value['delivery']['insurance_status'] ?? false) == true ? 1 : 0);
                                         if ($service['must_use_insurance'] == true) {
                                             $shipmentInsuranceStatus = 1;
+                                            $mustUseInsurance = true;
                                         }
                                         $shipmentInsurancePrice = $service['insurance_fee'];
                                         $shipmentPrice = $service['price'];
@@ -2944,7 +2946,8 @@ class ApiOnlineTransaction extends Controller
                                 'shipment_insurance_price' => $shipmentInsurancePrice,
                                 'shipment_price' => $shipmentPrice,
                                 'shipment_price_text' => 'Rp ' . number_format($shipmentPrice, 0, ",", "."),
-                                'estimated' => $estimated
+                                'estimated' => $estimated,
+                                'must_use_insurance' => $mustUseInsurance
                             ];
 
                             $items[$index]['subtotal'] = $productSubtotal + $shipmentPrice;
