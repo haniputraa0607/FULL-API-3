@@ -2906,6 +2906,7 @@ class ApiOnlineTransaction extends Controller
                         $items[$index]['available_delivery'] = $deliveryPriceList;
                         $items[$index]['delivery'] = $value['delivery'] ?? [];
 
+                        $shipmentRateID = null;
                         if (!empty($value['delivery']['rate_id'])) {
                             foreach ($deliveryPriceList as $shipmentCheck) {
                                 foreach ($shipmentCheck['service'] as $service) {
@@ -2923,6 +2924,7 @@ class ApiOnlineTransaction extends Controller
                                         if ($shipmentInsuranceStatus == 1) {
                                             $shipmentPrice = $shipmentPrice + $shipmentInsurancePrice;
                                         }
+                                        $estimated = $service['estimated'] ?? '';
                                     }
                                 }
                             }
@@ -2938,9 +2940,11 @@ class ApiOnlineTransaction extends Controller
                                 'shipment_code' => $shipmentCode,
                                 'shipment_courier' => $shipmentCourier,
                                 'shipment_courier_service' => $shipmentCourierService,
-                                'shipment_insurance_status' => $shipmentInsurancePrice,
+                                'shipment_insurance_status' => ($shipmentInsuranceStatus ? true : false),
+                                'shipment_insurance_price' => $shipmentInsurancePrice,
                                 'shipment_price' => $shipmentPrice,
-                                'shipment_price_text' => 'Rp ' . number_format($shipmentPrice, 0, ",", ".")
+                                'shipment_price_text' => 'Rp ' . number_format($shipmentPrice, 0, ",", "."),
+                                'estimated' => $estimated
                             ];
 
                             $items[$index]['subtotal'] = $productSubtotal + $shipmentPrice;
