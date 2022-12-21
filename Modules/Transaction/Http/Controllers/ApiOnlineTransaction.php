@@ -318,7 +318,7 @@ class ApiOnlineTransaction extends Controller
                 'trasaction_type'             => $transactionType,
                 'transaction_subtotal'        => $data['items_subtotal'],
                 'transaction_gross'           => $data['items_subtotal'],
-                'transaction_shipment'        => $data['delivery_price']['shipment_price'] ?? 0,
+                'transaction_shipment'        => $data['delivery_price']['shipment_price_final'] ?? 0,
                 'transaction_grandtotal'      => $subFinal ?? 0,
                 'transaction_tax'             => $data['tax'] ?? 0,
                 'transaction_service'         => $data['service'] ?? 0,
@@ -2908,6 +2908,7 @@ class ApiOnlineTransaction extends Controller
 
                         $shipmentRateID = null;
                         $mustUseInsurance = false;
+                        $shipmentOriginalPrice = 0;
                         if (!empty($value['delivery']['rate_id'])) {
                             foreach ($deliveryPriceList as $shipmentCheck) {
                                 foreach ($shipmentCheck['service'] as $service) {
@@ -2923,6 +2924,7 @@ class ApiOnlineTransaction extends Controller
                                         }
                                         $shipmentInsurancePrice = $service['insurance_fee'];
                                         $shipmentPrice = $service['price'];
+                                        $shipmentOriginalPrice = $shipmentPrice;
                                         if ($shipmentInsuranceStatus == 1) {
                                             $shipmentPrice = $shipmentPrice + $shipmentInsurancePrice;
                                         }
@@ -2944,8 +2946,9 @@ class ApiOnlineTransaction extends Controller
                                 'shipment_courier_service' => $shipmentCourierService,
                                 'shipment_insurance_status' => ($shipmentInsuranceStatus ? true : false),
                                 'shipment_insurance_price' => $shipmentInsurancePrice,
-                                'shipment_price' => $shipmentPrice,
-                                'shipment_price_text' => 'Rp ' . number_format($shipmentPrice, 0, ",", "."),
+                                'shipment_price_final' => $shipmentPrice,
+                                'shipment_price' => $shipmentOriginalPrice,
+                                'shipment_price_text' => 'Rp ' . number_format($shipmentOriginalPrice, 0, ",", "."),
                                 'estimated' => $estimated,
                                 'must_use_insurance' => $mustUseInsurance
                             ];
