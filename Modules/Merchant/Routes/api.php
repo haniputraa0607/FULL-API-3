@@ -116,7 +116,10 @@ Route::group(['prefix' => 'merchant'], function () {
             Route::post('/register', 'ApiUserResellerMerchantController@register');
         });
         Route::group(['prefix' => 'search'], function () {
+            Route::post('product/list', 'ApiMerchantCustomerController@product');
             Route::post('/list', 'ApiMerchantCustomerController@list');
+            Route::get('/city', 'ApiMerchantCustomerController@city');
+            Route::get('/order_by', 'ApiMerchantCustomerController@order_by');
         });
     });
 
