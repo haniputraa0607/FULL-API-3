@@ -79,15 +79,15 @@ class ApiMerchantCustomerController extends Controller
         }
         $get = $get->get();
         $data = array();
-        foreach($get as $value){
+        foreach ($get as $value) {
             $data[] = array(
-                'id_merchant'=>$value['id_merchant'],
-                'id_outlet'=>$value['id_outlet'],
-                'product'=>$value['product'],
-                'price'=>$value['average_price'],
-                'rating'=>$value['total_rating'],
-                'outlet_image_cover'=>$value['url_outlet_image_cover'],
-                'outlet_image_logo_portrait'=>$value['url_outlet_image_logo_portrait'],
+                'id_merchant' => $value['id_merchant'],
+                'id_outlet' => $value['id_outlet'],
+                'product' => $value['product'],
+                'price' => $value['average_price'],
+                'rating' => $value['total_rating'],
+                'outlet_image_cover' => $value['url_outlet_image_cover'],
+                'outlet_image_logo_portrait' => $value['url_outlet_image_logo_portrait'],
             );
         }
         return response()->json(MyHelper::checkGet($data));
@@ -165,9 +165,9 @@ class ApiMerchantCustomerController extends Controller
     public function city()
     {
         $get = City::select('cities.id_city', 'city_name', 'city_type')
-                ->join('outlets','outlets.id_city','cities.id_city')
+                ->join('outlets', 'outlets.id_city', 'cities.id_city')
                 ->join('merchants', 'merchants.id_outlet', 'outlets.id_outlet')
-                ->orderby('city_type','desc')
+                ->orderby('city_type', 'desc')
                 ->get();
         return response()->json(MyHelper::checkGet($get));
     }
@@ -186,11 +186,11 @@ class ApiMerchantCustomerController extends Controller
     public function promo()
     {
         $get = PromoCampaign::where(array(
-                    'promo_campaign_visibility'=>"Visible",
-                    'step_complete'=>1
+                    'promo_campaign_visibility' => "Visible",
+                    'step_complete' => 1
                 ))
-                ->where('date_start','<=',date('Y-m-d H:i:s'))
-                ->where('date_end','>=',date('Y-m-d H:i:s'))
+                ->where('date_start', '<=', date('Y-m-d H:i:s'))
+                ->where('date_end', '>=', date('Y-m-d H:i:s'))
                 ->groupby('promo_title')
                 ->distinct()
                 ->select('promo_title')
