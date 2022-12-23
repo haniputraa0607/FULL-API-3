@@ -40,21 +40,20 @@ use Modules\Merchant\Entities\UserResellerMerchant;
 use Modules\Merchant\Http\Requests\UserReseller\Register;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Models\City;
+use Modules\PromoCampaign\Entities\PromoCampaign;
 
 class ApiMerchantCustomerController extends Controller
 {
     public function list(Request $request)
     {
         $post = $request->json()->all();
-        $get = Merchant::join('outlets', 'outlets.id_outlet', 'merchants.id_outlet')
+        $get = Outlet::join('merchants', 'merchants.id_outlet', 'outlets.id_outlet')
                 ->leftjoin('products', 'products.id_merchant', 'merchants.id_merchant')
                 ->leftjoin('product_global_price', 'product_global_price.id_product', 'products.id_product')
                 ->where('merchant_status', 'Active')
                 ->select(
                     'merchants.id_merchant',
-                    'outlet_name',
-                    'outlet_image_logo_landscape',
-                    'outlet_image_logo_portrait',
+                    'outlets.*',
                     DB::raw('
                             count(
                             products.id_product
@@ -78,8 +77,20 @@ class ApiMerchantCustomerController extends Controller
         if (isset($post['city']) && $post['city'] != null) {
             $get = $get->wherein('id_city', $post['city']);
         }
-                $get = $get->get();
-        return response()->json(MyHelper::checkGet($get));
+        $get = $get->get();
+        $data = array();
+        foreach($get as $value){
+            $data[] = array(
+                'id_merchant'=>$value['id_merchant'],
+                'id_outlet'=>$value['id_outlet'],
+                'product'=>$value['product'],
+                'price'=>$value['average_price'],
+                'rating'=>$value['total_rating'],
+                'outlet_image_cover'=>$value['url_outlet_image_cover'],
+                'outlet_image_logo_portrait'=>$value['url_outlet_image_logo_portrait'],
+            );
+        }
+        return response()->json(MyHelper::checkGet($data));
     }
     public function product(Request $request)
     {
@@ -153,7 +164,11 @@ class ApiMerchantCustomerController extends Controller
     }
     public function city()
     {
-        $get = City::select('id_city', 'city_name', 'city_type')->get();
+        $get = City::select('cities.id_city', 'city_name', 'city_type')
+                ->join('outlets','outlets.id_city','cities.id_city')
+                ->join('merchants', 'merchants.id_outlet', 'outlets.id_outlet')
+                ->orderby('city_type','desc')
+                ->get();
         return response()->json(MyHelper::checkGet($get));
     }
     public function order_by()
@@ -166,6 +181,20 @@ class ApiMerchantCustomerController extends Controller
             'Harga Tertinggi',
             'Harga Terendah',
         );
+        return response()->json(MyHelper::checkGet($get));
+    }
+    public function promo()
+    {
+        $get = PromoCampaign::where(array(
+                    'promo_campaign_visibility'=>"Visible",
+                    'step_complete'=>1
+                ))
+                ->where('date_start','<=',date('Y-m-d H:i:s'))
+                ->where('date_end','>=',date('Y-m-d H:i:s'))
+                ->groupby('promo_title')
+                ->distinct()
+                ->select('promo_title')
+                ->get();
         return response()->json(MyHelper::checkGet($get));
     }
 }
