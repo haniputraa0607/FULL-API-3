@@ -2286,7 +2286,36 @@ class ApiProductController extends Controller
                 $list = $list->orderBy('products.created_at', 'desc');
             } elseif ($sorting == 'recommendation') {
                 $list = $list->orderBy('products.product_recommendation_status', 'desc')->orderBy('products.product_name', 'asc');
+            } elseif($sorting == 'Rating Tertinggi'){
+                 $list = $list->orderby('products.total_rating', 'desc');
+            } elseif($sorting == 'Rating Terendah'){
+                 $list = $list->orderby('products.total_rating', 'asc');
+            } elseif($sorting == 'Terlaris'){
+                 $list = $list->orderby('product_count_transaction', 'desc');
+            } elseif($sorting == 'Terbaru'){
+                $list = $list->orderBy('products.created_at', 'desc');
+            } elseif($sorting == 'Harga Tertinggi'){
+                 $list = $list->where(function ($q) use ($post) {
+                        $q->where(function ($query1) use ($post) {
+                            $query1->orderby('product_global_price', 'desc')
+                                ->where('product_variant_status', 0);
+                        });
+                        $q->orWhereHas('base_price_variant', function ($query2) use ($post) {
+                            $query2->orderby('product_variant_group_price', 'desc');
+                        });
+                    });
+            } elseif($sorting == 'Harga Terendah'){
+                 $list = $list->where(function ($q) use ($post) {
+                        $q->where(function ($query1) use ($post) {
+                            $query1->orderby('product_global_price', 'asc')
+                                ->where('product_variant_status', 0);
+                        });
+                        $q->orWhereHas('base_price_variant', function ($query2) use ($post) {
+                            $query2->orderby('product_variant_group_price', 'asc');
+                        });
+                    });
             }
+        
         } else {
             $list = $list->orderBy('product_count_transaction', 'desc');
         }
@@ -2340,21 +2369,7 @@ class ApiProductController extends Controller
                 });
             });
         }
-        if (isset($post['order_by']) && $post['order_by'] != null) {
-            if ($post['order_by'] == 'Rating Tertinggi') {
-                $list = $list->orderby('products.total_rating', 'desc');
-            } elseif ($post['order_by'] == 'Rating Terendah') {
-                 $list = $list->orderby('products.total_rating', 'asc');
-            } elseif ($post['order_by'] == 'Terlaris') {
-                 $list = $list->orderby('product_count_transaction', 'desc');
-            } elseif ($post['order_by'] == 'Terbaru') {
-                 $list = $list->orderby('products.created_at', 'asc');
-            } elseif ($post['order_by'] == 'Harga Tertinggi') {
-                 $list = $list->orderby('product_global_price', 'desc');
-            } elseif ($post['order_by'] == 'Harga Terendah') {
-                 $list = $list->orderby('product_global_price', 'asc');
-            }
-        }
+        
         if (isset($post['range']) && $post['range'] != null) {
             $start = 0;
             foreach ($post['range'] as $v) {
