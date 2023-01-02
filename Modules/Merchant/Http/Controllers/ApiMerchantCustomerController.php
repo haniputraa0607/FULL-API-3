@@ -83,6 +83,7 @@ class ApiMerchantCustomerController extends Controller
             $data[] = array(
                 'id_merchant' => $value['id_merchant'],
                 'id_outlet' => $value['id_outlet'],
+                'outlet_name' => $value['outlet_name'],
                 'product' => $value['product'],
                 'price' => $value['average_price'],
                 'rating' => $value['total_rating'],
@@ -164,10 +165,11 @@ class ApiMerchantCustomerController extends Controller
     }
     public function city()
     {
-        $get = City::select('cities.id_city', 'city_name', 'city_type')
-                ->join('outlets', 'outlets.id_city', 'cities.id_city')
+        $get = City::join('outlets', 'outlets.id_city', 'cities.id_city')
                 ->join('merchants', 'merchants.id_outlet', 'outlets.id_outlet')
                 ->orderby('city_type', 'desc')
+                ->select('cities.id_city', 'city_name', 'city_type')
+                ->groupby('cities.id_city')
                 ->get();
         return response()->json(MyHelper::checkGet($get));
     }
