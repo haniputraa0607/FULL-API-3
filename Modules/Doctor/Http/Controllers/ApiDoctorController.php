@@ -693,10 +693,6 @@ class ApiDoctorController extends Controller
                 if (in_array($doctor, $recomendationDoctorHistory) == false && count($recomendationDoctorHistory) < 3 && $doctor) {
                     $recomendationDoctorHistory[] = $doctor;
                 }
-
-                if (count($recomendationDoctorHistory) >= 3) {
-                    return response()->json(['status'  => 'success', 'result' => $recomendationDoctorHistory]);
-                }
             }
         }
 
@@ -708,10 +704,6 @@ class ApiDoctorController extends Controller
 
                 if (in_array($doctor, $recomendationDoctorHistory) == false && count($recomendationDoctorHistory) < 3 && $doctor) {
                     $recomendationDoctorHistory[] = $doctor;
-                }
-
-                if (count($recomendationDoctorHistory) >= 3) {
-                    return response()->json(['status'  => 'success', 'result' => $recomendationDoctorHistory]);
                 }
             }
         }
