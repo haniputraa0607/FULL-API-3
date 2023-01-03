@@ -69,7 +69,7 @@ class ApiScheduleController extends Controller
                 $postSchedule = [
                     'id_doctor' => $post['id_doctor'],
                     'day' => $schedule['day'],
-                    'is_active' => $schedule['is_active']
+                    'is_active' => (empty($schedule['session_time']) ? 0 : $schedule['is_active'])
                 ];
                 $updateSchedule = DoctorSchedule::where('id_doctor_schedule', $schedule['id_doctor_schedule'])->update($postSchedule);
 
@@ -93,7 +93,7 @@ class ApiScheduleController extends Controller
                 $postSchedule = [
                     'id_doctor' => $post['id_doctor'],
                     'day' => $schedule['day'],
-                    'is_active' => $schedule['is_active'],
+                    'is_active' => (empty($schedule['session_time']) ? 0 : $schedule['is_active']),
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s')
                 ];
