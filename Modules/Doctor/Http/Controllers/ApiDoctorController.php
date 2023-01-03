@@ -653,10 +653,12 @@ class ApiDoctorController extends Controller
             $ids_doctor = $post['id_doctor'];
 
             //reset doctor recomendation
-            DB::table('doctors')->update([ 'doctor_recomendation_status' => false]);
+            DB::table('doctors')->update([ 'doctor_recomendation_status' => 0]);
 
             //new doctor recomendation
-            Doctor::whereIn('id_doctor', $ids_doctor)->update(['doctor_recomendation_status' => true]);
+            if (!empty($ids_doctor)) {
+                Doctor::whereIn('id_doctor', $ids_doctor)->update(['doctor_recomendation_status' => 1]);
+            }
         } catch (\Exception $e) {
             $result = [
                 'status'  => 'fail',
@@ -679,6 +681,7 @@ class ApiDoctorController extends Controller
 
         //Logic doctor recomendation
         $recomendationDoctor = array();
+        $recomendationDoctorHistory = array();
 
         //1. Doctor From Consultation History
         $historyConsultation = Transaction::where('id_user', $user->id)->where('trasaction_type', 'consultation')->get();
@@ -687,50 +690,41 @@ class ApiDoctorController extends Controller
                 $doctorId = TransactionConsultation::where('id_transaction', $hc->id_transaction)->pluck('id_doctor');
                 $doctor = Doctor::where('is_active', 1)->whereIn('id_doctor', $doctorId)->with('outlet')->with('specialists')->first();
 
-                if (in_array($doctor, $recomendationDoctor) == false && count($recomendationDoctor) < 3 && $doctor) {
-                    $recomendationDoctor[] = $doctor;
+                if (in_array($doctor, $recomendationDoctorHistory) == false && count($recomendationDoctorHistory) < 3 && $doctor) {
+                    $recomendationDoctorHistory[] = $doctor;
                 }
 
-                if (count($recomendationDoctor) >= 3) {
-                    return response()->json(['status'  => 'success', 'result' => $recomendationDoctor]);
+                if (count($recomendationDoctorHistory) >= 3) {
+                    return response()->json(['status'  => 'success', 'result' => $recomendationDoctorHistory]);
                 }
             }
         }
 
         //2. Doctor From Outlet Related Transaction Product History
-        $historyTransaction = Transaction::where('id_user', $user->id)->where('trasaction_type', 'product')->get();
+        $historyTransaction = Transaction::where('id_user', $user->id)->where('trasaction_type', 'Delivery')->get();
         if (!empty($historyTransaction)) {
             foreach ($historyTransaction as $ht) {
                 $doctor = Doctor::with('outlet')->with('specialists')->where('id_outlet', $ht->id_outlet)->first();
 
-                if (in_array($doctor, $recomendationDoctor) == false && count($recomendationDoctor) < 3 && $doctor) {
-                    $recomendationDoctor[] = $doctor;
+                if (in_array($doctor, $recomendationDoctorHistory) == false && count($recomendationDoctorHistory) < 3 && $doctor) {
+                    $recomendationDoctorHistory[] = $doctor;
                 }
 
-                if (count($recomendationDoctor) >= 3) {
-                    return response()->json(['status'  => 'success', 'result' => $recomendationDoctor]);
+                if (count($recomendationDoctorHistory) >= 3) {
+                    return response()->json(['status'  => 'success', 'result' => $recomendationDoctorHistory]);
                 }
             }
         }
+
+        $recomendationDoctorHistory = array_map("unserialize", array_unique(array_map("serialize", $recomendationDoctorHistory)));
 
         //3. From Setting
-        $doctorRecomendationDefault = Doctor::where('is_active', 1)->with('outlet')->with('specialists')->where('doctor_recomendation_status', true)->get();
+        $doctorRecomendationDefault = Doctor::where('is_active', 1)->with('outlet')->with('specialists')->where('doctor_recomendation_status', 1)->orderBy('created_at', 'desc')->get();
 
         if (empty($doctorRecomendationDefault)) {
-            return response()->json([
-                'status'    => 'fail',
-                'messages'  => ['Doctor Recomendation Settings not found']
-            ]);
-        }
-
-        foreach ($doctorRecomendationDefault as $dr) {
-            if (in_array($dr, $recomendationDoctor) == false && count($recomendationDoctor) < 4 && $dr) {
-                $recomendationDoctor[] = $dr;
-            }
-
-            if (count($recomendationDoctor) >= 4) {
-                return response()->json(['status'  => 'success', 'result' => $recomendationDoctor]);
-            }
+            $recomendationDoctor = $recomendationDoctorHistory;
+        } else {
+            $recomendationDoctor = $doctorRecomendationDefault;
         }
 
         return response()->json(['status'  => 'success', 'result' => $recomendationDoctor]);

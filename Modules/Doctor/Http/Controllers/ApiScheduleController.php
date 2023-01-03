@@ -75,8 +75,8 @@ class ApiScheduleController extends Controller
 
                 $getSchedule = DoctorSchedule::where('id_doctor_schedule', $schedule['id_doctor_schedule'])->first();
                 //drop and save schedule time
+                $oldTime = TimeSchedule::where('id_doctor_schedule', $getSchedule['id_doctor_schedule'])->delete();
                 if (isset($schedule['session_time'])) {
-                    $oldTime = TimeSchedule::where('id_doctor_schedule', $getSchedule['id_doctor_schedule'])->delete();
                     $getSchedule->schedule_time()->createMany($schedule['session_time']);
                 }
                 try {
