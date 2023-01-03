@@ -51,6 +51,8 @@ class ApiMerchantCustomerController extends Controller
                 ->leftjoin('products', 'products.id_merchant', 'merchants.id_merchant')
                 ->leftjoin('product_global_price', 'product_global_price.id_product', 'products.id_product')
                 ->where('merchant_status', 'Active')
+                ->where('outlet_status', 'Active')
+                ->where('outlet_is_closed', 0)
                 ->select(
                     'merchants.id_merchant',
                     'outlets.*',
@@ -102,6 +104,8 @@ class ApiMerchantCustomerController extends Controller
                 ->leftjoin('transaction_products', 'transaction_products.id_product', 'products.id_product')
                 ->leftjoin('transactions', 'transactions.id_transaction', 'transaction_products.id_transaction')
                 ->where('merchant_status', 'Active')
+                ->where('outlet_status', 'Active')
+                ->where('outlet_is_closed', 0)
                 ->select(
                     'products.id_product',
                     'product_name',
