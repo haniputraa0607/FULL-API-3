@@ -90,6 +90,19 @@ class ApiShipperController extends Controller
                         if (in_array($dtShipper['code'], [2000, 3000, 2010])) {
                             $update = TransactionShipment::where('id_transaction', $data['id_transaction'])->update(['receive_at' => $convertWIB]);
                             if ($update) {
+                                $trxProduct = TransactionProduct::where('id_transaction', $data['id_transaction'])->pluck('id_product')->toArray();
+
+                                foreach ($trxProduct as $id_product) {
+                                    $countBestSaller = TransactionProduct::join('transactions', 'transactions.id_transaction', 'transaction_products.id_transaction')
+                                        ->join('transaction_shipments', 'transaction_shipments.id_transaction', 'transactions.id_transaction')
+                                        ->where('id_product', $id_product)
+                                        ->where(function ($q) {
+                                            $q->whereNotNull('transaction_shipments.receive_at')
+                                                ->orWhere('transaction_status', 'Completed');
+                                        })->sum('transaction_product_qty');
+                                    Product::where('id_product', $id_product)->update(['product_count_transaction' => $countBestSaller]);
+                                }
+
                                 $trxShipment = TransactionShipment::where('id_transaction', $data['id_transaction'])->first();
                                 $user = User::where('id', $data['id_user'])->first();
                                 app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM('Transaction Delivery Received', $user['phone'], [
@@ -185,6 +198,19 @@ class ApiShipperController extends Controller
             if (in_array($shipper['code'], [2000, 3000, 2010])) {
                 $update = TransactionShipment::where('id_transaction', $transaction['id_transaction'])->update(['receive_at' => $convertWIB]);
                 if ($update) {
+                    $trxProduct = TransactionProduct::where('id_transaction', $transaction['id_transaction'])->pluck('id_product')->toArray();
+
+                    foreach ($trxProduct as $id_product) {
+                        $countBestSaller = TransactionProduct::join('transactions', 'transactions.id_transaction', 'transaction_products.id_transaction')
+                            ->join('transaction_shipments', 'transaction_shipments.id_transaction', 'transactions.id_transaction')
+                            ->where('id_product', $id_product)
+                            ->where(function ($q) {
+                                $q->whereNotNull('transaction_shipments.receive_at')
+                                    ->orWhere('transaction_status', 'Completed');
+                            })->sum('transaction_product_qty');
+                        Product::where('id_product', $id_product)->update(['product_count_transaction' => $countBestSaller]);
+                    }
+
                     $trxShipment = TransactionShipment::where('id_transaction', $transaction['id_transaction'])->first();
                     app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM('Transaction Delivery Received', $user['phone'], [
                         'receipt_number'   => $transaction['transaction_receipt_number'],
@@ -240,9 +266,14 @@ class ApiShipperController extends Controller
             $trxProduct = TransactionProduct::where('id_transaction', $transaction['id_transaction'])->pluck('id_product')->toArray();
 
             foreach ($trxProduct as $id_product) {
-                $countBestSaller = Product::where('id_product', $id_product)->first()['product_count_transaction'] ?? 0;
-                Product::where('id_product', $id_product)->update(['product_count_transaction' => $countBestSaller + 1]);
-
+                $countBestSaller = TransactionProduct::join('transactions', 'transactions.id_transaction', 'transaction_products.id_transaction')
+                    ->join('transaction_shipments', 'transaction_shipments.id_transaction', 'transactions.id_transaction')
+                    ->where('id_product', $id_product)
+                    ->where(function ($q) {
+                        $q->whereNotNull('transaction_shipments.receive_at')
+                            ->orWhere('transaction_status', 'Completed');
+                    })->sum('transaction_product_qty');
+                Product::where('id_product', $id_product)->update(['product_count_transaction' => $countBestSaller]);
                 UserRatingLog::updateOrCreate([
                     'id_user' => $transaction['id_user'],
                     'id_transaction' => $transaction['id_transaction'],
