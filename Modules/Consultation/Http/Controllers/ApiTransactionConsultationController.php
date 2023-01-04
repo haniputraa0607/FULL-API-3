@@ -4146,8 +4146,10 @@ class ApiTransactionConsultationController extends Controller
                     $endConsultation = $date . $consultationSoon['schedule_end_time'];
                 }
 
-                if (!empty($getSettingLate)) {
+                if (!empty($getSettingLate) && $consultationSoon['consultation_type'] == 'scheduled') {
                     $endConsultation = date('Y-m-d H:i:s', strtotime("{$consultationSoon['schedule_date']} {$consultationSoon['schedule_start_time']} +{$getSettingLate->value}minutes"));
+                } elseif ($consultationSoon['consultation_type'] == 'now') {
+                    $endConsultation = date('Y-m-d H:i:s', strtotime($consultationSoon['schedule_date'] . ' ' . $consultationSoon['schedule_end_time']));
                 }
 
                 $scheduleDateTime = Carbon::parse($endConsultation);
