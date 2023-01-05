@@ -1011,13 +1011,14 @@ class ApiDoctorController extends Controller
             $now = date('H:i:s');
 
             //update doctor status to online
-            $doctorOnline = Doctor::whereHas('schedules', function ($query) use ($day, $now, $earlyEnter, $lateEnter) {
-                            $query->where('day', '=', $day);
-                            $query->whereHas('schedule_time', function ($query2) use ($now, $earlyEnter, $lateEnter) {
-                                $query2->whereTime('start_time', '<=', date('H:i:s', time() + $earlyEnter));
-                                $query2->whereTime('end_time', '>=', $now);
-                            });
-            })->pluck('id_doctor');
+            $doctorOnline = Doctor::join('doctor_schedules', 'doctors.id_doctor', 'doctor_schedules.id_doctor')
+                ->join('time_schedules', 'doctor_schedules.id_doctor_schedule', 'time_schedules.id_doctor_schedule')
+                ->where('is_active', 1)
+                ->where('day', '=', $day)
+                ->whereTime('start_time', '<=', date('H:i:s', time() - $earlyEnter))
+                ->whereTime('end_time', '>=', $now)->pluck('doctors.id_doctor')->toArray();
+
+            $doctorOnline = array_unique($doctorOnline);
 
             Doctor::whereIn('id_doctor', $doctorOnline)->update(['doctor_status' => 'Online']);
             Doctor::whereNotIn('id_doctor', $doctorOnline)->update(['doctor_status' => 'Offline']);
