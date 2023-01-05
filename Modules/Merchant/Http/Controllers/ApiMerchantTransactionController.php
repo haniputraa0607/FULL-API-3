@@ -765,13 +765,13 @@ class ApiMerchantTransactionController extends Controller
                 ],
                 "coverage" => "domestic",
                 "destination" => [
-                    "address" => $detail['destination_address'],
+                    "address" => preg_replace("/[^A-Za-z0-9. -#&'=+,()]/", "", $detail['destination_address']),
                     "area_id" => $subdistrictCustomer['id_subdistrict_external'],
                     "lat" => $latCustomer,
                     "lng" => $lngCustomer
                 ],
                 "origin" => [
-                    "address" => $detail['depart_address'],
+                    "address" => preg_replace("/[^A-Za-z0-9. -#&'=+,()]/", "", $detail['depart_address']),
                     "area_id" => $subdistrictOutlet['id_subdistrict_external'],
                     "lat" => $latOutlet,
                     "lng" => $lngOutlet
