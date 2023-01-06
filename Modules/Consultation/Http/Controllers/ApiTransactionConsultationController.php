@@ -161,6 +161,24 @@ class ApiTransactionConsultationController extends Controller
             'time' => $post['time']
         ];
 
+        if ($post['consultation_type'] == 'now') {
+            $picked_schedule = DoctorSchedule::where('id_doctor', $id_doctor)->leftJoin('time_schedules', function ($query) {
+                $query->on('time_schedules.id_doctor_schedule', '=', 'doctor_schedules.id_doctor_schedule');
+            })->whereTime('start_time', '<', $result['selected_schedule']['time'])->whereTime('end_time', '>', $result['selected_schedule']['time'])->first();
+            $settingMaximumSessionNow = Setting::where('key', 'min_session_consultation_now')->first()['value'] ?? 30;
+            $now = strtotime(date('H:i:s'));
+            $endSession = date('H:i:s', strtotime($picked_schedule['end_time']));
+
+            $diff = round(abs(strtotime($endSession) - $now) / 60);
+
+            if ($diff < $settingMaximumSessionNow) {
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Tidak bisa melakukan konsultasi saat ini karena sesi akan berakhir ' . $diff . ' menit lagi']
+                ]);
+            }
+        }
+
         //check referral code
         if (isset($post['referral_code'])) {
             $outlet = Outlet::where('outlet_referral_code', $post['referral_code'])->first();
@@ -310,6 +328,24 @@ class ApiTransactionConsultationController extends Controller
                 'status'    => 'fail',
                 'messages'  => ['Jadwal penuh / tidak tersedia']
             ]);
+        }
+
+        if ($post['consultation_type'] == 'now') {
+            $checkS = DoctorSchedule::where('id_doctor', $id_doctor)->leftJoin('time_schedules', function ($query) {
+                $query->on('time_schedules.id_doctor_schedule', '=', 'doctor_schedules.id_doctor_schedule');
+            })->whereTime('start_time', '<', $post['selected_schedule']['time'])->whereTime('end_time', '>', $post['selected_schedule']['time'])->first();
+            $settingMaximumSessionNow = Setting::where('key', 'min_session_consultation_now')->first()['value'] ?? 30;
+            $now = strtotime(date('H:i:s'));
+            $endSession = date('H:i:s', strtotime($checkS['end_time']));
+
+            $diff = round(abs(strtotime($endSession) - $now) / 60);
+
+            if ($diff < $settingMaximumSessionNow) {
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Tidak bisa melakukan konsultasi saat ini karena sesi akan berakhir ' . $diff . ' menit lagi']
+                ]);
+            }
         }
 
         if (isset($post['transaction_date'])) {
