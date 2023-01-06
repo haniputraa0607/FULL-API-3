@@ -3789,7 +3789,22 @@ class ApiOutletController extends Controller
         }
 
         if (!empty($post['id_outlet'])) {
-            $detail = Outlet::where('outlet_status', 'Active')->where('id_outlet', $post['id_outlet'])->first();
+          $detail = Outlet::join('merchants', 'merchants.id_outlet', 'outlets.id_outlet')
+                      ->leftjoin('products', 'products.id_merchant', 'merchants.id_merchant')
+                      ->where('outlet_status', 'Active')->where('outlets.id_outlet', $post['id_outlet'])
+                      ->select('outlets.*',
+                              DB::raw('
+                                    round(avg(
+                                    products.total_rating
+                                    ),2) as rating
+                                '),
+                              DB::raw('
+                                    sum(
+                                   product_count_transaction
+                                    ) as product
+                                '),
+                              )
+                      ->first();
 
             if (empty($detail)) {
                 return response()->json(['status' => 'fail', 'messages' => ['Outlet not found']]);
@@ -3806,6 +3821,8 @@ class ApiOutletController extends Controller
 
             $result = [
                 'is_closed' => (empty($detail['outlet_is_closed']) ? false : true),
+                'rating' => $detail['rating']??null,
+                'product' => $this->productCount($detail['product']??null),
                 'id_outlet' => $detail['id_outlet'],
                 'outlet_code' => MyHelper::encSlug($detail['id_outlet'], null),
                 'outlet_name' => $detail['outlet_name'],
@@ -3992,5 +4009,26 @@ class ApiOutletController extends Controller
             'status' => 'success',
             'result' => $data_home
         ];
+    }
+    public function productCount($total = 0)
+    {
+
+        if ($total > 0 && $total < 1000) {
+            $total = $total . ' terjual';
+        } elseif ($total >= 1000 && $total < 10000) {
+            $total = substr($total, 0, 2);
+            if ($total % 10 == 0) {
+                $total = substr($total, 0, 1) . 'rb+ terjual';
+            } else {
+                $total = substr_replace($total, ',', 1, 0) . 'rb+ terjual';
+            }
+        } elseif ($total >= 10000) {
+            $total = substr($total, 0, 2);
+            $total = $total . 'rb+ terjual';
+        } else {
+            $total = '';
+        }
+
+        return $total;
     }
 }
