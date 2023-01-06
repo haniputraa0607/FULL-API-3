@@ -1072,13 +1072,13 @@ class ApiTransactionConsultationController extends Controller
                 ]);
             }
 
-            if (!empty($getSettingLate)) {
-                $getStartTime = date('Y-m-d H:i:s', strtotime("{$transaction['consultation']['schedule_date']} {$transaction['consultation']['schedule_start_time']} +{$getSettingLate->value}minutes"));
+            if (!empty($getSettingLate) && $transaction['consultation']['consultation_type'] == "scheduled") {
+                $getEndTime = date('Y-m-d H:i:s', strtotime("{$transaction['consultation']['schedule_date']} {$transaction['consultation']['schedule_start_time']} +{$getSettingLate->value}minutes"));
             } else {
-                $getStartTime = date('Y-m-d H:i:s', strtotime("{$transaction['consultation']['schedule_date']} {$transaction['consultation']['schedule_start_time']}"));
+                $getEndTime = date('Y-m-d H:i:s', strtotime("{$transaction['consultation']['schedule_date']} {$transaction['consultation']['schedule_end_time']}"));
             }
 
-            if ($currentTime > $getStartTime) {
+            if ($currentTime > $getEndTime) {
                 $updateStatus = $this->checkConsultationMissed($transaction);
 
                 return response()->json([
