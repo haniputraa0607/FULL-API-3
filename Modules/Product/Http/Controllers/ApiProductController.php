@@ -2295,25 +2295,49 @@ class ApiProductController extends Controller
             } elseif ($sorting == 'Terbaru') {
                 $list = $list->orderBy('products.created_at', 'desc');
             } elseif ($sorting == 'Harga Tertinggi') {
-                 $list = $list->where(function ($q) use ($post) {
-                        $q->where(function ($query1) use ($post) {
-                            $query1->orderby('product_global_price', 'desc')
-                                ->where('product_variant_status', 0);
-                        });
-                        $q->orWhereHas('base_price_variant', function ($query2) use ($post) {
-                            $query2->orderby('product_variant_group_price', 'desc');
-                        });
-                 });
+                $defaultSelect = 0;
+                $list = $list->select(
+                    'products.id_product',
+                    'products.total_rating',
+                    DB::raw('
+                            floor(products.total_rating) as rating
+                        '),
+                    'products.product_name',
+                    'products.product_code',
+                    'products.product_description',
+                    'product_variant_status',
+                    'product_global_price as product_price',
+                    'global_price_discount_percent as product_label_discount',
+                    'global_price_before_discount as product_label_price_before_discount',
+                    'product_detail_stock_status as stock_status',
+                    'product_detail.id_outlet',
+                    'need_recipe_status',
+                    'product_categories.product_category_name',
+                    'products.product_count_transaction'
+                );
+                $list = $list->orderBy('product_global_price', 'desc');
             } elseif ($sorting == 'Harga Terendah') {
-                 $list = $list->where(function ($q) use ($post) {
-                        $q->where(function ($query1) use ($post) {
-                            $query1->orderby('product_global_price', 'asc')
-                                ->where('product_variant_status', 0);
-                        });
-                        $q->orWhereHas('base_price_variant', function ($query2) use ($post) {
-                            $query2->orderby('product_variant_group_price', 'asc');
-                        });
-                 });
+                $defaultSelect = 0;
+                $list = $list->select(
+                    'products.id_product',
+                    'products.total_rating',
+                    DB::raw('
+                            floor(products.total_rating) as rating
+                        '),
+                    'products.product_name',
+                    'products.product_code',
+                    'products.product_description',
+                    'product_variant_status',
+                    'product_global_price as product_price',
+                    'global_price_discount_percent as product_label_discount',
+                    'global_price_before_discount as product_label_price_before_discount',
+                    'product_detail_stock_status as stock_status',
+                    'product_detail.id_outlet',
+                    'need_recipe_status',
+                    'product_categories.product_category_name',
+                    'products.product_count_transaction'
+                );
+                 $list = $list->orderBy('product_global_price', 'asc');
             }
         } else {
             $list = $list->orderBy('product_count_transaction', 'desc');
