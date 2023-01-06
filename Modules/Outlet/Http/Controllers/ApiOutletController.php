@@ -3789,21 +3789,22 @@ class ApiOutletController extends Controller
         }
 
         if (!empty($post['id_outlet'])) {
-          $detail = Outlet::join('merchants', 'merchants.id_outlet', 'outlets.id_outlet')
+            $detail = Outlet::join('merchants', 'merchants.id_outlet', 'outlets.id_outlet')
                       ->leftjoin('products', 'products.id_merchant', 'merchants.id_merchant')
                       ->where('outlet_status', 'Active')->where('outlets.id_outlet', $post['id_outlet'])
-                      ->select('outlets.*',
-                              DB::raw('
+                      ->select(
+                          'outlets.*',
+                          DB::raw('
                                     round(avg(
                                     products.total_rating
                                     ),2) as rating
                                 '),
-                              DB::raw('
+                          DB::raw('
                                     sum(
                                    product_count_transaction
                                     ) as product
                                 '),
-                              )
+                      )
                       ->first();
 
             if (empty($detail)) {
@@ -3821,8 +3822,8 @@ class ApiOutletController extends Controller
 
             $result = [
                 'is_closed' => (empty($detail['outlet_is_closed']) ? false : true),
-                'rating' => $detail['rating']??null,
-                'product' => $this->productCount($detail['product']??null),
+                'rating' => $detail['rating'] ?? null,
+                'product' => $this->productCount($detail['product'] ?? null),
                 'id_outlet' => $detail['id_outlet'],
                 'outlet_code' => MyHelper::encSlug($detail['id_outlet'], null),
                 'outlet_name' => $detail['outlet_name'],
