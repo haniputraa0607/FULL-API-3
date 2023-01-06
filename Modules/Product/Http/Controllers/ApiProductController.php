@@ -2077,6 +2077,7 @@ class ApiProductController extends Controller
             'products.id_product',
             'products.product_name',
             'products.product_code',
+            'products.total_rating',
             'products.product_count_transaction',
             'products.product_description',
             'product_variant_status',
@@ -2086,6 +2087,7 @@ class ApiProductController extends Controller
             'product_detail_stock_status as stock_status',
             'need_recipe_status',
             'outlets.id_outlet',
+            'outlets.outlet_is_closed',
             'product_categories.product_category_name'
         )
                 ->leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
@@ -2093,7 +2095,7 @@ class ApiProductController extends Controller
                 ->join('product_categories', 'product_categories.id_product_category', 'products.id_product_category')
                 ->leftJoin('outlets', 'outlets.id_outlet', 'product_detail.id_outlet')
                 ->where('outlet_status', 'Active')
-                ->where('outlet_is_closed', 0)
+//                ->where('outlet_is_closed', 0)
                 ->where('product_global_price', '>', 0)
                 ->where('product_visibility', 'Visible')
                 ->where('product_detail_visibility', 'Visible')
@@ -2145,6 +2147,7 @@ class ApiProductController extends Controller
         $list = Product::select(
             'products.id_product',
             'products.product_name',
+            'products.total_rating',
             'products.product_code',
             'products.product_description',
             'products.product_count_transaction',
@@ -2155,6 +2158,7 @@ class ApiProductController extends Controller
             'product_detail_stock_status as stock_status',
             'need_recipe_status',
             'outlets.id_outlet',
+            'outlets.outlet_is_closed',
             'product_categories.product_category_name'
         )
             ->leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
@@ -2162,7 +2166,7 @@ class ApiProductController extends Controller
             ->join('product_categories', 'product_categories.id_product_category', 'products.id_product_category')
             ->leftJoin('outlets', 'outlets.id_outlet', 'product_detail.id_outlet')
             ->where('outlet_status', 'Active')
-            ->where('outlet_is_closed', 0)
+//            ->where('outlet_is_closed', 0)
             ->where('product_global_price', '>', 0)
             ->where('product_visibility', 'Visible')
             ->where('product_detail_visibility', 'Visible')
