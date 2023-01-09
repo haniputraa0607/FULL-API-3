@@ -1910,6 +1910,9 @@ class ApiProductController extends Controller
         $getRatings = UserRating::join('users', 'users.id', 'user_ratings.id_user')
                     ->select('user_ratings.*', 'users.name', 'users.photo')
                     ->where('id_product', $product['id_product'])->orderBy('user_ratings.created_at', 'desc')->limit(5)->get()->toArray();
+        $countRatings = UserRating::join('users', 'users.id', 'user_ratings.id_user')
+            ->select('user_ratings.*', 'users.name', 'users.photo')
+            ->where('id_product', $product['id_product'])->orderBy('user_ratings.created_at', 'desc')->count();
         foreach ($getRatings as $rating) {
             $getPhotos = UserRatingPhoto::where('id_user_rating', $rating['id_user_rating'])->get()->toArray();
             $photos = [];
@@ -1928,6 +1931,7 @@ class ApiProductController extends Controller
             ];
         }
         $product['ratings'] = $ratings;
+        $product['total_count_rating'] = $countRatings;
         $product['total_rating'] = round(UserRating::where('id_product', $product['id_product'])->average('rating_value') ?? 0, 1);
         $product['can_buy_own_product'] = true;
         $favorite = Favorite::where('id_product', $product['id_product'])->where('id_user', $request->user()->id)->first();
@@ -1957,6 +1961,9 @@ class ApiProductController extends Controller
         $getRatings = UserRating::join('users', 'users.id', 'user_ratings.id_user')
             ->select('user_ratings.*', 'users.name', 'users.photo')
             ->where('id_product', $product['id_product'])->orderBy('user_ratings.created_at', 'desc')->paginate($post['pagination_total_row'] ?? 10)->toArray();
+        $countRatings = UserRating::join('users', 'users.id', 'user_ratings.id_user')
+            ->select('user_ratings.*', 'users.name', 'users.photo')
+            ->where('id_product', $product['id_product'])->orderBy('user_ratings.created_at', 'desc')->count();
         foreach ($getRatings['data'] ?? [] as $key => $rating) {
             $getPhotos = UserRatingPhoto::where('id_user_rating', $rating['id_user_rating'])->get()->toArray();
             $photos = [];
@@ -1978,6 +1985,8 @@ class ApiProductController extends Controller
         }
 
         $product['ratings'] = $getRatings;
+        $product['total_count_rating'] = $countRatings;
+        $product['total_rating'] = round(UserRating::where('id_product', $product['id_product'])->average('rating_value') ?? 0, 1);
         return MyHelper::checkGet($product);
     }
 
