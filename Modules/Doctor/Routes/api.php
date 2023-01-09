@@ -57,6 +57,12 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be'], 'prefix' 
     });
 
     Route::post('list/outlet', ['uses' => 'ApiDoctorController@listAllDoctor']);
+
+    Route::group(['prefix' => 'update-data'], function () {
+        Route::post('list', ['middleware' => 'feature_control:428,429', 'uses' => 'ApiDoctorUpdateData@list']);
+        Route::post('detail', ['middleware' => 'feature_control:429', 'uses' => 'ApiDoctorUpdateData@detail']);
+        Route::post('update', ['middleware' => 'feature_control:430', 'uses' => 'ApiDoctorUpdateData@update']);
+    });
 });
 
 Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix' => 'doctor'], function () {
@@ -90,6 +96,9 @@ Route::group(['middleware' => ['auth:doctor-apps', 'user_agent', 'scopes:doctor-
     Route::get('get-infobip-token', ['uses' => 'ApiDoctorController@getInfobipToken']);
 
     Route::get('cron-status', ['uses' => 'ApiDoctorController@cronUpdateDoctorStatus']);
+
+    Route::get('data-update-request', 'ApiDoctorUpdateData@listField');
+    Route::post('data-update-request/save', 'ApiDoctorUpdateData@updateRequest');
 
     Route::get('my/settings', ['uses' => 'ApiDoctorController@getMySettings']);
     Route::post('my/settings', ['uses' => 'ApiDoctorController@updateMySettings']);
