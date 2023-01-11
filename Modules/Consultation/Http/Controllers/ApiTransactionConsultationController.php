@@ -157,6 +157,7 @@ class ApiTransactionConsultationController extends Controller
         //selected schedule
         $result['selected_schedule'] = [
             'date' => $post['date'],
+            'date_text' => MyHelper::dateFormatInd($post['date'], true, false, false),
             'day' => $dayId,
             'time' => $post['time']
         ];
