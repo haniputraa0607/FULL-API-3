@@ -1015,7 +1015,7 @@ class ApiDoctorController extends Controller
                 ->join('time_schedules', 'doctor_schedules.id_doctor_schedule', 'time_schedules.id_doctor_schedule')
                 ->where('doctor_schedules.is_active', 1)
                 ->where('doctor_schedules.day', '=', $day)
-                ->whereTime('start_time', '<=', date('H:i:s', time() - $earlyEnter))
+                ->whereTime('start_time', '<=', date('H:i:s', time() + $earlyEnter))
                 ->whereTime('end_time', '>=', $now)->pluck('doctors.id_doctor')->toArray();
 
             $doctorOnline = array_unique($doctorOnline);
