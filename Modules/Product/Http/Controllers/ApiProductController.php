@@ -33,6 +33,12 @@ use Modules\ProductVariant\Entities\ProductVariant;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\ProductVariant\Entities\ProductVariantGroupDetail;
 use Modules\ProductVariant\Entities\ProductVariantPivot;
+use Modules\PromoCampaign\Entities\PromoCampaignDiscountBillProduct;
+use Modules\PromoCampaign\Entities\PromoCampaignDiscountBillRule;
+use Modules\PromoCampaign\Entities\PromoCampaignProductDiscount;
+use Modules\PromoCampaign\Entities\PromoCampaignProductDiscountRule;
+use Modules\PromoCampaign\Entities\PromoCampaignTierDiscountProduct;
+use Modules\PromoCampaign\Entities\PromoCampaignTierDiscountRule;
 use Modules\UserRating\Entities\UserRating;
 use Modules\UserRating\Entities\UserRatingPhoto;
 use Validator;
@@ -2229,6 +2235,10 @@ class ApiProductController extends Controller
             }
         }
 
+        if (!empty($post['promo'])) {
+            $availablePromo = $this->getProductFromPromo($post['promo']);
+        }
+
         $list = Product::leftJoin('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
             ->join('product_detail', 'product_detail.id_product', '=', 'products.id_product')
             ->leftJoin('outlets', 'outlets.id_outlet', 'product_detail.id_outlet')
@@ -2263,6 +2273,17 @@ class ApiProductController extends Controller
 
         if (isset($post['all_recommendation']) && $post['all_recommendation']) {
             $list = $list->where('product_recommendation_status', 1);
+        }
+
+        if (!empty($post['rating'])) {
+            $min = min($post['rating']);
+            $max = 5;
+            $list = $list->where('products.total_rating', '>=', $min)
+                ->where('products.total_rating', '<=', $max);
+
+            if (empty($post['filter_sorting'])) {
+                $list = $list->orderBy('products.total_rating', 'desc');
+            }
         }
 
         $defaultSelect = 1;
@@ -2326,9 +2347,13 @@ class ApiProductController extends Controller
                     'product_detail.id_outlet',
                     'need_recipe_status',
                     'product_categories.product_category_name',
-                    'products.product_count_transaction'
+                    'products.product_count_transaction',
+                    DB::raw('(CASE
+                         WHEN product_variant_status = 1 THEN (Select product_variant_group_price from product_variant_groups where product_variant_group_visibility = "visible" and product_variant_groups.id_product = products.id_product order by product_variant_groups.product_variant_group_price asc limit 1)
+                         ELSE product_global_price
+                      END) AS price_sorting')
                 );
-                $list = $list->orderBy('product_global_price', 'desc');
+                $list = $list->orderBy('price_sorting', 'desc');
             } elseif ($sorting == 'Harga Terendah') {
                 $defaultSelect = 0;
                 $list = $list->select(
@@ -2348,9 +2373,13 @@ class ApiProductController extends Controller
                     'product_detail.id_outlet',
                     'need_recipe_status',
                     'product_categories.product_category_name',
-                    'products.product_count_transaction'
+                    'products.product_count_transaction',
+                    DB::raw('(CASE
+                         WHEN product_variant_status = 1 THEN (Select product_variant_group_price from product_variant_groups where product_variant_group_visibility = "visible" and product_variant_groups.id_product = products.id_product order by product_variant_groups.product_variant_group_price asc limit 1)
+                         ELSE product_global_price
+                      END) AS price_sorting')
                 );
-                 $list = $list->orderBy('product_global_price', 'asc');
+                 $list = $list->orderBy('price_sorting', 'asc');
             }
         } else {
             $list = $list->orderBy('product_count_transaction', 'desc');
@@ -2376,6 +2405,10 @@ class ApiProductController extends Controller
                 'product_categories.product_category_name',
                 'products.product_count_transaction'
             );
+        }
+
+        if (!empty($availablePromo)) {
+            $list = $list->whereIn('products.id_product', $availablePromo);
         }
 
         if (!empty($post['filter_category'])) {
@@ -2436,111 +2469,95 @@ class ApiProductController extends Controller
             $list = $list->paginate($post['pagination_total_row'] ?? 10)->toArray();
 
             foreach ($list['data'] as $key => $product) {
-                if (isset($post['rating']) && $post['rating'] != null) {
-                    if (in_array($list['data'][$key]['rating'], $post['rating'])) {
-                        if ($product['product_variant_status']) {
-                            $outlet = Outlet::where('id_outlet', $product['id_outlet'])->first();
-                            $variantTree = Product::getVariantTree($product['id_product'], $outlet);
-                            if (empty($variantTree['base_price'])) {
-                                $list['data'][$key]['stock_status'] = 'Sold Out';
-                            }
-                            $list['data'][$key]['product_price'] = ($variantTree['base_price'] ?? false) ?: $product['product_price'];
-                            $list['data'][$key]['product_label_discount'] = ($variantTree['base_price_discount_percent'] ?? false) ?: $product['product_label_discount'];
-                            $list['data'][$key]['product_label_price_before_discount'] = ($variantTree['base_price_before_discount'] ?? false) ?: $product['product_label_price_before_discount'];
-                        }
-
-                        unset($list['data'][$key]['id_outlet']);
-                        unset($list['data'][$key]['product_variant_status']);
-                        $list['data'][$key]['product_price'] = (int)$list['data'][$key]['product_price'];
-                        $favorite = Favorite::where('id_product', $product['id_product'])->where('id_user', $idUser)->first();
-                        $list['data'][$key]['favorite'] = (!empty($favorite) ? true : false);
-                        $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
-                        $list['data'][$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api') . $image['product_photo'] : config('url.storage_url_api') . 'img/default.jpg');
-                        $list['data'][$key]['sold'] = app($this->management_merchant)->productCount($product['product_count_transaction']);
-                        unset($list['data'][$key]['product_count_transaction']);
-                    } else {
-                        unset($list['data'][$key]);
+                if ($product['product_variant_status']) {
+                    $outlet = Outlet::where('id_outlet', $product['id_outlet'])->first();
+                    $variantTree = Product::getVariantTree($product['id_product'], $outlet);
+                    if (empty($variantTree['base_price'])) {
+                        $list['data'][$key]['stock_status'] = 'Sold Out';
                     }
-                } else {
-                    if ($product['product_variant_status']) {
-                        $outlet = Outlet::where('id_outlet', $product['id_outlet'])->first();
-                        $variantTree = Product::getVariantTree($product['id_product'], $outlet);
-                        if (empty($variantTree['base_price'])) {
-                              $list['data'][$key]['stock_status'] = 'Sold Out';
-                        }
-                        $list['data'][$key]['product_price'] = ($variantTree['base_price'] ?? false) ?: $product['product_price'];
-                        $list['data'][$key]['product_label_discount'] = ($variantTree['base_price_discount_percent'] ?? false) ?: $product['product_label_discount'];
-                        $list['data'][$key]['product_label_price_before_discount'] = ($variantTree['base_price_before_discount'] ?? false) ?: $product['product_label_price_before_discount'];
-                    }
-
-                    unset($list['data'][$key]['id_outlet']);
-                    unset($list['data'][$key]['product_variant_status']);
-                    $list['data'][$key]['product_price'] = (int)$list['data'][$key]['product_price'];
-                    $favorite = Favorite::where('id_product', $product['id_product'])->where('id_user', $idUser)->first();
-                    $list['data'][$key]['favorite'] = (!empty($favorite) ? true : false);
-                    $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
-                    $list['data'][$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api') . $image['product_photo'] : config('url.storage_url_api') . 'img/default.jpg');
-                    $list['data'][$key]['sold'] = app($this->management_merchant)->productCount($product['product_count_transaction']);
-                    unset($list['data'][$key]['product_count_transaction']);
+                    $list['data'][$key]['product_price'] = ($variantTree['base_price'] ?? false) ?: $product['product_price'];
+                    $list['data'][$key]['product_label_discount'] = ($variantTree['base_price_discount_percent'] ?? false) ?: $product['product_label_discount'];
+                    $list['data'][$key]['product_label_price_before_discount'] = ($variantTree['base_price_before_discount'] ?? false) ?: $product['product_label_price_before_discount'];
                 }
+
+                unset($list['data'][$key]['id_outlet']);
+                unset($list['data'][$key]['product_variant_status']);
+                $list['data'][$key]['product_price'] = (int)$list['data'][$key]['product_price'];
+                $favorite = Favorite::where('id_product', $product['id_product'])->where('id_user', $idUser)->first();
+                $list['data'][$key]['favorite'] = (!empty($favorite) ? true : false);
+                $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
+                $list['data'][$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api') . $image['product_photo'] : config('url.storage_url_api') . 'img/default.jpg');
+                $list['data'][$key]['sold'] = app($this->management_merchant)->productCount($product['product_count_transaction']);
+                unset($list['data'][$key]['product_count_transaction']);
             }
-            $list['data'] = array_values($list['data']);
         } else {
             $list = $list->get()->toArray();
 
             foreach ($list as $key => $product) {
-                if (isset($post['rating']) && $post['rating'] != null) {
-                    if (in_array($list[$key]['rating'], $post['rating'])) {
-                        if ($product['product_variant_status']) {
-                            $outlet = Outlet::where('id_outlet', $product['id_outlet'])->first();
-                            $variantTree = Product::getVariantTree($product['id_product'], $outlet);
-                            if (empty($variantTree['base_price'])) {
-                                $list[$key]['stock_status'] = 'Sold Out';
-                            }
-                            $list[$key]['product_price'] = ($variantTree['base_price'] ?? false) ?: $product['product_price'];
-                            $list[$key]['product_label_discount'] = ($variantTree['base_price_discount_percent'] ?? false) ?: $product['product_label_discount'];
-                            $list[$key]['product_label_price_before_discount'] = ($variantTree['base_price_before_discount'] ?? false) ?: $product['product_label_price_before_discount'];
-                        }
-
-                        unset($list[$key]['id_outlet']);
-                        unset($list[$key]['product_variant_status']);
-                        $list[$key]['product_price'] = (int)$list[$key]['product_price'];
-                        $favorite = Favorite::where('id_product', $product['id_product'])->where('id_user', $idUser)->first();
-                        $list[$key]['favorite'] = (!empty($favorite) ? true : false);
-                        $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
-                        $list[$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api') . $image['product_photo'] : config('url.storage_url_api') . 'img/default.jpg');
-                        $list[$key]['sold'] = app($this->management_merchant)->productCount($product['product_count_transaction']);
-                        unset($list['data'][$key]['product_count_transaction']);
-                    } else {
-                        unset($list['data'][$key]);
+                if ($product['product_variant_status']) {
+                    $outlet = Outlet::where('id_outlet', $product['id_outlet'])->first();
+                    $variantTree = Product::getVariantTree($product['id_product'], $outlet);
+                    if (empty($variantTree['base_price'])) {
+                        $list[$key]['stock_status'] = 'Sold Out';
                     }
-                } else {
-                    if ($product['product_variant_status']) {
-                        $outlet = Outlet::where('id_outlet', $product['id_outlet'])->first();
-                        $variantTree = Product::getVariantTree($product['id_product'], $outlet);
-                        if (empty($variantTree['base_price'])) {
-                              $list[$key]['stock_status'] = 'Sold Out';
-                        }
-                        $list[$key]['product_price'] = ($variantTree['base_price'] ?? false) ?: $product['product_price'];
-                        $list[$key]['product_label_discount'] = ($variantTree['base_price_discount_percent'] ?? false) ?: $product['product_label_discount'];
-                        $list[$key]['product_label_price_before_discount'] = ($variantTree['base_price_before_discount'] ?? false) ?: $product['product_label_price_before_discount'];
-                    }
-
-                    unset($list[$key]['id_outlet']);
-                    unset($list[$key]['product_variant_status']);
-                    $list[$key]['product_price'] = (int)$list[$key]['product_price'];
-                    $favorite = Favorite::where('id_product', $product['id_product'])->where('id_user', $idUser)->first();
-                    $list[$key]['favorite'] = (!empty($favorite) ? true : false);
-                    $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
-                    $list[$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api') . $image['product_photo'] : config('url.storage_url_api') . 'img/default.jpg');
-                    $list[$key]['sold'] = app($this->management_merchant)->productCount($product['product_count_transaction']);
-                    unset($list['data'][$key]['product_count_transaction']);
+                    $list[$key]['product_price'] = ($variantTree['base_price'] ?? false) ?: $product['product_price'];
+                    $list[$key]['product_label_discount'] = ($variantTree['base_price_discount_percent'] ?? false) ?: $product['product_label_discount'];
+                    $list[$key]['product_label_price_before_discount'] = ($variantTree['base_price_before_discount'] ?? false) ?: $product['product_label_price_before_discount'];
                 }
+
+                unset($list[$key]['id_outlet']);
+                unset($list[$key]['product_variant_status']);
+                $list[$key]['product_price'] = (int)$list[$key]['product_price'];
+                $favorite = Favorite::where('id_product', $product['id_product'])->where('id_user', $idUser)->first();
+                $list[$key]['favorite'] = (!empty($favorite) ? true : false);
+                $image = ProductPhoto::where('id_product', $product['id_product'])->orderBy('product_photo_order', 'asc')->first();
+                $list[$key]['image'] = (!empty($image['product_photo']) ? config('url.storage_url_api') . $image['product_photo'] : config('url.storage_url_api') . 'img/default.jpg');
+                $list[$key]['sold'] = app($this->management_merchant)->productCount($product['product_count_transaction']);
+                unset($list['data'][$key]['product_count_transaction']);
             }
 
             $list = array_values($list);
         }
         return response()->json(MyHelper::checkGet($list));
+    }
+
+    public function getProductFromPromo($ids)
+    {
+        $getPromo = PromoCampaign::whereIn('id_promo_campaign', $ids)->get();
+
+        $products = [];
+        foreach ($getPromo as $p) {
+            switch ($p->promo_type) {
+                case 'Product discount':
+                    $promo_rules    = PromoCampaignProductDiscountRule::where('id_promo_campaign', $p->id_promo_campaign)->first();
+                    if (!$promo_rules->is_all_product) {
+                        $prdts = PromoCampaignProductDiscount::where('id_promo_campaign', $p->id_promo_campaign)->pluck('id_product')->toArray();
+                        $products = array_merge($products, $prdts);
+                    }
+                    break;
+
+                case 'Tier discount':
+                    $promo_rules    = PromoCampaignTierDiscountRule::where('id_promo_campaign', $p->id_promo_campaign)->first();
+                    if (!$promo_rules->is_all_product) {
+                        $prdts = PromoCampaignTierDiscountProduct::where('id_promo_campaign', $p->id_promo_campaign)->pluck('id_product')->toArray();
+                        $products = array_merge($products, $prdts);
+                    }
+                    break;
+
+                case 'Discount bill':
+                    $promo_rules    = PromoCampaignDiscountBillRule::where('id_promo_campaign', $p->id_promo_campaign)->first();
+                    if (!$promo_rules->is_all_product) {
+                        $prdts = PromoCampaignDiscountBillProduct::where('id_promo_campaign', $p->id_promo_campaign)->pluck('id_product')->toArray();
+                        $products = array_merge($products, $prdts);
+                    }
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        return $products;
     }
 
     public function productRecommendation(Request $request)

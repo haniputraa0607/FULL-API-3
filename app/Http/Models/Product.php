@@ -517,8 +517,8 @@ class Product extends Model
                 $variant['id_product_variant_group']    = $variant_group['id_product_variant_group'];
                 $variant['product_variant_group_price'] = (double) $variant_group['product_variant_group_price'];
                 $variant['product_variant_stock_status'] = $variant_group['product_variant_group_stock_status'];
-                $variant['variant_group_price_before_discount'] = $variant_group['variant_group_price_before_discount'];
-                $variant['variant_group_price_discount_percent'] = $variant_group['variant_group_price_discount_percent'];
+                $variant['variant_group_price_before_discount'] = $variant_group['variant_group_price_before_discount'] ?? 0;
+                $variant['variant_group_price_discount_percent'] = $variant_group['variant_group_price_discount_percent'] ?? 0;
 
                 // set this level lowest price to parent variant detail
                 if (!isset($variants['product_variant_group_price']) || $variants['product_variant_group_price'] > $variant_group['product_variant_group_price']) {
@@ -594,8 +594,8 @@ class Product extends Model
             'childs'                      => $variants['childs'],
             'product_variant_group_price' => $variants['product_variant_group_price'], // do not remove or rename this
             'product_variant_stock_status' => $variants['product_variant_stock_status'],
-            'variant_group_price_before_discount' => $variants['variant_group_price_before_discount'],
-            'variant_group_price_discount_percent' => $variants['variant_group_price_discount_percent']
+            'variant_group_price_before_discount' => $variants['variant_group_price_before_discount'] ?? 0,
+            'variant_group_price_discount_percent' => $variants['variant_group_price_discount_percent'] ?? 0
         ];
 
         $variants = $new_order;
