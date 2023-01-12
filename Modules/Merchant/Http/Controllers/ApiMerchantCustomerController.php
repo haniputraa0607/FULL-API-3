@@ -199,7 +199,7 @@ class ApiMerchantCustomerController extends Controller
                 ->where('date_end', '>=', date('Y-m-d H:i:s'))
                 ->groupby('promo_title')
                 ->distinct()
-                ->select('promo_title')
+                ->select('id_promo_campaign', 'promo_title')
                 ->get();
         return response()->json(MyHelper::checkGet($get));
     }

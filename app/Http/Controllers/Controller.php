@@ -21,7 +21,9 @@ use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use App\Lib\MyHelper;
+use Modules\Doctor\Entities\DoctorUpdateData;
 use Modules\Merchant\Entities\Merchant;
+use Modules\Merchant\Entities\MerchantLogBalance;
 
 class Controller extends BaseController
 {
@@ -209,10 +211,16 @@ class Controller extends BaseController
 
     public function getSidebarBadge(Request $request)
     {
+        $merchantPending = $this->merchant_register_pending();
+        $witdrawalPending = $this->withdrawal_pending();
+
         return [
             'status' => 'success',
             'result' => [
-                'merchant_register_pending' => $this->merchant_register_pending(),
+                'doctor_request_update_data_pending' => $this->doctor_request_update_data_pending(),
+                'merchant' => $merchantPending + $witdrawalPending,
+                'merchant_register_pending' => $merchantPending,
+                'withdrawal_pending' => $witdrawalPending,
                 'transaction_pending' => $this->transaction_pending(),
                 'transaction_consultation_pending' => $this->transaction_consultation_pending()
             ],
@@ -222,6 +230,16 @@ class Controller extends BaseController
     public function merchant_register_pending()
     {
         $total = Merchant::whereNotIn('merchant_status', ['Active', 'Inactive', 'Rejected'])->count();
+        if ($total == 0) {
+            $total = null;
+        }
+
+        return $total;
+    }
+
+    public function withdrawal_pending()
+    {
+        $total = MerchantLogBalance::where('merchant_balance_source', 'Withdrawal')->whereNull('merchant_balance_status')->count();
         if ($total == 0) {
             $total = null;
         }
@@ -242,6 +260,16 @@ class Controller extends BaseController
     public function transaction_consultation_pending()
     {
         $total = TransactionConsultation::whereNotIn('consultation_status', ['completed'])->count();
+        if ($total == 0) {
+            $total = null;
+        }
+
+        return $total;
+    }
+
+    public function doctor_request_update_data_pending()
+    {
+        $total = DoctorUpdateData::whereNull('approve_at')->whereNull('reject_at')->count();
         if ($total == 0) {
             $total = null;
         }

@@ -2608,7 +2608,7 @@ class ApiOnlineTransaction extends Controller
         foreach ($items as $index => $value) {
             $errorMsgSubgroup = [];
             $merchant = Merchant::where('id_outlet', $value['id_outlet'])->first();
-            $checkOutlet = Outlet::where('id_outlet', $value['id_outlet'])->where('outlet_status', 'Active')->where('outlet_is_closed', 0)->first();
+            $checkOutlet = Outlet::where('id_outlet', $value['id_outlet'])->where('outlet_status', 'Active')->first();
             if (!empty($checkOutlet)) {
                 $productSubtotal = 0;
                 $weightProduct = 0;
@@ -3285,6 +3285,15 @@ class ApiOnlineTransaction extends Controller
             $dt['id_user_address'] = $post['id_user_address'];
         }
 
+        $deliveryChoose = [];
+        if (!empty($post['items'])) {
+            foreach ($post['items'] as $t) {
+                if (!empty($t['delivery'])) {
+                    $deliveryChoose[$t['id_outlet']] = $t['delivery'];
+                }
+            }
+        }
+
         $consultationProduct = TransactionConsultationRecomendation::where('id_transaction_consultation', $post['id_transaction_consultation'])
                             ->where('product_type', 'Drug')
                             ->get()->toArray();
@@ -3307,6 +3316,7 @@ class ApiOnlineTransaction extends Controller
         foreach ($productOutlet as $key => $value) {
             $items[] = [
                 'id_outlet' => $key,
+                'delivery' => $deliveryChoose[$key] ?? null,
                 'items' => $value
             ];
         }
