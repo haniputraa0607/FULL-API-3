@@ -1654,6 +1654,7 @@ class ApiTransactionConsultationController extends Controller
             $result[$key]['badge_text'] = $badgeText;
             $result[$key]['badge_color'] = $badgeColor;
             $result[$key]['badge_text_color'] = $badgeTextColor;
+            $result[$key]['consultation_time'] = date('H:i', strtotime($value['consultation']['schedule_start_time'])) . ' - ' . date('H:i', strtotime($value['consultation']['schedule_end_time']));
         }
 
         return response()->json([
@@ -3432,6 +3433,7 @@ class ApiTransactionConsultationController extends Controller
             'transaction_reject_reason' => $transaction['transaction_reject_reason'],
             'transaction_reject_at' => (!empty($transaction['transaction_reject_at']) ? MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($transaction['transaction_reject_at'])), true) : null),
             'transaction_consultation_chat_url' => $transaction_consultation_chat_url,
+            'consultation_time' => MyHelper::dateFormatInd($consultation['schedule_date'], true, false) . ' ' . date('H:i', strtotime($consultation['schedule_start_time'])) . ' - ' . date('H:i', strtotime($consultation['schedule_end_time']))
         ];
 
         return response()->json(MyHelper::checkGet($result));
