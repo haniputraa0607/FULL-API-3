@@ -2245,7 +2245,6 @@ class ApiProductController extends Controller
             ->leftJoin('cities', 'outlets.id_city', 'outlets.id_city')
             ->join('product_categories', 'product_categories.id_product_category', 'products.id_product_category')
             ->where('outlet_status', 'Active')
-            ->where('outlet_is_closed', 0)
             ->where('product_global_price', '>', 0)
             ->where('product_visibility', 'Visible')
             ->where('product_detail_visibility', 'Visible')
@@ -2261,6 +2260,10 @@ class ApiProductController extends Controller
             } else {
                 $list->where('product_name', 'like', '%' . $post['search_key'] . '%');
             }
+        }
+
+        if(empty($idMerchant)){
+            $list = $list->where('outlet_is_closed', 0);
         }
 
         if (!empty($post['id_product_category'])) {
@@ -2309,6 +2312,7 @@ class ApiProductController extends Controller
                     'product_detail.id_outlet',
                     'need_recipe_status',
                     'product_categories.product_category_name',
+                    'outlet_is_closed as outlet_holiday_status',
                     DB::raw('MATCH (product_name) AGAINST ("' . $post['search_key'] . '" IN BOOLEAN MODE) AS relate')
                 )
                     ->orderBy('relate', 'desc');
@@ -2348,6 +2352,7 @@ class ApiProductController extends Controller
                     'need_recipe_status',
                     'product_categories.product_category_name',
                     'products.product_count_transaction',
+                    'outlet_is_closed as outlet_holiday_status',
                     DB::raw('(CASE
                          WHEN product_variant_status = 1 THEN (Select product_variant_group_price from product_variant_groups where product_variant_group_visibility = "visible" and product_variant_groups.id_product = products.id_product order by product_variant_groups.product_variant_group_price asc limit 1)
                          ELSE product_global_price
@@ -2374,6 +2379,7 @@ class ApiProductController extends Controller
                     'need_recipe_status',
                     'product_categories.product_category_name',
                     'products.product_count_transaction',
+                    'outlet_is_closed as outlet_holiday_status',
                     DB::raw('(CASE
                          WHEN product_variant_status = 1 THEN (Select product_variant_group_price from product_variant_groups where product_variant_group_visibility = "visible" and product_variant_groups.id_product = products.id_product order by product_variant_groups.product_variant_group_price asc limit 1)
                          ELSE product_global_price
@@ -2403,7 +2409,8 @@ class ApiProductController extends Controller
                 'product_detail.id_outlet',
                 'need_recipe_status',
                 'product_categories.product_category_name',
-                'products.product_count_transaction'
+                'products.product_count_transaction',
+                'outlet_is_closed as outlet_holiday_status'
             );
         }
 
