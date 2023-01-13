@@ -2262,7 +2262,7 @@ class ApiProductController extends Controller
             }
         }
 
-        if(empty($idMerchant)){
+        if (empty($idMerchant)) {
             $list = $list->where('outlet_is_closed', 0);
         }
 
