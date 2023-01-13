@@ -2570,7 +2570,7 @@ class ApiOnlineTransaction extends Controller
         $post = $request->json()->all();
 
         if (!empty($post)) {
-            $itemsCheck = $this->checkDataTransaction($post, 0, 1, 0, [], 0, $request->user()->id);
+            $itemsCheck = $this->checkDataTransaction($post['items'] ?? $post, 0, 1, 0, [], 0, $request->user()->id);
             $items = $itemsCheck['items'];
             $subtotal = $itemsCheck['subtotal'];
             $dtNeedRecipe = $itemsCheck['data_need_recipe'];
@@ -2584,7 +2584,8 @@ class ApiOnlineTransaction extends Controller
 
             return response()->json(MyHelper::checkGet([
                 'items' => $items,
-                'subtotal' => 'Rp ' . number_format((int)$subtotal, 0, ",", ".")
+                'subtotal' => (int)$subtotal,
+                'subtotal_text' => 'Rp ' . number_format((int)$subtotal, 0, ",", ".")
             ]));
         } else {
             return response()->json(['status'    => 'fail', 'messages'  => ['Item can not be empty']]);
@@ -2836,6 +2837,7 @@ class ApiOnlineTransaction extends Controller
                     $subtotal = $subtotal + $productSubtotal;
 
                     $s = round($dimentionProduct ** (1 / 3), 0);
+                    $items[$index]['outlet_holiday_status'] = $checkOutlet['outlet_is_closed'];
                     $items[$index]['outlet_name'] = $checkOutlet['outlet_name'];
                     $items[$index]['items_total_height'] = (int)$s;
                     $items[$index]['items_total_width'] = (int) $s;
@@ -2845,6 +2847,12 @@ class ApiOnlineTransaction extends Controller
                     $items[$index]['items_subtotal_text'] = 'Rp ' . number_format($productSubtotal, 0, ",", ".");
                     $items[$index]['items'] = array_values($value['items']);
 
+                    if ($checkOutlet['outlet_is_closed'] == 1 && ($from_check == 1 || $from_new == 1)) {
+                        $errorMsg[] = 'Toko sedang libur';
+                        $errorMsgSubgroup[] = 'Toko sedang libur';
+                        unset($value['items'][$key]);
+                        continue;
+                    }
                     if ($from_cart == 0) {
                         $subdistrictOutlet = Subdistricts::where('id_subdistrict', $checkOutlet['id_subdistrict'])
                             ->join('districts', 'districts.id_district', 'subdistricts.id_district')->first();
