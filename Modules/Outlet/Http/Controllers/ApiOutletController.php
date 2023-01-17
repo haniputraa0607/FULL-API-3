@@ -3918,6 +3918,14 @@ class ApiOutletController extends Controller
             ->whereNotIn('outlets.id_outlet', $idTop)
             ->orderBy('outlets.created_at', 'desc')->limit(10)->get()->toArray();
 
+        if (count($newestList) < 10) {
+            $newestList  = Outlet::join('merchants', 'merchants.id_outlet', 'outlets.id_outlet')
+                ->where('outlet_status', 'Active')
+                ->where('outlet_is_closed', 0)
+                ->where('merchant_status', 'Active')
+                ->orderBy('outlets.created_at', 'desc')->limit(10)->get()->toArray();
+        }
+
         foreach ($newestList as $dt) {
             $newest[] = [
                 'id_outlet' => $dt['id_outlet'],

@@ -287,7 +287,7 @@ class ApiPromoCampaign extends Controller
                     case 'promo_code':
                         $wherein = $where . 'In';
                         $query->$wherein('id_promo_campaign', function ($query) use ($value, $where) {
-                            $query->select('id_promo_campaign')->from(with(new PromoCode())->getTable())->where('promo_code', $value['operator'], $value['operator'] == 'like' ? '%' . $value['parameter'] . '%' : $value['parameter'])->groupBy('id_promo_campaign');
+                            $query->select('id_promo_campaign')->from(with(new PromoCampaignPromoCode())->getTable())->where('promo_code', $value['operator'], $value['operator'] == 'like' ? '%' . $value['parameter'] . '%' : $value['parameter'])->groupBy('id_promo_campaign');
                         });
                         break;
 
