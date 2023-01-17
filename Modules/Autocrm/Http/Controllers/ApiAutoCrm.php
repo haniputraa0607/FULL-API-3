@@ -723,6 +723,10 @@ class ApiAutoCrm extends Controller
                                 $dataOptional['type'] = $crm['autocrm_push_clickto'];
                                 $dataOptional['id_reference'] = $variables['id_transaction'];
                                 break;
+                            case 'consultation_done':
+                                $dataOptional['type'] = $crm['autocrm_push_clickto'];
+                                $dataOptional['id_reference'] = $variables['id_transaction'];
+                                break;
                             case 'consultation_chat':
                                 $dataOptional['type'] = $crm['autocrm_push_clickto'];
                                 $dataOptional['id_reference'] = $variables['id_transaction'];

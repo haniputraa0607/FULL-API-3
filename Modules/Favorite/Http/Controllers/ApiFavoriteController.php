@@ -388,7 +388,6 @@ class ApiFavoriteController extends Controller
             ->join('product_detail', 'product_detail.id_product', '=', 'products.id_product')
             ->join('favorites', 'favorites.id_product', '=', 'products.id_product')
             ->leftJoin('outlets', 'outlets.id_outlet', 'product_detail.id_outlet')
-            ->where('outlet_is_closed', 0)
             ->where('product_global_price', '>', 0)
             ->where('product_visibility', 'Visible')
             ->where('product_detail_visibility', 'Visible')
@@ -402,7 +401,8 @@ class ApiFavoriteController extends Controller
                 'product_global_price as product_price',
                 'product_detail_stock_status as stock_status',
                 'product_detail.id_outlet',
-                'need_recipe_status'
+                'need_recipe_status',
+                'outlet_is_closed as outlet_holiday_status'
             )
             ->groupBy('products.id_product');
 
