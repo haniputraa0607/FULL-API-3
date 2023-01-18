@@ -2649,6 +2649,7 @@ class ApiTransactionConsultationController extends Controller
             ->where('product_global_price', '>', 0)
             ->where('product_visibility', 'Visible')
             ->where('product_detail_visibility', 'Visible')
+            ->where('product_detail_stock_status', 'Available')
             ->groupBy('products.id_product');
 
         if (!empty($idMerchant)) {
@@ -2793,6 +2794,7 @@ class ApiTransactionConsultationController extends Controller
             ->where('product_global_price', '>', 0)
             ->where('product_visibility', 'Visible')
             ->where('product_detail_visibility', 'Visible')
+            ->where('product_detail_stock_status', 'Available')
             ->groupBy('products.id_product');
 
         if (!empty($idMerchant)) {
