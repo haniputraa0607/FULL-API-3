@@ -41,10 +41,133 @@ use Modules\Merchant\Http\Requests\UserReseller\Register;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Models\City;
 use Modules\PromoCampaign\Entities\PromoCampaign;
+use Modules\Favorite\Entities\Favorite;
 
 class ApiMerchantCustomerController extends Controller
 {
+    public function __construct()
+    {
+        date_default_timezone_set('Asia/Jakarta');
+        $this->management_merchant = "Modules\Merchant\Http\Controllers\ApiMerchantManagementController";
+    }
     public function list(Request $request)
+    {
+        $idUser = $request->user()->id;
+        $post = $request->json()->all();
+
+        if (!empty($post['id_outlet'])) {
+            $idMerchant = Merchant::where('id_outlet', $post['id_outlet'])->first()['id_merchant'] ?? null;
+            if (empty($idMerchant)) {
+                return response()->json(['status' => 'fail', 'messages' => ['Outlet not found']]);
+            }
+        }
+
+        $list = Outlet::join('merchants', 'merchants.id_outlet', 'outlets.id_outlet')
+                ->leftjoin('products', 'products.id_merchant', 'merchants.id_merchant')
+                ->leftjoin('product_global_price', 'product_global_price.id_product', 'products.id_product')
+            ->where('outlet_status', 'Active')
+            ->where('outlet_is_closed', 0)
+            ->groupBy('merchants.id_merchant');
+        if (!empty($post['filter_sorting'])) {
+            $sorting = $post['filter_sorting'];
+            if ($sorting == 'Sesuaikan' && !empty($post['name'])) {
+                $list = $list->select(
+                    'merchants.id_merchant',
+                    'merchants.created_at',
+                    'outlets.*',
+                    DB::raw('MATCH (outlet_name) AGAINST ("' . $post['name'] . '" IN BOOLEAN MODE) AS relate'),
+                    DB::raw('
+                            count(
+                            products.id_product
+                            ) as product
+                        '),
+                    DB::raw('
+                            sum(products.product_count_transaction) as product_count_transaction
+                        '),
+                )
+                    ->orderBy('relate', 'desc');
+            } elseif ($sorting == 'Terlaris') {
+                 $list = $list->select(
+                     'merchants.id_merchant',
+                     'merchants.created_at',
+                     'outlets.*',
+                     DB::raw('
+                            count(
+                            products.id_product
+                            ) as product
+                        '),
+                     DB::raw('
+                            sum(products.product_count_transaction) as product_count_transaction
+                        '),
+                 )->orderby('product_count_transaction', 'desc');
+            } elseif ($sorting == 'Terbaru') {
+                $list = $list->select(
+                    'merchants.id_merchant',
+                    'merchants.created_at',
+                    'outlets.*',
+                    DB::raw('
+                            count(
+                            products.id_product
+                            ) as product
+                        '),
+                    DB::raw('
+                            sum(products.product_count_transaction) as product_count_transaction
+                        '),
+                )->orderBy('merchants.created_at', 'desc');
+            } else {
+                $list = $list->select(
+                    'merchants.id_merchant',
+                    'merchants.created_at',
+                    'outlets.*',
+                    DB::raw('
+                            count(
+                            products.id_product
+                            ) as product
+                        '),
+                    DB::raw('
+                            sum(products.product_count_transaction) as product_count_transaction
+                        ')
+                );
+            }
+        } else {
+             $list = $list->select(
+                 'merchants.id_merchant',
+                 'merchants.created_at',
+                 'outlets.*',
+                 DB::raw('
+                            count(
+                            products.id_product
+                            ) as product
+                        '),
+                 DB::raw('
+                            sum(products.product_count_transaction) as product_count_transaction
+                        ')
+             );
+        }
+        if (isset($post['name']) && $post['name'] != null) {
+            $list = $list->where('outlet_name', 'like', '%' . $post['name'] . '%');
+        }
+        if (isset($post['city']) && $post['city'] != null) {
+            $list = $list->wherein('id_city', $post['city']);
+        }
+          $list = $list->get()->toArray();
+          $data = array();
+        foreach ($list as $key => $value) {
+               $data[] = array(
+                    'id_merchant' => $value['id_merchant'],
+                    'id_outlet' => $value['id_outlet'],
+                    'outlet_name' => $value['outlet_name'],
+                    'product' => $value['product'],
+                    'outlet_is_closed' => $value['outlet_is_closed'],
+                    'outlet_image_cover' => $value['url_outlet_image_cover'],
+                    'outlet_image_logo_portrait' => $value['url_outlet_image_logo_portrait'],
+                    'sold' => app($this->management_merchant)->productCount($value['product_count_transaction']),
+                );
+        }
+
+        return response()->json(MyHelper::checkGet($data));
+    }
+    public function list2(Request $request)
     {
         $post = $request->json()->all();
         $get = Outlet::join('merchants', 'merchants.id_outlet', 'outlets.id_outlet')
@@ -175,6 +298,15 @@ class ApiMerchantCustomerController extends Controller
                 ->select('cities.id_city', 'city_name', 'city_type')
                 ->groupby('cities.id_city')
                 ->get();
+        return response()->json(MyHelper::checkGet($get));
+    }
+    public function filter_sorting()
+    {
+        $get = array(
+            'Sesuaikan',
+            'Terlaris',
+            'Terbaru',
+        );
         return response()->json(MyHelper::checkGet($get));
     }
     public function order_by()

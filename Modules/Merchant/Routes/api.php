@@ -120,6 +120,7 @@ Route::group(['prefix' => 'merchant'], function () {
             Route::post('/list', 'ApiMerchantCustomerController@list');
             Route::get('/city', 'ApiMerchantCustomerController@city');
             Route::get('/order_by', 'ApiMerchantCustomerController@order_by');
+            Route::get('/filter_sorting', 'ApiMerchantCustomerController@filter_sorting');
             Route::get('/promo', 'ApiMerchantCustomerController@promo');
         });
     });
