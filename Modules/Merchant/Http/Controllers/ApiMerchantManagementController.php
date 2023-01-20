@@ -1662,6 +1662,11 @@ class ApiMerchantManagementController extends Controller
             $price = min($priceVariant);
             ProductGlobalPrice::where('id_product', $post['id_product'])->update(['product_global_price' => $price]);
             DB::commit();
+
+            //update status
+            $sumCurrentStock = ProductVariantGroupDetail::whereIn('id_product_variant_group', $idVariantGroupAll)
+                ->where('product_variant_group_visibility', 'Visible')->sum('product_variant_group_stock_item');
+            ProductDetail::where('id_product', $post['id_product'])->update(['product_detail_stock_status' => ($sumCurrentStock <= 0 ? 'Sold Out' : 'Available')]);
             return response()->json(['status' => 'success']);
         } else {
             return response()->json(['status' => 'fail', 'messages' => ['Variants can not be empty']]);
