@@ -2053,6 +2053,7 @@ class ApiTransactionConsultationController extends Controller
             'outlet' => $outlet,
             'items' => $items,
             'remaining_recipe_redemption' =>  ($transactionConsultation->recipe_redemption_limit - $transactionConsultation->recipe_redemption_counter),
+            'total_redemption_limit' => $transactionConsultation->recipe_redemption_limit,
             'medical_prescription_url' => url("api/consultation/detail/drug-recomendation/$transactionConsultation[id_transaction_consultation]/medical-prescription.pdf"),
         ];
 
