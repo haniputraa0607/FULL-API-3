@@ -3856,7 +3856,11 @@ class ApiOutletController extends Controller
             ->select('outlets.id_outlet', 'id_merchant', 'outlet_name', 'outlet_image_logo_portrait', 'outlet_code');
 
         if (!empty($post['search_key'])) {
-            $list = $list->where('outlet_name', 'like', '%' . $post['search_key'] . '%');
+            if (strpos($post['search_key'], " ") !== false) {
+                $list = $list->whereRaw('MATCH (outlet_name) AGAINST ("' . $post['search_key'] . '" IN BOOLEAN MODE)');
+            } else {
+                $list->where('outlet_name', 'like', '%' . $post['search_key'] . '%');
+            }
         }
 
         if (!empty($post['pagination'])) {
