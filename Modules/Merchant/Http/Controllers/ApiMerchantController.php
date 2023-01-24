@@ -888,10 +888,10 @@ class ApiMerchantController extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['Data merchant tidak ditemukan']]);
         }
 
-        $newOrder = Transaction::where('id_outlet', $checkMerchant['id_outlet'])->where('transaction_status', 'Pending')->count();
-        $onProgress = Transaction::where('id_outlet', $checkMerchant['id_outlet'])->where('transaction_status', 'On Progress')->count();
-        $onDelivery = Transaction::where('id_outlet', $checkMerchant['id_outlet'])->where('transaction_status', 'On Delivery')->count();
-        $completed = Transaction::where('id_outlet', $checkMerchant['id_outlet'])->where('transaction_status', 'Completed')->count();
+        $newOrder = Transaction::where('id_outlet', $checkMerchant['id_outlet'])->where('trasaction_type', 'Delivery')->where('transaction_status', 'Pending')->count();
+        $onProgress = Transaction::where('id_outlet', $checkMerchant['id_outlet'])->where('trasaction_type', 'Delivery')->where('transaction_status', 'On Progress')->count();
+        $onDelivery = Transaction::where('id_outlet', $checkMerchant['id_outlet'])->where('trasaction_type', 'Delivery')->where('transaction_status', 'On Delivery')->count();
+        $completed = Transaction::where('id_outlet', $checkMerchant['id_outlet'])->where('trasaction_type', 'Delivery')->where('transaction_status', 'Completed')->count();
 
         $result = [
             'new_order' => $newOrder,
