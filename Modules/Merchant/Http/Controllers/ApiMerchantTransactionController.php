@@ -65,14 +65,19 @@ class ApiMerchantTransactionController extends Controller
         }
 
         $order_new = Transaction::where('id_outlet', $checkMerchant['id_outlet'])
+                    ->where('trasaction_type', 'Delivery')
                     ->where('transaction_status', 'Pending')->count();
         $order_onprogress = Transaction::where('id_outlet', $checkMerchant['id_outlet'])
+            ->where('trasaction_type', 'Delivery')
             ->where('transaction_status', 'On Progress')->count();
         $order_ondelivery = Transaction::where('id_outlet', $checkMerchant['id_outlet'])
+            ->where('trasaction_type', 'Delivery')
             ->where('transaction_status', 'On Delivery')->count();
         $order_completed = Transaction::where('id_outlet', $checkMerchant['id_outlet'])
+            ->where('trasaction_type', 'Delivery')
             ->where('transaction_status', 'Completed')->count();
         $order_rejected = Transaction::where('id_outlet', $checkMerchant['id_outlet'])
+            ->where('trasaction_type', 'Delivery')
             ->where('transaction_status', 'Rejected')->count();
 
         $result = [
