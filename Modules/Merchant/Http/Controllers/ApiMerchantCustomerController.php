@@ -333,6 +333,11 @@ class ApiMerchantCustomerController extends Controller
                 ->distinct()
                 ->select('id_promo_campaign', 'promo_title')
                 ->get();
+        $get = array(
+           "status" => "success",
+            "result" => []
+        );
+        return $get;
         return response()->json(MyHelper::checkGet($get));
     }
 }
