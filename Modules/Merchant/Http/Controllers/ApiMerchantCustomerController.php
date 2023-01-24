@@ -83,7 +83,7 @@ class ApiMerchantCustomerController extends Controller
                         '),
                     DB::raw('
                             sum(products.product_count_transaction) as product_count_transaction
-                        '),
+                        ')
                 )
                     ->orderBy('relate', 'desc');
             } elseif ($sorting == 'Terlaris') {
@@ -144,8 +144,12 @@ class ApiMerchantCustomerController extends Controller
                         ')
              );
         }
-        if (isset($post['name']) && $post['name'] != null) {
-            $list = $list->where('outlet_name', 'like', '%' . $post['name'] . '%');
+        if (!empty($post['name'])) {
+            if (strpos($post['name'], " ") !== false) {
+                $list = $list->whereRaw('MATCH (outlet_name) AGAINST ("' . $post['name'] . '" IN BOOLEAN MODE)');
+            } else {
+                $list->where('outlet_name', 'like', '%' . $post['name'] . '%');
+            }
         }
         if (isset($post['city']) && $post['city'] != null) {
             $list = $list->wherein('id_city', $post['city']);
