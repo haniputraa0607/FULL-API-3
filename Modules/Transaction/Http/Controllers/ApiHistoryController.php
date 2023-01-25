@@ -1424,7 +1424,7 @@ class ApiHistoryController extends Controller
             }
 
             if ($dt['balance'] < 0) {
-                $amount = '- ' . abs(number_format($dt['balance'], 0, ',', '.'));
+                $amount = '- ' . number_format(abs($dt['balance']), 0, ',', '.');
             } else {
                 $amount = '+ ' . number_format($dt['balance'], 0, ',', '.');
             }

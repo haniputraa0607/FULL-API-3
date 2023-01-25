@@ -454,7 +454,7 @@ class Transaction extends Model
     {
         \DB::beginTransaction();
 
-        if ($this->reject_at) {
+        if ($this->transaction_reject_at) {
             return true;
         }
 
@@ -464,14 +464,15 @@ class Transaction extends Model
             'transaction_reject_reason' => $data['reject_reason'] ?? null
         ]);
 
-        $checkCountTrxGroup = TransactionGroup::where('id_transaction_group', $this->id_transaction_group)->count();
+        $checkCountTrxGroup = Transaction::where('id_transaction_group', $this->id_transaction_group)->count();
         if (isset($data['reject_reason']) && $data['reject_reason'] == 'Auto reject transaction from delivery') {
             $grandTotal = $this->transaction_grandtotal - $this->transaction_shipment + $this->transaction_discount_delivery;
             if ($grandTotal > 0) {
                 $refund = app('\Modules\Transaction\Http\Controllers\ApiTransactionRefund')->refundPayment([
                     'id_transaction_group' => $this->id_transaction_group,
                     'id_transaction' => $this->id_transaction,
-                    'refund_partial' => $grandTotal
+                    'refund_partial' => $grandTotal,
+                    'receipt_number'   => $this->transaction_receipt_number,
                 ]);
                 if ($refund['status'] == 'fail') {
                     DB::rollback();
@@ -482,7 +483,8 @@ class Transaction extends Model
             $refund = app('\Modules\Transaction\Http\Controllers\ApiTransactionRefund')->refundPayment([
                 'id_transaction_group' => $this->id_transaction_group,
                 'id_transaction' => $this->id_transaction,
-                'refund_partial' => $this->transaction_grandtotal
+                'refund_partial' => $this->transaction_grandtotal,
+                'receipt_number'   => $this->transaction_receipt_number,
             ]);
             if ($refund['status'] == 'fail') {
                 DB::rollback();
@@ -491,7 +493,8 @@ class Transaction extends Model
         } else {
             $refund = app('\Modules\Transaction\Http\Controllers\ApiTransactionRefund')->refundPayment([
                 'id_transaction_group' => $this->id_transaction_group,
-                'id_transaction' => $this->id_transaction
+                'id_transaction' => $this->id_transaction,
+                'receipt_number'   => $this->transaction_receipt_number,
             ]);
             if ($refund['status'] == 'fail') {
                 DB::rollback();
