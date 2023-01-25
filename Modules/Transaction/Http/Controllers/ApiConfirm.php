@@ -66,6 +66,13 @@ class ApiConfirm extends Controller
         }
 
         if ($check['transaction_payment_status'] == 'Completed' && ($check['transaction_payment_type'] == 'Balance' || $check['transaction_grandtotal'] == 0)) {
+            $transactionGroup = Transaction::where('id_transaction_group', $check['id_transaction_group'])->get()->toArray();
+            foreach ($transactionGroup as $transactions) {
+                if ($transactions['trasaction_type'] == 'Delivery') {
+                    app('\Modules\Transaction\Http\Controllers\ApiOnlineTransaction')->updateStockProduct($transactions['id_transaction'], 'book');
+                }
+            }
+
             return response()->json([
                 'status'   => 'success'
             ]);
