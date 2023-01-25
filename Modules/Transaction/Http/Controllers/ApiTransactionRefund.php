@@ -65,7 +65,7 @@ class ApiTransactionRefund extends Controller
                 }
 
                 if ($payBalance) {
-                    $refund = app($this->balance)->addLogBalance($order['id_user'], $nominal, $order['id_transaction'], 'Rejected Order Point', $nominal);
+                    $refund = app($this->balance)->addLogBalance($order['id_user'], $nominal, $trx['id_transaction'], 'Rejected Order Point', $nominal);
                     if ($refund == false) {
                         return [
                             'status'   => 'fail',
@@ -226,10 +226,10 @@ class ApiTransactionRefund extends Controller
                 [
                     "outlet_name"      => $outlet['outlet_name'],
                     "transaction_date" => $order['transaction_date'],
-                    'id_transaction'   => $order['id_transaction'],
-                    'receipt_number'   => $order['transaction_receipt_number'],
+                    'id_transaction'   => $trx['id_transaction'] ?? null,
+                    'receipt_number'   => $trx['receipt_number'] ?? $order['transaction_receipt_number'],
                     'received_point'   => (string) $point,
-                    'order_id'         => $order->order_id,
+                    'order_id'         => ''
                 ]
             );
             if ($send != true) {
