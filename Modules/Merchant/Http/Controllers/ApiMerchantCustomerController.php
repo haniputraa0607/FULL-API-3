@@ -66,7 +66,6 @@ class ApiMerchantCustomerController extends Controller
                 ->leftjoin('products', 'products.id_merchant', 'merchants.id_merchant')
                 ->leftjoin('product_global_price', 'product_global_price.id_product', 'products.id_product')
             ->where('outlet_status', 'Active')
-            ->where('outlet_is_closed', 0)
             ->groupBy('merchants.id_merchant');
         if (!empty($post['filter_sorting'])) {
             $sorting = $post['filter_sorting'];
@@ -148,8 +147,9 @@ class ApiMerchantCustomerController extends Controller
             if (strpos($post['name'], " ") !== false) {
                 $list = $list->whereRaw('MATCH (outlet_name) AGAINST ("' . $post['name'] . '" IN BOOLEAN MODE)');
             } else {
-                $list->where('outlet_name', 'like', '%' . $post['name'] . '%');
+                $list = $list->where('outlet_name', 'like', '%' . $post['name'] . '%');
             }
+            $list = $list->where('outlet_is_closed', 0);
         }
         if (isset($post['city']) && $post['city'] != null) {
             $list = $list->wherein('id_city', $post['city']);
