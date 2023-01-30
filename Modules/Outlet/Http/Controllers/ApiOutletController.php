@@ -3786,9 +3786,15 @@ class ApiOutletController extends Controller
         $config = array_pluck($config, 'id_config');
         if (!empty($post['outlet_code'])) {
             $post['id_outlet'] = MyHelper::decSlug($post['outlet_code']);
+            $post['id_outlet'] = (int)$post['id_outlet'];
+        }
+
+        if (!empty($post['id_outlet']) && preg_match("/[a-z]/i", $post['id_outlet'])) {
+            $post['id_outlet'] = MyHelper::decSlug($post['id_outlet']);
         }
 
         if (!empty($post['id_outlet'])) {
+            $post['id_outlet'] = (int)$post['id_outlet'];
             $detail = Outlet::join('merchants', 'merchants.id_outlet', 'outlets.id_outlet')
                       ->leftjoin('products', 'products.id_merchant', 'merchants.id_merchant')
                       ->where('outlet_status', 'Active')->where('outlets.id_outlet', $post['id_outlet'])
@@ -3803,11 +3809,11 @@ class ApiOutletController extends Controller
                                     sum(
                                    product_count_transaction
                                     ) as product
-                                '),
+                                ')
                       )
                       ->first();
 
-            if (empty($detail)) {
+            if (empty($detail['id_outlet'])) {
                 return response()->json(['status' => 'fail', 'messages' => ['Outlet not found']]);
             }
 
@@ -3822,6 +3828,7 @@ class ApiOutletController extends Controller
 
             $result = [
                 'is_closed' => (empty($detail['outlet_is_closed']) ? false : true),
+                'outlet_is_closed' => $detail['outlet_is_closed'],
                 'rating' => $detail['rating'] ?? null,
                 'product' => $this->productCount($detail['product'] ?? null),
                 'id_outlet' => $detail['id_outlet'],
