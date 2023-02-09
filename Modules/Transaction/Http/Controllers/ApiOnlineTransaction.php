@@ -2720,7 +2720,7 @@ class ApiOnlineTransaction extends Controller
                                 ->where('id_user', $idUser)->where('product_type', 'Drug')->where('id_product', $product['id_product']);
                         }
 
-                        if(!empty($item['id_product_variant_group'])){
+                        if (!empty($item['id_product_variant_group'])) {
                             $checkRecipe = $checkRecipe->where('id_product_variant_group', $item['id_product_variant_group']);
                         }
                         $checkRecipe = $checkRecipe->get()->toArray();
