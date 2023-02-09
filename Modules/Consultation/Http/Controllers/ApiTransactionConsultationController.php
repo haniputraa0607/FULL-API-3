@@ -16,6 +16,7 @@ use App\Http\Models\User;
 use App\Http\Models\Setting;
 use App\Http\Models\Product;
 use App\Http\Models\LogBalance;
+use Modules\ProductVariant\Entities\ProductVariant;
 use Modules\ProductVariant\Entities\ProductVariantGroup;
 use Modules\Merchant\Entities\Merchant;
 use App\Http\Models\ProductPhoto;
@@ -2164,7 +2165,13 @@ class ApiTransactionConsultationController extends Controller
                 }
 
                 $items[$key]['product_name'] = $detailProduct['result']['product_name'] ?? null;
-                $items[$key]['variant_name'] = $detailProduct['result']['variants']['product_variant_name'] ?? null;
+                $variantsName = null;
+                if (!empty($recomendation['id_product_variant_group'])) {
+                    $variants = ProductVariant::join('product_variant_pivot', 'product_variant_pivot.id_product_variant', 'product_variants.id_product_variant')
+                        ->where('product_variant_visibility', 'Visible')->where('id_product_variant_group', $recomendation['id_product_variant_group'])->pluck('product_variant_name')->toArray();
+                    $variantsName = implode(', ', $variants);
+                }
+                $items[$key]['variant_name'] = $variantsName;
                 $items[$key]['qty'] = $recomendation->qty_product ?? null;
                 $items[$key]['usage_rule'] = $recomendation->usage_rules ?? null;
                 $items[$key]['usage_rule_time'] = $usageRules ?? null;
@@ -2296,7 +2303,13 @@ class ApiTransactionConsultationController extends Controller
                 }
 
                 $items[$key]['product_name'] = $detailProduct['result']['product_name'] ?? null;
-                $items[$key]['variant_name'] = $detailProduct['result']['variants']['product_variant_name'] ?? null;
+                $variantsName = null;
+                if (!empty($recomendation['id_product_variant_group'])) {
+                    $variants = ProductVariant::join('product_variant_pivot', 'product_variant_pivot.id_product_variant', 'product_variants.id_product_variant')
+                        ->where('product_variant_visibility', 'Visible')->where('id_product_variant_group', $recomendation['id_product_variant_group'])->pluck('product_variant_name')->toArray();
+                    $variantsName = implode(', ', $variants);
+                }
+                $items[$key]['variant_name'] = $variantsName;
                 $items[$key]['qty'] = $recomendation->qty_product ?? null;
                 $items[$key]['usage_rule'] = $recomendation->usage_rules ?? null;
                 $items[$key]['usage_rule_time'] = $usageRules ?? null;
