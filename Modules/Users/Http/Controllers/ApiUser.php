@@ -3988,7 +3988,7 @@ class ApiUser extends Controller
                             ->select('provinces.id_province', 'cities.id_city', 'districts.id_district', 'subdistricts.id_subdistrict', 'subdistrict_postal_code')->first();
 
         $detail = [
-            'photo' => (!empty($dataUser['photo']) ? config('url.storage_url_api') . $dataUser['photo'] : null),
+            'photo' => (!empty($dataUser['photo']) ? config('url.storage_url_api') . $dataUser['photo'] . '?' . time() : null),
             'info' => [
                 'name' => $dataUser['name'],
                 'phone' => substr_replace($dataUser['phone'], '', 0, 1),
