@@ -2712,14 +2712,18 @@ class ApiOnlineTransaction extends Controller
                             $checkRecipe = TransactionConsultation::join('transaction_consultation_recomendations', 'transaction_consultation_recomendations.id_transaction_consultation', 'transaction_consultations.id_transaction_consultation')
                                 ->whereNotNull('completed_at')
                                 ->where('transaction_consultation_recomendations.id_transaction_consultation', $item['id_transaction_consultation'])
-                                ->where('product_type', 'Drug')->where('id_product', $product['id_product'])->get()->toArray();
+                                ->where('product_type', 'Drug')->where('id_product', $product['id_product']);
                         } else {
                             $checkRecipe = TransactionConsultation::join('transaction_consultation_recomendations', 'transaction_consultation_recomendations.id_transaction_consultation', 'transaction_consultations.id_transaction_consultation')
                                 ->whereNotNull('completed_at')
                                 ->whereNotIn('consultation_status', ['canceled'])
-                                ->where('id_user', $idUser)->where('product_type', 'Drug')->where('id_product', $product['id_product'])
-                                ->get()->toArray();
+                                ->where('id_user', $idUser)->where('product_type', 'Drug')->where('id_product', $product['id_product']);
                         }
+
+                        if (!empty($item['id_product_variant_group'])) {
+                            $checkRecipe = $checkRecipe->where('id_product_variant_group', $item['id_product_variant_group']);
+                        }
+                        $checkRecipe = $checkRecipe->get()->toArray();
 
                         if (empty($checkRecipe)) {
                             $canBuyStatus = false;
