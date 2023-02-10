@@ -251,7 +251,7 @@ class ApiElearning extends Controller
                     'post_date' => MyHelper::dateFormatInd($news['news_post_date'], true, false),
                     'creator_by' => $news['news_by'],
                     'short_description' => $news['news_content_short'],
-                    'description' => $news['news_content_long'],
+                    'description' => str_replace('font-family: Arial', 'font-family: Montserrat Regular', $news['news_content_long']),
                     'favorite' => (!empty($favorite) ? 1 : 0)
                 ];
 
@@ -395,7 +395,7 @@ class ApiElearning extends Controller
                     'post_date' => MyHelper::dateFormatInd($news['news_post_date'], true, false),
                     'class_by' => $news['news_by'],
                     'short_description' => $news['news_content_short'],
-                    'description' => $news['news_content_long'],
+                    'description' => str_replace('font-family: Arial', 'font-family: Montserrat Regular', $news['news_content_long']),
                     'favorite' => (!empty($favorite) ? 1 : 0)
                 ];
 
