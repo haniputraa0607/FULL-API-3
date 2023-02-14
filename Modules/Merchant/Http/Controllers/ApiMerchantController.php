@@ -1414,7 +1414,7 @@ class ApiMerchantController extends Controller
 
         $totalTransfer = $amount - $fee;
         if ($totalTransfer < 0) {
-            return response()->json(['status' => 'fail', 'messages' => ['Jumlah saldo yang Anda tarik tidak mencukupi dikarenakan dikenakan fee sebesar '.number_format($fee, 0, ",", ".")]]);
+            return response()->json(['status' => 'fail', 'messages' => ['Jumlah saldo yang Anda tarik tidak mencukupi dikarenakan dikenakan fee sebesar ' . number_format($fee, 0, ",", ".")]]);
         }
 
         $result = [
@@ -1479,7 +1479,7 @@ class ApiMerchantController extends Controller
 
         $totalTransfer = $amount - $fee;
         if ($totalTransfer < 0) {
-            return response()->json(['status' => 'fail', 'messages' => ['Jumlah saldo yang Anda tarik tidak mencukupi dikarenakan dikenakan fee sebesar '.number_format($fee, 0, ",", ".")]]);
+            return response()->json(['status' => 'fail', 'messages' => ['Jumlah saldo yang Anda tarik tidak mencukupi dikarenakan dikenakan fee sebesar ' . number_format($fee, 0, ",", ".")]]);
         }
 
         $amount = $totalTransfer;
