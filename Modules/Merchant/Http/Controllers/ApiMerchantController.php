@@ -1408,9 +1408,13 @@ class ApiMerchantController extends Controller
 
         $fee = (!empty($formula) ? MyHelper::calculator($formula, ['amount' => $amount]) : 0);
 
-        $totalTransfer = $amount + $fee;
-        if ($totalTransfer > $currentBalance) {
+        if ($amount > $currentBalance) {
             return response()->json(['status' => 'fail', 'messages' => ['Jumlah saldo saat ini tidak mencukupi']]);
+        }
+
+        $totalTransfer = $amount - $fee;
+        if ($totalTransfer < 0) {
+            return response()->json(['status' => 'fail', 'messages' => ['Jumlah saldo yang Anda tarik tidak mencukupi dikarenakan dikenakan fee sebesar '.number_format($fee, 0, ",", ".")]]);
         }
 
         $result = [
@@ -1469,11 +1473,16 @@ class ApiMerchantController extends Controller
 
         $fee = (!empty($formula) ? MyHelper::calculator($formula, ['amount' => $amount]) : 0);
 
-        $totalTransfer = $amount + $fee;
-        if ($totalTransfer > $currentBalance) {
+        if ($amount > $currentBalance) {
             return response()->json(['status' => 'fail', 'messages' => ['Jumlah saldo saat ini tidak mencukupi']]);
         }
 
+        $totalTransfer = $amount - $fee;
+        if ($totalTransfer < 0) {
+            return response()->json(['status' => 'fail', 'messages' => ['Jumlah saldo yang Anda tarik tidak mencukupi dikarenakan dikenakan fee sebesar '.number_format($fee, 0, ",", ".")]]);
+        }
+
+        $amount = $totalTransfer;
         $dt = [
             'id_merchant' => $checkMerchant['id_merchant'],
             'balance_nominal' => -$amount,
