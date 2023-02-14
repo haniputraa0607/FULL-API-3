@@ -3877,7 +3877,7 @@ class ApiPromoCampaign extends Controller
         $home_text = Setting::whereIn('key', ['share_promo_code'])->get()->keyBy('key');
         $text['share'] = $home_text['share_promo_code']['value_text'] ?? 'Bagikan %promo_code% ke teman-teman'; //dummy
 
-        $promo_campaign = PromoCampaign::select('id_promo_campaign', 'promo_title', 'promo_image', 'date_start', 'date_end', 'code_type', 'promo_description')
+        $promo_campaign = PromoCampaign::select('id_promo_campaign', 'promo_title', 'promo_image', 'promo_image_detail', 'date_start', 'date_end', 'code_type', 'promo_description')
             ->where('date_end', '>=', $now)
             ->where('date_start', '<=', $now)
             ->where(function ($q) {

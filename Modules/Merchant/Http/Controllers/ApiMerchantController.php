@@ -1647,11 +1647,9 @@ class ApiMerchantController extends Controller
                     MerchantLogBalance::where('id_merchant_log_balance', $idMerchantBalance)->update(['merchant_balance_status' => 'Pending']);
 
                     $idMerchant = MerchantLogBalance::where('id_merchant_log_balance', $idMerchantBalance)->first()['id_merchant'] ?? null;
-                    $user = User::join('merchants', 'merchants.id_user', 'users.id')->where('id_merchant', $idMerchant)
-                        ->select('users.*')->first();
                     app($this->autocrm)->SendAutoCRM(
                         'Merchant Withdrawal',
-                        $user['phone'],
+                        $idMerchant,
                         [
                             'amount' => number_format((int)$data['amount'], 0, ",", "."),
                             'status' => 'Pending'
