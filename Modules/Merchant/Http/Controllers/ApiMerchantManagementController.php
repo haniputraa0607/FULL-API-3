@@ -1758,6 +1758,22 @@ class ApiMerchantManagementController extends Controller
     {
         $post = $request->json()->all();
         $update = MerchantLogBalance::where('id_merchant_log_balance', $post['id_merchant_log_balance'])->update(['merchant_balance_status' => 'Completed']);
+        if ($update) {
+            $getBalance = MerchantLogBalance::where('id_merchant_log_balance', $post['id_merchant_log_balance'])->first();
+            $idMerchant = MerchantLogBalance::where('id_merchant_log_balance', $post['id_merchant_log_balance'])->first()['id_merchant'] ?? null;
+            app($this->autocrm)->SendAutoCRM(
+                'Merchant Withdrawal',
+                $idMerchant,
+                [
+                    'amount' => number_format((int)abs($getBalance['merchant_balance']), 0, ",", "."),
+                    'status' => 'Completed'
+                ],
+                null,
+                false,
+                false,
+                'merchant'
+            );
+        }
         return response()->json(MyHelper::checkUpdate($update));
     }
 
