@@ -245,12 +245,9 @@ class ApiMerchantController extends Controller
                 return response()->json(['status' => 'fail', 'messages' => ['Gagal menyimpan data merchant']]);
             }
 
-            $lastOutlet = Outlet::orderBy('outlet_code', 'desc')->first()['outlet_code'] ?? '';
-            $lastOutlet = substr($lastOutlet, -5);
-            $lastOutlet = (int)$lastOutlet;
-            $countCode = $lastOutlet + 1;
+            $random = MyHelper::createrandom(5);
             $dataCreateOutlet = [
-                "outlet_code" => 'M' . sprintf("%06d", $countCode),
+                "outlet_code" => 'M' . $random . time(),
                 "outlet_name" => $post['merchant_name'],
                 "outlet_license_number" => $post['merchant_license_number'],
                 "outlet_email" => (empty($post['merchant_email']) ? null : $post['merchant_email']),
