@@ -975,6 +975,7 @@ class ApiMerchantController extends Controller
         $transactions = MerchantLogBalance::where('id_merchant', $id_merchant)->orderBy('created_at', 'desc')
                         ->whereDate('created_at', '>=', $start)
                         ->whereDate('created_at', '<=', $end)
+                        ->whereIn('merchant_balance_source', ['Transaction Completed', 'Transaction Consultation Completed'])
                         ->select(DB::raw('DATE(created_at) as date'), DB::raw('SUM(merchant_balance) AS value'), DB::raw('Count(Case When merchant_balance_source not IN ("Withdrawal Fee","Withdrawal") Then 1 End) as count'))
                         ->groupBy(DB::raw('DATE(created_at)'))
                         ->get()->toArray();
@@ -1026,6 +1027,7 @@ class ApiMerchantController extends Controller
         $transactions = MerchantLogBalance::where('id_merchant', $id_merchant)->orderBy('created_at', 'desc')
             ->whereDate('created_at', '>=', $start)
             ->whereDate('created_at', '<=', $end)
+            ->whereIn('merchant_balance_source', ['Transaction Completed', 'Transaction Consultation Completed'])
             ->select(DB::raw('DATE(created_at) as date'), DB::raw('SUM(merchant_balance) AS value'), DB::raw('Count(Case When merchant_balance_source not IN ("Withdrawal Fee","Withdrawal") Then 1 End) as count'))
             ->groupBy(DB::raw('DATE(created_at)'))
             ->get()->toArray();
@@ -1099,6 +1101,7 @@ class ApiMerchantController extends Controller
             $value = MerchantLogBalance::where('id_merchant', $id_merchant)->orderBy('created_at', 'desc')
                 ->whereMonth('created_at', $month)
                 ->whereYear('created_at', $year)
+                ->whereIn('merchant_balance_source', ['Transaction Completed', 'Transaction Consultation Completed'])
                 ->select(DB::raw('SUM(merchant_balance) AS value'), DB::raw('Count(Case When merchant_balance_source not IN ("Withdrawal Fee","Withdrawal") Then 1 End) as count'))
                 ->first();
 
@@ -1149,6 +1152,7 @@ class ApiMerchantController extends Controller
             }
             $value = MerchantLogBalance::where('id_merchant', $id_merchant)->orderBy('created_at', 'desc')
                 ->whereYear('created_at', $year)
+                ->whereIn('merchant_balance_source', ['Transaction Completed', 'Transaction Consultation Completed'])
                 ->select(DB::raw('SUM(merchant_balance) AS value'), DB::raw('Count(Case When merchant_balance_source not IN ("Withdrawal Fee","Withdrawal") Then 1 End) as count'))
                 ->first();
 
