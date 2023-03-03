@@ -271,20 +271,20 @@ class ApiElearning extends Controller
 
                 $res['outlets_text'] = $news['news_outlet_text'];
                 $res['outlets'] = [];
-                if (!empty($news['news_outlet'])) {
-                    $newsOutlet = $news['news_outlet'];
-                    unset($news['news_outlet']);
+                if (!empty($news['newsOutlet'])) {
+                    $newsOutlet = $news['newsOutlet'];
+                    unset($news['newsOutlet']);
                     foreach ($newsOutlet as $keyOutlet => $valOutlet) {
                         $res['outlets'][$keyOutlet]['outlet_name']     = $valOutlet['outlet']['outlet_name'];
-                        $res['outlets'][$keyOutlet]['outlet_image']    = null;
+                        $res['outlets'][$keyOutlet]['outlet_image']    = $valOutlet['outlet']['url_outlet_image_cover']??null;
                     }
                 }
 
                 $res['products_text'] = $news['news_product_text'];
                 $res['products'] = [];
-                if (!empty($news['news_product'])) {
-                    $newsProduct = $news['news_product'];
-                    unset($news['news_product']);
+                if (!empty($news['newsProduct'])) {
+                    $newsProduct = $news['newsProduct'];
+                    unset($news['newsProduct']);
                     foreach ($newsProduct as $keyProduct => $valProduct) {
                         $res['products'][$keyProduct]['product_name']  = $valProduct['product']['product_name'];
                         $res['products'][$keyProduct]['product_image'] = config('url.storage_url_api') . ($valProduct['product']['photos'][0]['product_photo'] ?? 'img/product/item/default.png');
