@@ -276,7 +276,7 @@ class ApiElearning extends Controller
                     unset($news['newsOutlet']);
                     foreach ($newsOutlet as $keyOutlet => $valOutlet) {
                         $res['outlets'][$keyOutlet]['outlet_name']     = $valOutlet['outlet']['outlet_name'];
-                        $res['outlets'][$keyOutlet]['outlet_image']    = $valOutlet['outlet']['url_outlet_image_cover']??null;
+                        $res['outlets'][$keyOutlet]['outlet_image']    = $valOutlet['outlet']['url_outlet_image_cover'] ?? null;
                     }
                 }
 
