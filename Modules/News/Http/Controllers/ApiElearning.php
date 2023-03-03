@@ -275,6 +275,7 @@ class ApiElearning extends Controller
                     $newsOutlet = $news['newsOutlet'];
                     unset($news['newsOutlet']);
                     foreach ($newsOutlet as $keyOutlet => $valOutlet) {
+                        $res['outlets'][$keyOutlet]['id_outlet']     = $valOutlet['outlet']['id_outlet'];
                         $res['outlets'][$keyOutlet]['outlet_name']     = $valOutlet['outlet']['outlet_name'];
                         $res['outlets'][$keyOutlet]['outlet_image']    = $valOutlet['outlet']['url_outlet_image_cover'] ?? null;
                     }
@@ -286,6 +287,7 @@ class ApiElearning extends Controller
                     $newsProduct = $news['newsProduct'];
                     unset($news['newsProduct']);
                     foreach ($newsProduct as $keyProduct => $valProduct) {
+                        $res['products'][$keyProduct]['id_product']  = $valProduct['product']['id_product'];
                         $res['products'][$keyProduct]['product_name']  = $valProduct['product']['product_name'];
                         $res['products'][$keyProduct]['product_image'] = config('url.storage_url_api') . ($valProduct['product']['photos'][0]['product_photo'] ?? 'img/product/item/default.png');
                     }
