@@ -382,6 +382,7 @@ class ApiSetting extends Controller
                                 }
                             }
                         }
+                        $send = app($this->autocrm)->SendAutoCRM('Report Point Reset', $user->first()->phone, ['datetime_reset' => date('d F Y H:i'), 'attachment' => $attachments], null, true);
                     }
                 }
 
@@ -392,7 +393,6 @@ class ApiSetting extends Controller
                 DB::commit();
             }
 
-            $send = app($this->autocrm)->SendAutoCRM('Report Point Reset', $user->first()->phone, ['datetime_reset' => date('d F Y H:i'), 'attachment' => $attachments], null, true);
 
             $log->success();
             return response()->json([
