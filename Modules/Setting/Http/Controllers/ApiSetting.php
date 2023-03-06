@@ -346,7 +346,7 @@ class ApiSetting extends Controller
             if ($setting) {
                 $userData1 = [];
                 foreach ($setting as $date) {
-                    if ($date['value'] == date('d F')) {
+                    if (strtotime($date['value']) == strtotime(date('d F'))) {
                         foreach ($user->cursor() as $datauser) {
                             $totalBalance = LogBalance::where('id_user', $datauser['id'])->sum('balance');
                             if ($totalBalance) {
