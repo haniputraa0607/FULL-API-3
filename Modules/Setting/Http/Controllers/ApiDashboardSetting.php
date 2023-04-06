@@ -370,8 +370,8 @@ class ApiDashboardSetting extends Controller
             $dashboard[1]['dashboard_card'][6]['card_name'] = 'Total Super Admin';
             $dashboard[1]['dashboard_card'][7]['card_name'] = 'Total Male Customer';
             $dashboard[1]['dashboard_card'][8]['card_name'] = 'Total Female Customer';
-            $dashboard[1]['dashboard_card'][9]['card_name'] = 'Total Android Customer';
-            $dashboard[1]['dashboard_card'][10]['card_name'] = 'Total IOS Customer';
+            $dashboard[1]['dashboard_card'][9]['card_name'] = 'Device Android';
+            $dashboard[1]['dashboard_card'][10]['card_name'] = 'Device IOS';
         }
         foreach ($dashboard as $key => $dash) {
             foreach ($dash['dashboard_card'] as $index => $card) {
