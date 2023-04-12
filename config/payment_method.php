@@ -7,7 +7,8 @@ return [
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API') . 'default_image/payment_method/ic_gopay.png',
         'text'            => 'GoPay',
-        'refund_time'     => 15
+        'refund_time'     => 15,
+        'redirect'        => true
     ],
     'midtrans_credit_card'    => [
         'payment_gateway' => 'Midtrans',
@@ -15,7 +16,8 @@ return [
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API') . 'default_image/payment_method/ic_creditcard.png',
         'text'            => 'Debit/Credit Card',
-        'refund_time'     => 15
+        'refund_time'     => 15,
+        'redirect'        => true
     ],
     'midtrans_bank_transfer'    => [
         'payment_gateway' => 'Midtrans',
@@ -23,7 +25,8 @@ return [
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API') . 'default_image/payment_method/ic_banktransfer.png',
         'text'            => 'Bank Transfer',
-        'refund_time'     => 15
+        'refund_time'     => 15,
+        'redirect'        => true
     ],
     'midtrans_akulaku'    => [
         'payment_gateway' => 'Midtrans',
@@ -31,7 +34,8 @@ return [
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API') . 'default_image/payment_method/ic_akulaku.png',
         'text'            => 'Akulaku',
-        'refund_time'     => 15
+        'refund_time'     => 15,
+        'redirect'        => true
     ],
     'midtrans_qris'    => [
         'payment_gateway' => 'Midtrans',
@@ -39,7 +43,8 @@ return [
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API') . 'default_image/payment_method/ic_shopeepay-qris.png',
         'text'            => 'ShopeePay/e-Wallet Lainnya',
-        'refund_time'     => 15
+        'refund_time'     => 15,
+        'redirect'        => true
     ],
     'ipay88_cc'      => [
         'payment_gateway' => 'Ipay88',
@@ -51,7 +56,8 @@ return [
             'start' => '00:00',
             'end'   => '23:45',
         ],
-        'refund_time'     => 15
+        'refund_time'     => 15,
+        'redirect'        => true
     ],
     'ipay88_ovo'     => [
         'payment_gateway' => 'Ipay88',
@@ -63,7 +69,8 @@ return [
             'start' => '00:00',
             'end'   => '23:45',
         ],
-        'refund_time'     => 15
+        'refund_time'     => 15,
+        'redirect'        => true
     ],
     'ovo'            => [
         'payment_gateway' => 'Ovo',
@@ -71,7 +78,8 @@ return [
         'status'          => 0,
         'logo'            => env('STORAGE_URL_API') . 'default_image/payment_method/ic_ovo_pay.png',
         'text'            => 'OVO',
-        'refund_time'     => 15
+        'refund_time'     => 15,
+        'redirect'        => true
     ],
     'shopeepay'      => [
         'payment_gateway' => 'Shopeepay',
@@ -83,14 +91,16 @@ return [
             'start' => '03:00',
             'end'   => '23:45',
         ],
-        'refund_time'     => 15
+        'refund_time'     => 15,
+        'redirect'        => true
     ],
     'online_payment' => [
         'payment_gateway' => 'Midtrans',
         'payment_method'  => 'Midtrans',
         'status'          => 0,
         'logo'            => env('STORAGE_URL_API') . 'default_image/payment_method/ic_online_payment.png',
-        'text'            => 'Online Payment'
+        'text'            => 'Online Payment',
+        'redirect'        => true
     ],
     'xendit_ovo'          => [
         'payment_gateway' => 'Xendit',
@@ -98,7 +108,8 @@ return [
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API') . 'default_image/payment_method/ic_ovo_pay.png',
         'text'            => 'OVO',
-        'refund_time'     => 15
+        'refund_time'     => 15,
+        'redirect'        => true
     ],
     'xendit_dana'         => [
         'payment_gateway' => 'Xendit',
@@ -106,7 +117,8 @@ return [
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API') . 'default_image/payment_method/ic_dana.png',
         'text'            => 'DANA',
-        'refund_time'     => 15
+        'refund_time'     => 15,
+        'redirect'        => true
     ],
     'xendit_linkaja'      => [
         'payment_gateway' => 'Xendit',
@@ -114,7 +126,8 @@ return [
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API') . 'default_image/payment_method/ic_linkaja.png',
         'text'            => 'LinkAJa',
-        'refund_time'     => 15
+        'refund_time'     => 15,
+        'redirect'        => true
     ],
     'xendit_shopeepay'      => [
         'payment_gateway' => 'Xendit',
@@ -122,7 +135,8 @@ return [
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API') . 'default_image/payment_method/ic_shopee_pay.png',
         'text'            => 'ShopeePay',
-        'refund_time'     => 15
+        'refund_time'     => 15,
+        'redirect'        => true
     ],
     'xendit_kredivo'      => [
         'payment_gateway' => 'Xendit',
@@ -130,7 +144,8 @@ return [
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API') . 'default_image/payment_method/ic_kredivo.png',
         'text'            => 'Kredivo',
-        'refund_time'     => 15
+        'refund_time'     => 15,
+        'redirect'        => true
     ],
     'xendit_qris'      => [
         'payment_gateway' => 'Xendit',
@@ -138,7 +153,8 @@ return [
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API') . 'default_image/payment_method/ic_qris.png',
         'text'            => 'QRIS',
-        'refund_time'     => 15
+        'refund_time'     => 15,
+        'redirect'        => true
     ],
     'xendit_credit_card'      => [
         'payment_gateway' => 'Xendit',
@@ -146,6 +162,79 @@ return [
         'status'          => 1,
         'logo'            => env('STORAGE_URL_API') . 'default_image/payment_method/ic_creditcard.png',
         'text'            => 'Credit Card',
-        'refund_time'     => 15
+        'refund_time'     => 15,
+        'redirect'        => true
+    ],
+    'xendit_bca'      => [
+        'payment_gateway' => 'Xendit VA',
+        'payment_method'  => 'BCA',
+        'status'          => 1,
+        'logo'            => env('STORAGE_URL_API') . 'default_image/payment_method/ic_creditcard.png',
+        'text'            => 'BCA',
+        'refund_time'     => 15,
+        'redirect'        => false
+    ],
+    'xendit_mandiri'      => [
+        'payment_gateway' => 'Xendit VA',
+        'payment_method'  => 'MANDIRI',
+        'status'          => 1,
+        'logo'            => env('STORAGE_URL_API') . 'default_image/payment_method/ic_creditcard.png',
+        'text'            => 'Mandiri',
+        'refund_time'     => 15,
+        'redirect'        => false
+    ],
+    'xendit_bni'      => [
+        'payment_gateway' => 'Xendit VA',
+        'payment_method'  => 'BNI',
+        'status'          => 1,
+        'logo'            => env('STORAGE_URL_API') . 'default_image/payment_method/ic_creditcard.png',
+        'text'            => 'BNI',
+        'refund_time'     => 15,
+        'redirect'        => false
+    ],
+    'xendit_bri'      => [
+        'payment_gateway' => 'Xendit VA',
+        'payment_method'  => 'BRI',
+        'status'          => 1,
+        'logo'            => env('STORAGE_URL_API') . 'default_image/payment_method/ic_creditcard.png',
+        'text'            => 'BRI',
+        'refund_time'     => 15,
+        'redirect'        => false
+    ],
+    'xendit_bjb'      => [
+        'payment_gateway' => 'Xendit VA',
+        'payment_method'  => 'BJB',
+        'status'          => 1,
+        'logo'            => env('STORAGE_URL_API') . 'default_image/payment_method/ic_creditcard.png',
+        'text'            => 'BJB',
+        'refund_time'     => 15,
+        'redirect'        => false
+    ],
+    'xendit_bsi'      => [
+        'payment_gateway' => 'Xendit VA',
+        'payment_method'  => 'BSI',
+        'status'          => 1,
+        'logo'            => env('STORAGE_URL_API') . 'default_image/payment_method/ic_creditcard.png',
+        'text'            => 'BSI',
+        'refund_time'     => 15,
+        'redirect'        => false
+    ],
+    'xendit_permata'      => [
+        'payment_gateway' => 'Xendit VA',
+        'payment_method'  => 'PERMATA',
+        'status'          => 1,
+        'logo'            => env('STORAGE_URL_API') . 'default_image/payment_method/ic_creditcard.png',
+        'text'            => 'Permata',
+        'refund_time'     => 15,
+        'redirect'        => false
+    ],
+    'xendit_bss'      => [
+        'payment_gateway' => 'Xendit VA',
+        'payment_method'  => 'SAHABAT_SAMPOERNA',
+        'status'          => 1,
+        'logo'            => env('STORAGE_URL_API') . 'default_image/payment_method/ic_creditcard.png',
+        'text'            => 'Bank Sahabat Sampoerna',
+        'refund_time'     => 15,
+        'redirect'        => false
     ],
 ];

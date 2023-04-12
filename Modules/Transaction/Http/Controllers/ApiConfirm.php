@@ -704,6 +704,170 @@ class ApiConfirm extends Controller
                 'status' => 'fail',
                 'messages' => $errors ?: ['Something went wrong']
             ];
+        } elseif ($post['payment_type'] == 'Xendit VA') {
+            $post['phone'] = $post['phone'] ?? $user['phone'];
+            $payment_id = $request->payment_id ?? $request->payment_detail;
+            $paymentXendit = TransactionPaymentXendit::where('id_transaction_group', $check['id_transaction_group'])->first();
+            $transactionData = [
+                'transaction_details' => [
+                    'id_transaction_group' => $check['id_transaction_group'],
+                    'order_id' => $check['transaction_receipt_number'],
+                ],
+            ];
+            if (!$paymentXendit) {
+                $paymentXendit = new TransactionPaymentXendit([
+                    'id_transaction_group' => $check['id_transaction_group'],
+                    'xendit_id' => null,
+                    'external_id' => $check['transaction_receipt_number'],
+                    'business_id' => null,
+                    'phone' => $post['phone'],
+                    'type' => $payment_id,
+                    'amount' => $countGrandTotal,
+                    'expiration_date' => null,
+                    'failure_code' => null,
+                    'status' => null,
+                    'callback_authentication_token' => null,
+                    'checkout_url' => null,
+                ]);
+            }
+
+            $dataDetailProduct = [];
+            $checkPayment = TransactionMultiplePayment::where('id_transaction_group', $check['id_transaction_group'])->first();
+            foreach ($check['transactions'] as $subtrx) {
+                foreach ($subtrx['productTransaction'] as $key => $value) {
+                    $dataProductMidtrans = [
+                        'id'       => $value['id_product'],
+                        'price'    => abs($value['transaction_product_price'] - ($value['transaction_product_discount'] / $value['transaction_product_qty'])),
+                        'name'     => $value['product']['product_name'],
+                        'quantity' => $value['transaction_product_qty'],
+                    ];
+
+                    $dataDetailProduct[] = $dataProductMidtrans;
+                }
+            }
+
+            if ($check['transaction_shipment'] > 0) {
+                $dataShip = [
+                    'id'       => 'shipment',
+                    'price'    => abs($check['transaction_shipment']),
+                    'name'     => 'Shipping',
+                    'quantity' => 1,
+                ];
+                array_push($dataDetailProduct, $dataShip);
+            }
+
+            if ($check['transaction_service'] > 0) {
+                $dataService = [
+                    'id'       => 'transaction_service',
+                    'price'    => abs($check['transaction_service']),
+                    'name'     => 'Service',
+                    'quantity' => 1,
+                ];
+                array_push($dataDetailProduct, $dataService);
+            }
+
+            if ($check['transaction_tax'] > 0) {
+                $dataTax = [
+                    'id'       => 'transaction_tax',
+                    'price'    => abs($check['transaction_tax']),
+                    'name'     => 'Tax',
+                    'quantity' => 1,
+                ];
+                array_push($dataDetailProduct, $dataTax);
+            }
+
+            if (!empty($checkPayment)) {
+                if ($checkPayment['type'] == 'Balance') {
+                    if (empty($checkPaymentBalance)) {
+                        DB::rollback();
+                        return response()->json([
+                            'status'   => 'fail',
+                            'messages' => ['Transaction is invalid'],
+                        ]);
+                    }
+
+                    $dataBalance     = [
+                        'id'       => 'balance',
+                        'price'    => abs($checkPaymentBalance['balance_nominal']),
+                        'name'     => 'Balance',
+                        'quantity' => 1,
+                    ];
+
+                    array_push($dataDetailProduct, $dataBalance);
+
+                    $detailPayment['balance'] = -$checkPaymentBalance['balance_nominal'];
+                }
+            }
+            $paymentXendit->items = $dataDetailProduct;
+
+            if ($paymentXendit->pay($errors)) {
+                $dataMultiple = [
+                    'id_transaction_group' => $paymentXendit->id_transaction_group,
+                    'type'           => 'Xendit',
+                    'id_payment'     => $paymentXendit->id_transaction_payment_xendit,
+                ];
+                // save multiple payment
+                $saveMultiple = TransactionMultiplePayment::updateOrCreate([
+                    'id_transaction_group' => $paymentXendit->id_transaction_group,
+                    'type'           => 'Xendit',
+                    'payment_detail' => $post['payment_detail']
+                ], $dataMultiple);
+
+                $result = [
+                    'redirect' => true,
+                    'type' => $paymentXendit->type,
+                ];
+                if ($paymentXendit->type == 'OVO') {
+                    $result['timer']  = (int) MyHelper::setting('setting_timer_ovo', 'value', 60);
+                    $result['message_timeout'] = 'Sorry, your payment has expired';
+                } else {
+                    if (!$paymentXendit->checkout_url) {
+                        DB::commit();
+                        return [
+                            'status' => 'fail',
+                            'messages' => ['Empty checkout_url']
+                        ];
+                    }
+                    $result['redirect_url'] = $paymentXendit->checkout_url;
+                    $result['transaction_data'] = $transactionData;
+                }
+
+                $transactionGroup = Transaction::where('id_transaction_group', $check['id_transaction_group'])->get()->toArray();
+                foreach ($transactionGroup as $transactions) {
+                    if ($transactions['trasaction_type'] == 'Delivery') {
+                        app('\Modules\Transaction\Http\Controllers\ApiOnlineTransaction')->updateStockProduct($transactions['id_transaction'], 'book');
+                    }
+
+                    if (!$checkPaymentBalance) {
+                        Transaction::where('id_transaction', $transactions['id_transaction'])->update(['trasaction_payment_type' => $post['payment_type']]);
+                    }
+                }
+
+                DB::commit();
+
+                return [
+                    'status' => 'success',
+                    'result' => $result
+                ];
+            }
+
+            $dataMultiple = [
+                'id_transaction' => $paymentXendit->id_transaction,
+                'type'           => 'Xendit',
+                'id_payment'     => $paymentXendit->id_transaction_payment_xendit,
+            ];
+            // save multiple payment
+            $saveMultiple = TransactionMultiplePayment::updateOrCreate([
+                'id_transaction' => $paymentXendit->id_transaction,
+                'type'           => 'Xendit',
+            ], $dataMultiple);
+
+            DB::commit();
+
+            return [
+                'status' => 'fail',
+                'messages' => $errors ?: ['Something went wrong']
+            ];
         } else {
             if (isset($post['id_manual_payment_method'])) {
                 $checkPaymentMethod = ManualPaymentMethod::where('id_manual_payment_method', $post['id_manual_payment_method'])->first();
