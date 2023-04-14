@@ -488,7 +488,7 @@ class XenditController extends Controller
             'is_closed' => true,
             'bank_code' => $method,
             'name'      => Auth::user()->name,
-            'expiration_date'=>date("Y-m-d H:i:s", strtotime("+15 minutes"))
+            'expiration_date' => date("Y-m-d H:i:s", strtotime("+15 minutes"))
         ];
 
         try {
