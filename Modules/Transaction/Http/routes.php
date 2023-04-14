@@ -161,7 +161,7 @@ Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction
 
     Route::get('/data/decript/{data}', function ($data) {
 
-        return response()->json(App\Lib\MyHelper::decrypt2019($data));
+        return response()->json(json_decode(App\Lib\MyHelper::decrypt2019($data)));
     });
     Route::get('/data/encrypt/{data}', function ($data) {
 
