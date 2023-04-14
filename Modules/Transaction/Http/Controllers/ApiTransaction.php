@@ -2854,6 +2854,7 @@ class ApiTransaction extends Controller
             $paymentMethod = $trxPaymentMidtrans['payment_type'] . (!empty($trxPaymentMidtrans['bank']) ? ' (' . $trxPaymentMidtrans['bank'] . ')' : '');
             $paymentMethod = str_replace(" ", "_", $paymentMethod);
             $paymentLogo = config('payment_method.midtrans_' . strtolower($paymentMethod) . '.logo');
+            $redirect = config('payment_method.midtrans_' . strtolower($paymentMethod) . '.redirect');
             $paymentType = 'Xendit';//'Midtrans';
             if ($transaction['transaction_status'] == 'Unpaid') {
                 $paymentURL = $trxPaymentMidtrans['redirect_url'];
@@ -2863,6 +2864,7 @@ class ApiTransaction extends Controller
             $paymentMethod = $trxPaymentXendit['type'];
             $paymentMethod = str_replace(" ", "_", $paymentMethod);
             $paymentLogo = config('payment_method.xendit_' . strtolower($paymentMethod) . '.logo');
+            $redirect = config('payment_method.xendit_' . strtolower($paymentMethod) . '.redirect');
             $paymentType = 'Xendit';
             if ($transaction['transaction_status'] == 'Unpaid') {
                 $paymentURL = $trxPaymentXendit['checkout_url'];
@@ -2903,6 +2905,7 @@ class ApiTransaction extends Controller
 
         $result = [
             'id_transaction' => $id,
+            'id_transaction_group' => $transaction['id_transaction_group'],
             'receipt_number_group' => TransactionGroup::where('id_transaction_group', $transaction['id_transaction_group'])->first()['transaction_receipt_number'] ?? '',
             'transaction_receipt_number' => $transaction['transaction_receipt_number'],
             'transaction_status_code' => $codeIndo[$transaction['transaction_status']]['code'] ?? '',
@@ -2928,13 +2931,14 @@ class ApiTransaction extends Controller
             'user' => User::where('id', $transaction['id_user'])->select('name', 'email', 'phone')->first(),
             'payment' => $paymentMethod ?? '',
             'payment_logo' => $paymentLogo ?? env('STORAGE_URL_API') . 'default_image/payment_method/default.png',
-            'payment_type' => $paymentType,
+            'payment_type' => TransactionGroup::where('id_transaction_group', $transaction['id_transaction_group'])->first()['transaction_payment_type'] ?? '',
             'payment_token' => $paymentToken,
             'payment_url' => $paymentURL,
             'payment_detail' => $paymentDetail,
             'point_receive' => (!empty($transaction['transaction_cashback_earned'] && $transaction['transaction_status'] != 'Rejected') ? ($transaction['cashback_insert_status'] ? 'Mendapatkan +' : 'Anda akan mendapatkan +') . number_format((int)$transaction['transaction_cashback_earned'], 0, ",", ".") . ' point dari transaksi ini' : ''),
             'transaction_reject_reason' => $transaction['transaction_reject_reason'],
-            'transaction_reject_at' => (!empty($transaction['transaction_reject_at']) ? MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($transaction['transaction_reject_at'])), true) : null)
+            'transaction_reject_at' => (!empty($transaction['transaction_reject_at']) ? MyHelper::dateFormatInd(date('Y-m-d H:i', strtotime($transaction['transaction_reject_at'])), true) : null),
+            'redirect' => $redirect ?? null
         ];
 
         return $result;
