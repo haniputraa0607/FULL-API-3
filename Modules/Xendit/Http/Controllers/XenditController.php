@@ -492,7 +492,7 @@ class XenditController extends Controller
         ];
 
         try {
-            $result = \Xendit\Invoice::create($params);
+            $result =  \Xendit\VirtualAccounts::create($params);
             return $result;
         } catch (\Exception $e) {
             $errors[] = $e->getMessage();
