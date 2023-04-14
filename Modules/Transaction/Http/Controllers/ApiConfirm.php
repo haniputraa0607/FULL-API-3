@@ -814,7 +814,7 @@ class ApiConfirm extends Controller
                 ], $dataMultiple);
 
                 $result = [
-                    'redirect' => true,
+                    'redirect' => false,
                     'type' => $paymentXendit->type,
                 ];
                 if ($paymentXendit->type == 'OVO') {
@@ -822,6 +822,8 @@ class ApiConfirm extends Controller
                     $result['message_timeout'] = 'Sorry, your payment has expired';
                 } else {
                     $result['transaction_data'] = $transactionData;
+                    $result['id_transaction_group'] = $transactionData['transaction_details']['id_transaction_group'];
+                    $result['transaction_receipt_number'] = $transactionData['transaction_details']['order_id'];
                 }
 
                 $transactionGroup = Transaction::where('id_transaction_group', $check['id_transaction_group'])->get()->toArray();
