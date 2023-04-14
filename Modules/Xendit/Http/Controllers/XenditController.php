@@ -461,7 +461,8 @@ class XenditController extends Controller
             'external_id'  => (string) $external_id,
             'amount'       => (int) $amount,
             'success_redirect_url' => $redirect_url,
-            'payment_methods' => [$method]
+            'payment_methods' => [$method],
+            'items'        => $options['items'] ?? [],
         ];
 
         try {
@@ -486,7 +487,8 @@ class XenditController extends Controller
             'expected_amount' => (int) $amount,
             'is_closed' => true,
             'bank_code' => $method,
-            'name'      => Auth::user()->name
+            'name'      => Auth::user()->name,
+            'expiration_date'=>date("Y-m-d H:i:s", strtotime("+15 minutes"))
         ];
 
         try {
