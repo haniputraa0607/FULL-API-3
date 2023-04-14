@@ -821,14 +821,6 @@ class ApiConfirm extends Controller
                     $result['timer']  = (int) MyHelper::setting('setting_timer_ovo', 'value', 60);
                     $result['message_timeout'] = 'Sorry, your payment has expired';
                 } else {
-                    if (!$paymentXendit->checkout_url) {
-                        DB::commit();
-                        return [
-                            'status' => 'fail',
-                            'messages' => ['Empty checkout_url']
-                        ];
-                    }
-                    $result['redirect_url'] = $paymentXendit->checkout_url;
                     $result['transaction_data'] = $transactionData;
                 }
 
