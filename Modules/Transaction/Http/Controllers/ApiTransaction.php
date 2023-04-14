@@ -2949,9 +2949,10 @@ class ApiTransaction extends Controller
                     ])->first();
         $data = null;
         if ($trx) {
+            $transaksi = Transaction::where('id_transaction_group', $request->id_transaction_group)->first();
             $paymentLogo = config('payment_method.xendit_' . strtolower($trx['type']) . '.logo');
             $data = array(
-                'transaction_receipt_number' =>  $trx['transaction_receipt_number'],
+                'transaction_receipt_number' =>  $transaksi['transaction_receipt_number'],
                 'transaction_payment_status' =>  $trx['transaction_payment_status'],
                 'amount' =>  $trx['transaction_grandtotal'],
                 'type' =>  $trx['type'],
