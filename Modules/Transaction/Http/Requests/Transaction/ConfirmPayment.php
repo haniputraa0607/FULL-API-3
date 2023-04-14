@@ -16,7 +16,7 @@ class ConfirmPayment extends FormRequest
     public function rules()
     {
         return [
-            'payment_type'             => 'nullable|in:Midtrans,Manual,Balance,Ovo,Ipay88,Shopeepay,Xendit',
+            'payment_type'             => 'nullable|in:Midtrans,Manual,Balance,Ovo,Ipay88,Shopeepay,Xendit,Xendit VA',
             'id'                       => 'required',
             'id_manual_payment_method' => 'nullable|integer',
             'id_bank_method'           => 'required_if:payment_type,Manual|integer',

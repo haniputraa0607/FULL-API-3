@@ -23,6 +23,7 @@ class TransactionPaymentXendit extends Model
         'failure_code',
         'status',
         'checkout_url',
+        'account_number',
     ];
     public $items = null;
 
@@ -68,6 +69,41 @@ class TransactionPaymentXendit extends Model
             $this->xendit_id = $create['id'] ?? null;
             $this->business_id = $create['business_id'] ?? null;
             $this->checkout_url = $create['invoice_url'] ?? null;
+            $this->external_id = $create['external_id'] ?? $this->external_id;
+            $this->status = $create['status'] ?? null;
+            $result = true;
+        } else {
+            $result = false;
+        }
+        $save = $this->save();
+        return $result;
+    }
+    public function payVA(&$errors = [])
+    {
+        if ($this->account_number) {
+            return true;
+        }
+
+        $transactionType = Transaction::where('id_transaction_group', $this->id_transaction_group)->first()['trasaction_type'] ?? 'trx';
+        $transactionType = ($transactionType == 'Delivery' ? 'trx' : $transactionType);
+
+        if (\Cache::has('xendit_confirm_' . $this->id_transaction_group)) {
+            $create = \Cache::get('xendit_confirm_' . $this->id_transaction_group);
+        } else {
+            $xenditController = app('Modules\Xendit\Http\Controllers\XenditController');
+            $create = $xenditController->createVA($this->type, $this->external_id, $this->amount, [
+                'phone' => $this->phone,
+                'items' => $this->items,
+                'type' => $transactionType
+            ], $errors);
+        }
+
+        if ($create) {
+            \Cache::put('xendit_confirm_' . $this->id_transaction_group, $create, now()->addMinutes(10));
+
+            $this->xendit_id = $create['id'] ?? null;
+            $this->business_id = $create['business_id'] ?? null;
+            $this->account_number = $create['account_number'] ?? null;
             $this->external_id = $create['external_id'] ?? $this->external_id;
             $this->status = $create['status'] ?? null;
             $result = true;

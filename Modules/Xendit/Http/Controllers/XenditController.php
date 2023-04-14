@@ -21,6 +21,7 @@ use Modules\Xendit\Entities\LogXendit;
 use Modules\Subscription\Entities\SubscriptionUser;
 use App\Http\Models\DealsUser;
 use App\Http\Models\Outlet;
+use Illuminate\Support\Facades\Auth;
 
 class XenditController extends Controller
 {
@@ -460,30 +461,35 @@ class XenditController extends Controller
             'external_id'  => (string) $external_id,
             'amount'       => (int) $amount,
             'success_redirect_url' => $redirect_url,
-            'payment_methods' => [$method],
-            'items'        => $options['items'] ?? [],
+            'payment_methods' => [$method]
         ];
 
         try {
-            // switch ($method) {
-            //     case 'OVO':
-            //         $params['ewallet_type'] = 'OVO';
-            //         break;
+            $result = \Xendit\Invoice::create($params);
+            return $result;
+        } catch (\Exception $e) {
+            $errors[] = $e->getMessage();
+            return false;
+        }
+    }
+    public function createVA($method, $external_id, $amount, $options = [], &$errors = [])
+    {
+        CustomHttpClient::setLogType('create');
+        CustomHttpClient::setIdReference($external_id);
+        $method = strtoupper($method);
 
-            //     case 'DANA':
-            //         $validity_period = (int) MyHelper::setting('xendit_validity_period', 'value', 300);
-            //         $params['ewallet_type'] = 'DANA';
-            //         $params['expiration_date'] = (new DateTime("+ $validity_period seconds"))->format('c');
-            //         break;
+        $tab = ($options['type'] == 'trx' ? 'history/order' : 'page/consultation');
+        $redirect_url = env('XENDIT_REDIRECT_URL') . $tab . '?type=' . $options['type'] . '&order_id=' . urlencode($options['order_id'] ?? $external_id);
 
-            //     case 'LINKAJA':
-            //         $params['ewallet_type'] = 'LINKAJA';
-            //         $params['items'] = $options['items'] ?? [];
-            //         break;
-            //     default:
-            //         throw new \Exception('Invalid payment method');
-            //         break;
-            // }
+        $params = [
+            'external_id'  => (string) $external_id,
+            'expected_amount' => (int) $amount,
+            'is_closed' => true,
+            'bank_code' => $method,
+            'name'      => Auth::user()->name
+        ];
+
+        try {
             $result = \Xendit\Invoice::create($params);
             return $result;
         } catch (\Exception $e) {

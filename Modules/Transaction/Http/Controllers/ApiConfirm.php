@@ -800,7 +800,7 @@ class ApiConfirm extends Controller
             }
             $paymentXendit->items = $dataDetailProduct;
 
-            if ($paymentXendit->pay($errors)) {
+            if ($paymentXendit->payVA($errors)) {
                 $dataMultiple = [
                     'id_transaction_group' => $paymentXendit->id_transaction_group,
                     'type'           => 'Xendit',
@@ -853,13 +853,13 @@ class ApiConfirm extends Controller
 
             $dataMultiple = [
                 'id_transaction' => $paymentXendit->id_transaction,
-                'type'           => 'Xendit',
+                'type'           => 'Xendit VA',
                 'id_payment'     => $paymentXendit->id_transaction_payment_xendit,
             ];
             // save multiple payment
             $saveMultiple = TransactionMultiplePayment::updateOrCreate([
                 'id_transaction' => $paymentXendit->id_transaction,
-                'type'           => 'Xendit',
+                'type'           => 'Xendit VA',
             ], $dataMultiple);
 
             DB::commit();
