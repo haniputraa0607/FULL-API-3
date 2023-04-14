@@ -106,6 +106,7 @@ class TransactionPaymentXendit extends Model
             $this->account_number = $create['account_number'] ?? null;
             $this->external_id = $create['external_id'] ?? $this->external_id;
             $this->status = $create['status'] ?? null;
+            $this->expiration_date = $create['expiration_date'] ? date('Y-m-d H:i:s', strtotime($create['expiration_date'])) : null;
             $result = true;
         } else {
             $result = false;

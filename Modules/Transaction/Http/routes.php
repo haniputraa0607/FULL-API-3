@@ -80,6 +80,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::get('/', 'ApiTransaction@transactionList');
     Route::any('/filter', 'ApiTransaction@transactionFilter');
     Route::post('/detail', 'ApiTransaction@transactionDetail');
+    Route::post('/detailVA', 'ApiTransaction@transactionDetailVA');
     Route::post('group/detail', 'ApiTransaction@transactionGroupDetail');
     Route::post('/item', 'ApiTransaction@transactionDetailTrx');
     Route::post('/point/detail', 'ApiTransaction@transactionPointDetail');

@@ -99,6 +99,7 @@ use Mail;
 use Image;
 use Illuminate\Support\Facades\Log;
 use Modules\Quest\Entities\Quest;
+use Modules\Transaction\Http\Requests\TransactionDetailVA;
 
 class ApiTransaction extends Controller
 {
@@ -2937,6 +2938,30 @@ class ApiTransaction extends Controller
         ];
 
         return $result;
+    }
+
+    public function transactionDetailVA(TransactionDetailVA $request)
+    {
+        $trx = TransactionGroup::join('transaction_payment_xendits', 'transaction_groups.id_transaction_group', 'transaction_payment_xendits.id_transaction_group')
+                ->where([
+                    'transaction_groups.id_transaction_group' => $request->id_transaction_group,
+                    'transaction_payment_type' => 'Xendit VA'
+                    ])->first();
+        $data = null;
+        if ($trx) {
+            $paymentLogo = config('payment_method.xendit_' . strtolower($trx['type']) . '.logo');
+            $data = array(
+                'transaction_receipt_number' =>  $trx['transaction_receipt_number'],
+                'transaction_payment_status' =>  $trx['transaction_payment_status'],
+                'amount' =>  $trx['transaction_grandtotal'],
+                'type' =>  $trx['type'],
+                'logo' =>  $paymentLogo,
+                'account_number' =>  $trx['account_number'],
+                'expiration_date' =>  date('d M Y, H:i') . " WIB",
+            );
+        }
+
+        return response()->json(MyHelper::checkGet($data));
     }
 
     // api/transaction/item
