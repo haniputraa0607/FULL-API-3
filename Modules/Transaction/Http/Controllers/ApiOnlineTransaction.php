@@ -1653,6 +1653,16 @@ class ApiOnlineTransaction extends Controller
                     'status' => 'fail',
                     'messages' => ['Transaksi tidak dapat dibatalkan karena proses pembayaran sedang berlangsung']
                 ];
+                case 'xendit va':
+                $dtXendit = TransactionPaymentXendit::where('id_transaction_group', $trx['id_transaction_group'])->first();
+                $trx->triggerPaymentCancelled();
+                return ['status' => 'success', 'result' => ['message' => 'Pembayaran berhasil dibatalkan']];
+                
+
+                return [
+                    'status' => 'fail',
+                    'messages' => ['Transaksi tidak dapat dibatalkan karena proses pembayaran sedang berlangsung']
+                ];
         }
         return ['status' => 'fail', 'messages' => ["Cancel $payment_type transaction is not supported yet"]];
     }

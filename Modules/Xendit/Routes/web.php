@@ -14,3 +14,4 @@
 Route::prefix('xendit')->group(function () {
     Route::any('landing', 'XenditController@landing')->name('landing_xendit');
 });
+Route::any('virtual_account_paid_callback_url', 'XenditController@virtual_account_paid_callback_url')->name('virtual_account_paid_callback_url');
