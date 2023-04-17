@@ -488,7 +488,7 @@ class XenditController extends Controller
             'is_closed' => true,
             'bank_code' => $method,
             'name'      => Auth::user()->name,
-            'expiration_date' => date("Y-m-d H:i:s", strtotime("+15 minutes"))
+            'expiration_date' => date("Y-m-d H:i:s", strtotime("+1 days"))
         ];
 
         try {
@@ -613,5 +613,187 @@ class XenditController extends Controller
     public function landing()
     {
         return view('xendit::landing');
+    }
+    public function virtual_account_paid_callback_url(Request $request)
+    {
+        $header         = $request->header();
+        $validToken     = $this->callback_token;
+        $update         = 0;
+        $cat            = $header['x-callback-token'][0] ?? null;
+        $universalStatus = 'COMPLETED';
+
+        DB::beginTransaction();
+
+        if (stristr($post['external_id'], "TRX")) {
+            $trx = TransactionGroup::where('transaction_receipt_number', $post['external_id'])->join('transaction_payment_xendits', 'transaction_groups.id_transaction_group', '=', 'transaction_payment_xendits.id_transaction_group')->first();
+
+            if (!$trx) {
+                $status_code = 404;
+                $response    = ['status' => 'fail', 'messages' => ['Transaction not found']];
+                goto end;
+            }
+            if ($trx->amount != $post['amount']) {
+                $status_code = 422;
+                $response    = ['status' => 'fail', 'messages' => ['Invalid amount']];
+                goto end;
+            }
+
+            if ($universalStatus == 'COMPLETED') {
+                $update                 = $trx->triggerPaymentCompleted([
+                    'amount' => $post['amount'] / 100,
+                ]);
+            } elseif ($universalStatus == 'FAILED') {
+                $update                 = $trx->triggerPaymentCancelled();
+            }
+
+            if (!$update) {
+                DB::rollBack();
+                if ($universalStatus == 'FAILED') {
+                    $status_code = 200;
+                    $response    = [
+                        'status'   => 'success',
+                        'messages' => ['Payment expired'],
+                    ];
+                } else {
+                    $status_code = 500;
+                    $response    = [
+                        'status'   => 'fail',
+                        'messages' => ['Failed update payment status'],
+                    ];
+                }
+                goto end;
+            }
+
+            TransactionPaymentXendit::where('id_transaction_group', $trx->id_transaction_group)->update([
+                'status'         => $universalStatus,
+                'xendit_id'      => $post['id'] ?? null,
+                'payment_id'     => $post['payment_id'] ?? null,
+                'expiration_date' => $post['expiration_date'] ?? null,
+                'failure_code'   => $post['failure_code'] ?? null,
+            ]);
+            DB::commit();
+
+            $status_code = 200;
+            $response    = ['status' => 'success'];
+        } elseif (stristr($post['external_id'], 'SUBS')) {
+            $subs_payment = SubscriptionPaymentXendit::where('order_id', $post['external_id'])->join('subscriptions', 'subscriptions.id_subscription', '=', 'subscription_payment_xendits.id_subscription')->first();
+
+            if (!$subs_payment) {
+                $status_code = 404;
+                $response    = ['status' => 'fail', 'messages' => ['Subscription not found']];
+                goto end;
+            }
+            if ($subs_payment->amount != $post['amount']) {
+                $status_code = 422;
+                $response    = ['status' => 'fail', 'messages' => ['Invalid amount']];
+                goto end;
+            }
+
+            $subscriptionUser = SubscriptionUser::where('id_subscription_user', $subs_payment->id_subscription_user)->first();
+
+            if ($universalStatus == 'COMPLETED') {
+                $update = $subscriptionUser->complete();
+            } elseif ($universalStatus == 'FAILED') {
+                $update = $subscriptionUser->cancel();
+            }
+
+            if (!$update) {
+                DB::rollBack();
+                $status_code = 500;
+                $response    = [
+                    'status'   => 'fail',
+                    'messages' => ['Failed update payment status'],
+                ];
+                goto end;
+            }
+
+            $subs_payment->update([
+                'status'         => $universalStatus,
+                'xendit_id'      => $post['id'] ?? null,
+                'payment_id'     => $post['payment_id'] ?? null,
+                'expiration_date' => $post['expiration_date'] ?? null,
+                'failure_code'   => $post['failure_code'] ?? null,
+            ]);
+            DB::commit();
+
+            $userPhone = User::select('phone')->where('id', $subs_payment->id_user)->pluck('phone')->first();
+            $send      = app($this->autocrm)->SendAutoCRM(
+                'Buy Paid Subscription Success',
+                $userPhone,
+                [
+                    'subscription_title'   => $subs_payment->subscription_title,
+                    'id_subscription_user' => $subs_payment->id_subscription_user,
+                ]
+            );
+            $status_code = 200;
+            $response    = ['status' => 'success'];
+        } else {
+            $deals_payment = DealsPaymentXendit::where('order_id', $post['external_id'])->join('deals', 'deals.id_deals', '=', 'deals_payment_xendits.id_deals')->first();
+
+            if (!$deals_payment) {
+                $status_code = 404;
+                $response    = ['status' => 'fail', 'messages' => ['Transaction not found']];
+                goto end;
+            }
+            if ($deals_payment->amount != $post['amount']) {
+                $status_code = 422;
+                $response    = ['status' => 'fail', 'messages' => ['Invalid amount']];
+                goto end;
+            }
+
+            $dealsUser = DealsUser::where('id_deals_user', $deals_payment->id_deals_user)->first();
+            if ($universalStatus == 'COMPLETED') {
+                $update = $dealsUser->complete();
+            } elseif ($universalStatus == 'FAILED') {
+                $update = $dealsUser->cancel();
+            }
+
+            if (!$update) {
+                DB::rollBack();
+                $status_code = 500;
+                $response    = [
+                    'status'   => 'fail',
+                    'messages' => ['Failed update payment status'],
+                ];
+                goto end;
+            }
+
+            $deals_payment->update([
+                'status'         => $universalStatus,
+                'xendit_id'      => $post['id'] ?? null,
+                'payment_id'     => $post['payment_id'] ?? null,
+                'expiration_date' => $post['expiration_date'] ?? null,
+                'failure_code'   => $post['failure_code'] ?? null,
+            ]);
+            DB::commit();
+
+            $userPhone = User::select('phone')->where('id', $deals_payment->id_user)->pluck('phone')->first();
+            $send      = app($this->autocrm)->SendAutoCRM(
+                'Payment Deals Success',
+                $userPhone,
+                [
+                    'deals_title'   => $deals_payment->title,
+                    'id_deals_user' => $deals_payment->id_deals_user,
+                ]
+            );
+            $status_code = 200;
+            $response    = ['status' => 'success'];
+        }
+
+        end:
+        try {
+            LogXendit::create([
+                'type'                 => 'webhook',
+                'id_reference'         => $post['external_id'],
+                'request'              => json_encode($post),
+                'request_url'          => url(route('notif_xendit')),
+                'request_header'       => json_encode($header),
+                'response'             => json_encode($response),
+                'response_status_code' => $status_code,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed write log to LogXendit: ' . $e->getMessage());
+        }
+        return response()->json($response, $status_code);
     }
 }
