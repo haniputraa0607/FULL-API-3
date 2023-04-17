@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 
 Route::group(['prefix' => 'xendit'], function () {
     Route::post('notif', 'XenditController@notif')->name('notif_xendit');
+    Route::any('virtual_account_paid_callback_url', 'XenditController@virtual_account_paid_callback_url')->name('virtual_account_paid_callback_url');
 });
 
 Route::group(['prefix' => 'xendit-account', 'middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:be']], function () {
