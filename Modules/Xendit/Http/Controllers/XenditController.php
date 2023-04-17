@@ -621,7 +621,7 @@ class XenditController extends Controller
         $update         = 0;
         $cat            = $header['x-callback-token'][0] ?? null;
         $universalStatus = 'COMPLETED';
-
+        $post = $request->post();
         DB::beginTransaction();
 
         if (stristr($post['external_id'], "TRX")) {
